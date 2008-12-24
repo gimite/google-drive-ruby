@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>login (GoogleSpreadsheet::Session)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/google_spreadsheet.rb, line 97</span>
+        <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">login</span>(<span class="ruby-identifier">mail</span>, <span class="ruby-identifier">password</span>)
+          <span class="ruby-keyword kw">begin</span>
+            <span class="ruby-identifier">params</span> = {
+              <span class="ruby-value str">&quot;accountType&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;HOSTED_OR_GOOGLE&quot;</span>,
+              <span class="ruby-value str">&quot;Email&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">mail</span>,
+              <span class="ruby-value str">&quot;Passwd&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">password</span>,
+              <span class="ruby-value str">&quot;service&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;wise&quot;</span>,
+              <span class="ruby-value str">&quot;source&quot;</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;Gimite-RubyGoogleSpreadsheet-1.00&quot;</span>,
+            }
+            <span class="ruby-identifier">response</span> = <span class="ruby-identifier">http_post</span>(<span class="ruby-value str">&quot;https://www.google.com/accounts/ClientLogin&quot;</span>, <span class="ruby-identifier">encode_query</span>(<span class="ruby-identifier">params</span>))
+            <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Session</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">response</span>.<span class="ruby-identifier">slice</span>(<span class="ruby-regexp re">/^Auth=(.*)$/</span>, <span class="ruby-value">1</span>))
+          <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">GoogleSpreadsheet</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">ex</span>
+            <span class="ruby-identifier">raise</span>(<span class="ruby-constant">AuthenticationError</span>, <span class="ruby-node">&quot;authentication failed for #{mail}: #{ex.message}&quot;</span>)
+          <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>saved_session (GoogleSpreadsheet)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File lib/google_spreadsheet.rb, line 27</span>
+    <span class="ruby-keyword kw">def</span> <span class="ruby-keyword kw">self</span>.<span class="ruby-identifier">saved_session</span>(<span class="ruby-identifier">path</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-value str">&quot;HOME&quot;</span>] <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;/.ruby_google_spreadsheet.token&quot;</span>)
+      <span class="ruby-keyword kw">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">path</span>)
+        <span class="ruby-keyword kw">return</span> <span class="ruby-constant">Session</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">path</span>))
+      <span class="ruby-keyword kw">else</span>
+        <span class="ruby-identifier">require</span> <span class="ruby-value str">&quot;password&quot;</span>
+        <span class="ruby-identifier">$stderr</span>.<span class="ruby-identifier">print</span>(<span class="ruby-value str">&quot;Mail: &quot;</span>)
+        <span class="ruby-identifier">mail</span> = <span class="ruby-identifier">$stdin</span>.<span class="ruby-identifier">gets</span>().<span class="ruby-identifier">chomp</span>()
+        <span class="ruby-identifier">password</span> = <span class="ruby-constant">Password</span>.<span class="ruby-identifier">get</span>()
+        <span class="ruby-identifier">session</span> = <span class="ruby-constant">Session</span>.<span class="ruby-identifier">login</span>(<span class="ruby-identifier">mail</span>, <span class="ruby-identifier">password</span>)
+        <span class="ruby-identifier">open</span>(<span class="ruby-identifier">path</span>, <span class="ruby-value str">&quot;w&quot;</span>, <span class="ruby-value">0600</span>){ <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">f</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">session</span>.<span class="ruby-identifier">auth_token</span>) }
+        <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">session</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
