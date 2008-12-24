@@ -39,3 +39,10 @@ API document: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
 http://github.com/gimite/google-spreadsheet-ruby/tree/master
 
 The license of this source is "New BSD Licence"
+
+
+= Author
+
+Hiroshi Ichikawa
+
+http://gimite.net/en/index.php?Contact
