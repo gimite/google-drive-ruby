@@ -31,4 +31,11 @@ Example:
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
 
-API document is here: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
+API document: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
+
+
+= Source code
+
+http://github.com/gimite/google-spreadsheet-ruby/tree/master
+
+The license of this source is "New BSD Licence"
