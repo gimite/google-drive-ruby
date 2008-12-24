@@ -3,7 +3,8 @@ This is a library to read/write Google Spreadsheet.
 
 = How to install
 
-TBD
+  $ gem sources -a http://gems.github.com
+  $ sudo gem install gimite-google-spreadsheet-ruby
 
 
 = How to use
@@ -29,3 +30,5 @@ Example:
   
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
+
+API document is here: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
