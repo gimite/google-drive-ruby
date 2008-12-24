@@ -10,6 +10,7 @@ TBD
 
 Example:
   
+  require "rubygems"
   require "google_spreadsheet"
   
   # Logs in.
