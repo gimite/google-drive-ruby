@@ -302,6 +302,26 @@ module GoogleSpreadsheet
           return @cells
         end
         
+        # An array of spreadsheet rows. Each row contains an array of
+        # columns.
+        def rows(options={})
+          reload() if !@cells
+          
+          start_row = 1
+          start_col = 1
+          end_row   = num_rows
+          end_col   = num_cols
+          row       = start_row
+          
+          @cells.inject([]) do |rows, cell|
+            rows << (start_col..end_col).map do |col|
+              @cells[[row, col]]
+            end
+            row = row + 1 # On to the next row my friend!
+            rows
+          ends
+        end
+        
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
