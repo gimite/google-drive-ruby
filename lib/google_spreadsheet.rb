@@ -304,22 +304,17 @@ module GoogleSpreadsheet
         
         # An array of spreadsheet rows. Each row contains an array of
         # columns.
-        def rows(options={})
+        def rows
           reload() if !@cells
-          
-          start_row = 1
-          start_col = 1
-          end_row   = num_rows
-          end_col   = num_cols
-          row       = start_row
-          
-          @cells.inject([]) do |rows, cell|
-            rows << (start_col..end_col).map do |col|
-              @cells[[row, col]]
+          worksheet = []
+          num_rows.times do |row|
+            cols = []
+            num_cols.times do |col|
+              cols << self[row, col]
             end
-            row = row + 1 # On to the next row my friend!
-            rows
-          ends
+            worksheet << cols
+          end
+          return worksheet
         end
         
         # Reloads content of the worksheets from the server.
