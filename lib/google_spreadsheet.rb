@@ -119,7 +119,12 @@ module GoogleSpreadsheet
         attr_reader(:auth_token)
         
         def get(url) #:nodoc:
-          response = open(url, self.http_header){ |f| f.read() }
+          begin
+            response = open(url, self.http_header){ |f| f.read() }
+          rescue OpenURI::HTTPError => ex
+            raise(GoogleSpreadsheet::Error, "Error #{ex.message} for GET #{url}: " +
+              ex.io.read())
+          end
           return Hpricot.XML(response)
         end
         
@@ -337,9 +342,9 @@ module GoogleSpreadsheet
           
           # Updates cell values using batch operation.
           xml = <<-"EOS"
-            <feed xmlns='http://www.w3.org/2005/Atom'
-                  xmlns:batch='http://schemas.google.com/gdata/batch'
-                  xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
+            <feed xmlns="http://www.w3.org/2005/Atom"
+                  xmlns:batch="http://schemas.google.com/gdata/batch"
+                  xmlns:gs="http://schemas.google.com/spreadsheets/2006">
               <id>#{h(@cells_feed_url)}</id>
           EOS
           for row, col in @modified
@@ -350,11 +355,11 @@ module GoogleSpreadsheet
             xml << <<-"EOS"
               <entry>
                 <batch:id>#{h(row)},#{h(col)}</batch:id>
-                <batch:operation type='update'/>
+                <batch:operation type="update"/>
                 <id>#{h(id)}</id>
-                <link rel='edit' type='application/atom+xml'
-                  href='#{h(edit_url)}'/>
-                <gs:cell row='#{h(row)}' col='#{h(col)}' inputValue='#{h(value)}'/>
+                <link rel="edit" type="application/atom+xml"
+                  href="#{h(edit_url)}"/>
+                <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
               </entry>
             EOS
           end
@@ -363,6 +368,11 @@ module GoogleSpreadsheet
           EOS
           result = @session.post("#{@cells_feed_url}/batch", xml)
           for entry in result.search("atom:entry")
+            interrupted = entry.search("batch:interrupted")[0]
+            if interrupted
+              raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
+                interrupted["reason"])
+            end
             if !(entry.search("batch:status")[0]["code"] =~ /^2/)
               raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
                 [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
