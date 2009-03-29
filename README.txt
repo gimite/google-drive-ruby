@@ -28,6 +28,11 @@ Example:
   ws[2, 2] = "bar"
   ws.save()
   
+  # You can also loop through rows
+  ws.rows.each do |row|
+    row[2] = "bar"
+  end
+  
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
 
@@ -43,6 +48,5 @@ The license of this source is "New BSD Licence"
 
 = Author
 
-Hiroshi Ichikawa
-
-http://gimite.net/en/index.php?Contact
+Hiroshi Ichikawa - http://gimite.net/en/index.php?Contact
+Brad Gessler - http://bradgessler.com/
