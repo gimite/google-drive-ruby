@@ -28,10 +28,15 @@ Example:
   ws[2, 2] = "bar"
   ws.save()
   
-  # You can also loop through rows
-  ws.rows.each do |row|
-    row[2] = "bar"
+  # Dumps all cells.
+  for row in 1..ws.num_rows
+    for col in 1..ws.num_cols
+      p ws[row, col]
+    end
   end
+  
+  # Yet another way to do so.
+  p ws.rows #==> [["fuga", ""], ["foo", "bar]]
   
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
@@ -49,4 +54,3 @@ The license of this source is "New BSD Licence"
 = Author
 
 Hiroshi Ichikawa - http://gimite.net/en/index.php?Contact
-Brad Gessler - http://bradgessler.com/

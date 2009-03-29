@@ -308,18 +308,14 @@ module GoogleSpreadsheet
         end
         
         # An array of spreadsheet rows. Each row contains an array of
-        # columns.
+        # columns. Note that resulting array is 0-origin so
+        # worksheet.rows[0][0] == worksheet[1, 1].
         def rows
-          reload() if !@cells
-          worksheet = []
-          num_rows.times do |row|
-            cols = []
-            num_cols.times do |col|
-              cols << self[row, col]
-            end
-            worksheet << cols
+          nc = self.num_cols
+          result = (1..self.num_rows).map() do |row|
+            (1..nc).map(){ |col| self[row, col] }.freeze()
           end
-          return worksheet
+          return result.freeze()
         end
         
         # Reloads content of the worksheets from the server.
