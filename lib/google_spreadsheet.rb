@@ -20,22 +20,25 @@ module GoogleSpreadsheet
     end
     
     # Restores GoogleSpreadsheet::Session from +path+ and returns it.
-    # If +path+ doesn't exist, prompts mail and password on console, authenticates with them,
-    # stores the session to +path+ and returns it.
+    # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
+    # authenticates with them, stores the session to +path+ and returns it.
     #
     # This method requires Ruby/Password library: http://www.caliban.org/ruby/ruby-password.shtml
     def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
-      if File.exist?(path)
-        return Session.new(File.read(path))
-      else
+      session = Session.new(File.exist?(path) ? File.read(path) : nil)
+      session.on_auth_fail = proc() do
         require "password"
         $stderr.print("Mail: ")
         mail = $stdin.gets().chomp()
         password = Password.get()
-        session = Session.login(mail, password)
+        session.login(mail, password)
         open(path, "w", 0600){ |f| f.write(session.auth_token) }
-        return session
+        true
       end
+      if !session.auth_token
+        session.on_auth_fail.call()
+      end
+      return session
     end
     
     
@@ -43,14 +46,14 @@ module GoogleSpreadsheet
       
       module_function
         
-        def http_post(url, data, header = {})
+        def http_request(method, url, data, header = {})
           uri = URI.parse(url)
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = uri.scheme == "https"
           http.verify_mode = OpenSSL::SSL::VERIFY_NONE
           http.start() do
             path = uri.path + (uri.query ? "?#{uri.query}" : "")
-            response = http.post(path, data, header)
+            response = http.__send__(method, path, data, header)
             if !(response.code =~ /^2/)
               raise(GoogleSpreadsheet::Error, "Response code #{response.code} for POST #{url}: " +
                 CGI.unescapeHTML(response.body))
@@ -95,7 +98,22 @@ module GoogleSpreadsheet
         
         # The same as GoogleSpreadsheet.login.
         def self.login(mail, password)
+          sessoin = Sessio.new()
+          session.login(mail, password)
+          return session
+        end
+        
+        # Creates session object with given authentication token.
+        def initialize(auth_token = nil)
+          @auth_token = auth_token
+        end
+        
+        # Authenticates with given +mail+ and +password+, and updates current session object
+        # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
+        # Google Apps account is supported.
+        def login(mail, password)
           begin
+            @auth_token = nil
             params = {
               "accountType" => "HOSTED_OR_GOOGLE",
               "Email" => mail,
@@ -103,34 +121,46 @@ module GoogleSpreadsheet
               "service" => "wise",
               "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
             }
-            response = http_post("https://www.google.com/accounts/ClientLogin", encode_query(params))
-            return Session.new(response.slice(/^Auth=(.*)$/, 1))
+            response = http_request(:post,
+              "https://www.google.com/accounts/ClientLogin", encode_query(params))
+            @auth_token = response.slice(/^Auth=(.*)$/, 1)
           rescue GoogleSpreadsheet::Error => ex
+            return true if @on_auth_fail && @on_auth_fail.call()
             raise(AuthenticationError, "authentication failed for #{mail}: #{ex.message}")
           end
         end
         
-        # Creates session object with given authentication token.
-        def initialize(auth_token)
-          @auth_token = auth_token
-        end
-        
         # Authentication token.
-        attr_reader(:auth_token)
+        attr_accessor(:auth_token)
+        
+        # Proc or Method called when authentication has failed.
+        # When this function returns +true+, it tries again.
+        attr_accessor(:on_auth_fail)
         
         def get(url) #:nodoc:
-          begin
-            response = open(url, self.http_header){ |f| f.read() }
-          rescue OpenURI::HTTPError => ex
-            raise(GoogleSpreadsheet::Error, "Error #{ex.message} for GET #{url}: " +
-              ex.io.read())
+          while true
+            begin
+              response = open(url, self.http_header){ |f| f.read() }
+            rescue OpenURI::HTTPError => ex
+              if ex.message =~ /^401/ && @on_auth_fail && @on_auth_fail.call()
+                next
+              end
+              raise(ex.message =~ /^401/ ? AuthenticationError : GoogleSpreadsheet::Error,
+                "Error #{ex.message} for GET #{url}: " + ex.io.read())
+            end
+            return Hpricot.XML(response)
           end
-          return Hpricot.XML(response)
         end
         
         def post(url, data) #:nodoc:
           header = self.http_header.merge({"Content-Type" => "application/atom+xml"})
-          response = http_post(url, data, header)
+          response = http_request(:post, url, data, header)
+          return Hpricot.XML(response)
+        end
+        
+        def put(url, data) #:nodoc:
+          header = self.http_header.merge({"Content-Type" => "application/atom+xml"})
+          response = http_request(:put, url, data, header)
           return Hpricot.XML(response)
         end
         
@@ -262,15 +292,12 @@ module GoogleSpreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
           @cells = nil
+          @input_values = nil
           @modified = Set.new()
         end
         
         # URL of cell-based feed of the spreadsheet.
         attr_reader(:cells_feed_url)
-        
-        # Title of the spreadsheet. So far not available if you get this object by
-        # GoogleSpreadsheet::Spreadsheet#worksheet_by_url.
-        attr_reader(:title)
         
         # Returns content of the cell as String. Top-left cell is [1, 1].
         def [](row, col)
@@ -287,19 +314,70 @@ module GoogleSpreadsheet
         def []=(row, col, value)
           reload() if !@cells
           @cells[[row, col]] = value
+          @input_values[[row, col]] = value
           @modified.add([row, col])
+          self.max_rows = row if row > @max_rows
+          self.max_cols = col if col > @max_cols
         end
         
-        # Number of the bottom-most non-empty row.
+        # Returns the value or the formula of the cell. Top-left cell is [1, 1].
+        #
+        # If user input "=A1+B1" to cell [1, 3], worksheet[1, 3] is "3" for example and
+        # worksheet.input_value(1, 3) is "=RC[-2]+RC[-1]".
+        def input_value(row, col)
+          reload() if !@cells
+          return @input_values[[row, col]] || ""
+        end
+        
+        # Row number of the bottom-most non-empty row.
         def num_rows
           reload() if !@cells
           return @cells.keys.map(){ |r, c| r }.max || 0
         end
         
-        # Number of the right-most non-empty column.
+        # Column number of the right-most non-empty column.
         def num_cols
           reload() if !@cells
           return @cells.keys.map(){ |r, c| c }.max || 0
+        end
+        
+        # Number of rows including empty rows.
+        def max_rows
+          reload() if !@cells
+          return @max_rows
+        end
+        
+        # Updates number of rows.
+        # Note that update is not sent to the server until you call save().
+        def max_rows=(rows)
+          @max_rows = rows
+          @meta_modified = true
+        end
+        
+        # Number of columns including empty columns.
+        def max_cols
+          reload() if !@cells
+          return @max_cols
+        end
+        
+        # Updates number of columns.
+        # Note that update is not sent to the server until you call save().
+        def max_cols=(cols)
+          @max_cols = cols
+          @meta_modified = true
+        end
+        
+        # Title of the worksheet (shown as tab label in Web interface).
+        def title
+          reload() if !@title
+          return @title
+        end
+        
+        # Updates title of the worksheet.
+        # Note that update is not sent to the server until you call save().
+        def title=(title)
+          @title = title
+          @meta_modified = true
         end
         
         def cells #:nodoc:
@@ -322,76 +400,115 @@ module GoogleSpreadsheet
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
           doc = @session.get(@cells_feed_url)
+          @max_rows = doc.search("gs:rowCount").text.to_i()
+          @max_cols = doc.search("gs:colCount").text.to_i()
+          @title = doc.search("title").text
           @cells = {}
+          @input_values = {}
           for entry in doc.search("entry")
-            row = entry.search("gs:cell")[0]["row"].to_i()
-            col = entry.search("gs:cell")[0]["col"].to_i()
-            content = entry.search("content").text
-            @cells[[row, col]] = content
+            cell = entry.search("gs:cell")[0]
+            row = cell["row"].to_i()
+            col = cell["col"].to_i()
+            @cells[[row, col]] = cell.inner_text
+            @input_values[[row, col]] = cell["inputValue"]
           end
           @modified.clear()
+          @meta_modified = false
           return true
         end
         
         # Saves your changes made by []= to the server.
         def save()
-          return false if @modified.empty?
+          sent = false
           
-          # Gets id and edit URL for each cell.
-          # Note that return-empty=true is required to get those info for empty cells.
-          cell_entries = {}
-          rows = @modified.map(){ |r, c| r }
-          cols = @modified.map(){ |r, c| c }
-          url = "#{@cells_feed_url}?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
-            "&min-col=#{cols.min}&max-col=#{cols.max}"
-          doc = @session.get(url)
-          for entry in doc.search("entry")
-            row = entry.search("gs:cell")[0]["row"].to_i()
-            col = entry.search("gs:cell")[0]["col"].to_i()
-            cell_entries[[row, col]] = entry
-          end
-          
-          # Updates cell values using batch operation.
-          xml = <<-"EOS"
-            <feed xmlns="http://www.w3.org/2005/Atom"
-                  xmlns:batch="http://schemas.google.com/gdata/batch"
-                  xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-              <id>#{h(@cells_feed_url)}</id>
-          EOS
-          for row, col in @modified
-            value = @cells[[row, col]]
-            entry = cell_entries[[row, col]]
-            id = entry.search("id").text
-            edit_url = entry.search("link[@rel='edit']")[0]["href"]
-            xml << <<-"EOS"
-              <entry>
-                <batch:id>#{h(row)},#{h(col)}</batch:id>
-                <batch:operation type="update"/>
-                <id>#{h(id)}</id>
-                <link rel="edit" type="application/atom+xml"
-                  href="#{h(edit_url)}"/>
-                <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+          if @meta_modified
+            
+            # I don't know good way to get worksheet feed URL from cells feed URL.
+            # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
+            # from it.
+            if !(@cells_feed_url =~
+                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              raise(GoogleSpreadsheet::Error,
+                "cells feed URL is in unknown format: #{@cells_feed_url}")
+            end
+            ws_doc = @session.get(
+              "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}")
+            edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
+            xml = <<-"EOS"
+              <entry xmlns='http://www.w3.org/2005/Atom'
+                     xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
+                <title>#{h(@title)}</title>
+                <gs:rowCount>#{h(@max_rows)}</gs:rowCount>
+                <gs:colCount>#{h(@max_cols)}</gs:colCount>
               </entry>
             EOS
-          end
-          xml << <<-"EOS"
-            </feed>
-          EOS
-          result = @session.post("#{@cells_feed_url}/batch", xml)
-          for entry in result.search("atom:entry")
-            interrupted = entry.search("batch:interrupted")[0]
-            if interrupted
-              raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
-                interrupted["reason"])
-            end
-            if !(entry.search("batch:status")[0]["code"] =~ /^2/)
-              raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
-            end
+            @session.put(edit_url, xml)
+            
+            @meta_modified = false
+            sent = true
+            
           end
           
-          @modified.clear()
-          return true
+          if !@modified.empty?
+            
+            # Gets id and edit URL for each cell.
+            # Note that return-empty=true is required to get those info for empty cells.
+            cell_entries = {}
+            rows = @modified.map(){ |r, c| r }
+            cols = @modified.map(){ |r, c| c }
+            url = "#{@cells_feed_url}?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
+              "&min-col=#{cols.min}&max-col=#{cols.max}"
+            doc = @session.get(url)
+            for entry in doc.search("entry")
+              row = entry.search("gs:cell")[0]["row"].to_i()
+              col = entry.search("gs:cell")[0]["col"].to_i()
+              cell_entries[[row, col]] = entry
+            end
+            
+            # Updates cell values using batch operation.
+            xml = <<-"EOS"
+              <feed xmlns="http://www.w3.org/2005/Atom"
+                    xmlns:batch="http://schemas.google.com/gdata/batch"
+                    xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+                <id>#{h(@cells_feed_url)}</id>
+            EOS
+            for row, col in @modified
+              value = @cells[[row, col]]
+              entry = cell_entries[[row, col]]
+              id = entry.search("id").text
+              edit_url = entry.search("link[@rel='edit']")[0]["href"]
+              xml << <<-"EOS"
+                <entry>
+                  <batch:id>#{h(row)},#{h(col)}</batch:id>
+                  <batch:operation type="update"/>
+                  <id>#{h(id)}</id>
+                  <link rel="edit" type="application/atom+xml"
+                    href="#{h(edit_url)}"/>
+                  <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                </entry>
+              EOS
+            end
+            xml << <<-"EOS"
+              </feed>
+            EOS
+            result = @session.post("#{@cells_feed_url}/batch", xml)
+            for entry in result.search("atom:entry")
+              interrupted = entry.search("batch:interrupted")[0]
+              if interrupted
+                raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
+                  interrupted["reason"])
+              end
+              if !(entry.search("batch:status")[0]["code"] =~ /^2/)
+                raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
+                  [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
+              end
+            end
+            
+            @modified.clear()
+            sent = true
+            
+          end
+          return sent
         end
         
         # Calls save() and reload().
