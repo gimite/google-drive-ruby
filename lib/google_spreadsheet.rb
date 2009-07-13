@@ -98,7 +98,7 @@ module GoogleSpreadsheet
         
         # The same as GoogleSpreadsheet.login.
         def self.login(mail, password)
-          sessoin = Sessio.new()
+          session = Session.new()
           session.login(mail, password)
           return session
         end
