@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
   s.name = %q{google-spreadsheet-ruby}
-  s.version = "0.0.2"
+  s.version = "0.0.3"
   s.authors = ["Hiroshi Ichikawa"]
-  s.date = %q{2008-12-24}
+  s.date = %q{2009-07-13}
   s.description = %q{This is a library to read/write Google Spreadsheet.}
   s.email = ["gimite+github@gmail.com"]
   s.extra_rdoc_files = ["README.txt"]
