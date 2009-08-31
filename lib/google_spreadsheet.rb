@@ -53,7 +53,12 @@ module GoogleSpreadsheet
           http.verify_mode = OpenSSL::SSL::VERIFY_NONE
           http.start() do
             path = uri.path + (uri.query ? "?#{uri.query}" : "")
-            response = http.__send__(method, path, data, header)
+            if method == :delete
+              response = http.__send__(method, path, header)
+            else
+              response = http.__send__(method, path, data, header)
+            end
+            
             if !(response.code =~ /^2/)
               raise(GoogleSpreadsheet::Error, "Response code #{response.code} for POST #{url}: " +
                 CGI.unescapeHTML(response.body))
@@ -164,6 +169,12 @@ module GoogleSpreadsheet
           return Hpricot.XML(response)
         end
         
+        def delete(url)
+          header = self.http_header.merge({"Content-Type" => "application/atom+xml"})
+          response = http_request(:delete, url, nil, header)
+          return Hpricot.XML(response)
+        end
+        
         def http_header #:nodoc:
           return {"Authorization" => "GoogleLogin auth=#{@auth_token}"}
         end
@@ -256,6 +267,7 @@ module GoogleSpreadsheet
           result = []
           for entry in doc.search("entry")
             title = entry.search("title").text
+            
             url = entry.search(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
             result.push(Worksheet.new(@session, url, title))
@@ -291,6 +303,7 @@ module GoogleSpreadsheet
           @session = session
           @cells_feed_url = cells_feed_url
           @title = title
+          
           @cells = nil
           @input_values = nil
           @modified = Set.new()
@@ -403,6 +416,7 @@ module GoogleSpreadsheet
           @max_rows = doc.search("gs:rowCount").text.to_i()
           @max_cols = doc.search("gs:colCount").text.to_i()
           @title = doc.search("title").text
+          
           @cells = {}
           @input_values = {}
           for entry in doc.search("entry")
@@ -442,6 +456,7 @@ module GoogleSpreadsheet
                 <gs:colCount>#{h(@max_cols)}</gs:colCount>
               </entry>
             EOS
+            
             @session.put(edit_url, xml)
             
             @meta_modified = false
@@ -491,6 +506,7 @@ module GoogleSpreadsheet
             xml << <<-"EOS"
               </feed>
             EOS
+            
             result = @session.post("#{@cells_feed_url}/batch", xml)
             for entry in result.search("atom:entry")
               interrupted = entry.search("batch:interrupted")[0]
@@ -515,6 +531,20 @@ module GoogleSpreadsheet
         def synchronize()
           save()
           reload()
+        end
+        
+        # Deletes this worksheet
+        def delete
+          if !(@cells_feed_url =~
+              %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+            raise(GoogleSpreadsheet::Error,
+              "cells feed URL is in unknown format: #{@cells_feed_url}")
+          end
+          ws_doc = @session.get(
+            "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}")
+          edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
+          
+          @session.delete(edit_url)
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
