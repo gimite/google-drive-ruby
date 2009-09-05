@@ -58,7 +58,6 @@ module GoogleSpreadsheet
             else
               response = http.__send__(method, path, data, header)
             end
-            
             if !(response.code =~ /^2/)
               raise(GoogleSpreadsheet::Error, "Response code #{response.code} for POST #{url}: " +
                 CGI.unescapeHTML(response.body))
@@ -169,7 +168,7 @@ module GoogleSpreadsheet
           return Hpricot.XML(response)
         end
         
-        def delete(url)
+        def delete(url) #:nodoc:
           header = self.http_header.merge({"Content-Type" => "application/atom+xml"})
           response = http_request(:delete, url, nil, header)
           return Hpricot.XML(response)
@@ -309,8 +308,21 @@ module GoogleSpreadsheet
           @modified = Set.new()
         end
         
-        # URL of cell-based feed of the spreadsheet.
+        # URL of cell-based feed of the worksheet.
         attr_reader(:cells_feed_url)
+        
+        # URL of worksheet feed URL of the worksheet.
+        def worksheet_feed_url
+          # I don't know good way to get worksheet feed URL from cells feed URL.
+          # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
+          # from it.
+          if !(@cells_feed_url =~
+              %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+            raise(GoogleSpreadsheet::Error,
+              "cells feed URL is in unknown format: #{@cells_feed_url}")
+          end
+          return "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
+        end
         
         # Returns content of the cell as String. Top-left cell is [1, 1].
         def [](row, col)
@@ -431,29 +443,20 @@ module GoogleSpreadsheet
           return true
         end
         
-        # Saves your changes made by []= to the server.
+        # Saves your changes made by []=, etc. to the server.
         def save()
           sent = false
           
           if @meta_modified
             
-            # I don't know good way to get worksheet feed URL from cells feed URL.
-            # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
-            # from it.
-            if !(@cells_feed_url =~
-                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
-              raise(GoogleSpreadsheet::Error,
-                "cells feed URL is in unknown format: #{@cells_feed_url}")
-            end
-            ws_doc = @session.get(
-              "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}")
+            ws_doc = @session.get(self.worksheet_feed_url)
             edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
-                <title>#{h(@title)}</title>
-                <gs:rowCount>#{h(@max_rows)}</gs:rowCount>
-                <gs:colCount>#{h(@max_cols)}</gs:colCount>
+                <title>#{h(self.title)}</title>
+                <gs:rowCount>#{h(self.max_rows)}</gs:rowCount>
+                <gs:colCount>#{h(self.max_cols)}</gs:colCount>
               </entry>
             EOS
             
@@ -533,17 +536,10 @@ module GoogleSpreadsheet
           reload()
         end
         
-        # Deletes this worksheet
+        # Deletes this worksheet. Deletion takes effect right away without calling save().
         def delete
-          if !(@cells_feed_url =~
-              %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
-            raise(GoogleSpreadsheet::Error,
-              "cells feed URL is in unknown format: #{@cells_feed_url}")
-          end
-          ws_doc = @session.get(
-            "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}")
+          ws_doc = @session.get(self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          
           @session.delete(edit_url)
         end
         
