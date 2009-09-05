@@ -493,7 +493,7 @@ module GoogleSpreadsheet
                   <id>#{h(@cells_feed_url)}</id>
               EOS
               
-              while batch_count <= 500
+              while batch_count <= 250
                 row,col = @modified[current_cell]
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
