@@ -481,42 +481,55 @@ module GoogleSpreadsheet
             end
             
             # Updates cell values using batch operation.
-            xml = <<-"EOS"
-              <feed xmlns="http://www.w3.org/2005/Atom"
-                    xmlns:batch="http://schemas.google.com/gdata/batch"
-                    xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                <id>#{h(@cells_feed_url)}</id>
-            EOS
-            for row, col in @modified
-              value = @cells[[row, col]]
-              entry = cell_entries[[row, col]]
-              id = entry.search("id").text
-              edit_url = entry.search("link[@rel='edit']")[0]["href"]
-              xml << <<-"EOS"
-                <entry>
-                  <batch:id>#{h(row)},#{h(col)}</batch:id>
-                  <batch:operation type="update"/>
-                  <id>#{h(id)}</id>
-                  <link rel="edit" type="application/atom+xml"
-                    href="#{h(edit_url)}"/>
-                  <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                </entry>
-              EOS
-            end
-            xml << <<-"EOS"
-              </feed>
-            EOS
+            cells = @modified.size
+            current_cell = 0
             
-            result = @session.post("#{@cells_feed_url}/batch", xml)
-            for entry in result.search("atom:entry")
-              interrupted = entry.search("batch:interrupted")[0]
-              if interrupted
-                raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
-                  interrupted["reason"])
+            while current_cell < cells
+              batch_count = 0
+              xml = <<-"EOS"
+                <feed xmlns="http://www.w3.org/2005/Atom"
+                      xmlns:batch="http://schemas.google.com/gdata/batch"
+                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+                  <id>#{h(@cells_feed_url)}</id>
+              EOS
+              
+              while batch_count <= 500
+                row,col = @modified[current_cell]
+                value = @cells[[row, col]]
+                entry = cell_entries[[row, col]]
+                id = entry.search("id").text
+                edit_url = entry.search("link[@rel='edit']")[0]["href"]
+                xml << <<-"EOS"
+                  <entry>
+                    <batch:id>#{h(row)},#{h(col)}</batch:id>
+                    <batch:operation type="update"/>
+                    <id>#{h(id)}</id>
+                    <link rel="edit" type="application/atom+xml"
+                      href="#{h(edit_url)}"/>
+                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                  </entry>
+                EOS
+                
+                # close each batch out at 500 cells
+                current_cell++
+                batch_count++
               end
-              if !(entry.search("batch:status")[0]["code"] =~ /^2/)
-                raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                  [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
+              
+              xml << <<-"EOS"
+                </feed>
+              EOS
+            
+              result = @session.post("#{@cells_feed_url}/batch", xml)
+              for entry in result.search("atom:entry")
+                interrupted = entry.search("batch:interrupted")[0]
+                if interrupted
+                  raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
+                    interrupted["reason"])
+                end
+                if !(entry.search("batch:status")[0]["code"] =~ /^2/)
+                  raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
+                    [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
+                end
               end
             end
             
