@@ -483,6 +483,7 @@ module GoogleSpreadsheet
             # Updates cell values using batch operation.
             cells = @modified.size
             current_cell = 0
+            modified_cells = @modified.to_a
             
             while current_cell < cells
               batch_count = 0
@@ -493,8 +494,8 @@ module GoogleSpreadsheet
                   <id>#{h(@cells_feed_url)}</id>
               EOS
               
-              until batch_count >= 250
-                row,col = @modified[current_cell]
+              until batch_count > 250
+                row,col = modified_cells[current_cell]
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
                 id = entry.search("id").text
@@ -510,7 +511,6 @@ module GoogleSpreadsheet
                   </entry>
                 EOS
                 
-                # close each batch out at 500 cells
                 current_cell +=1
                 batch_count += 1
               end
