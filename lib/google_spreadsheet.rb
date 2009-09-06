@@ -486,20 +486,20 @@ module GoogleSpreadsheet
             
             while current_cell < cells
               batch_count = 0
-              xml = <<-"EOS"
+              xml = <<-EOS
                 <feed xmlns="http://www.w3.org/2005/Atom"
                       xmlns:batch="http://schemas.google.com/gdata/batch"
                       xmlns:gs="http://schemas.google.com/spreadsheets/2006">
                   <id>#{h(@cells_feed_url)}</id>
               EOS
               
-              while batch_count <= 500
+              until batch_count >= 500
                 row,col = @modified[current_cell]
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
                 id = entry.search("id").text
                 edit_url = entry.search("link[@rel='edit']")[0]["href"]
-                xml << <<-"EOS"
+                xml << <<-EOS
                   <entry>
                     <batch:id>#{h(row)},#{h(col)}</batch:id>
                     <batch:operation type="update"/>
@@ -511,13 +511,11 @@ module GoogleSpreadsheet
                 EOS
                 
                 # close each batch out at 500 cells
-                current_cell++
-                batch_count++
+                current_cell +=1
+                batch_count += 1
               end
               
-              xml << <<-"EOS"
-                </feed>
-              EOS
+              xml << "</feed>"
             
               result = @session.post("#{@cells_feed_url}/batch", xml)
               for entry in result.search("atom:entry")
