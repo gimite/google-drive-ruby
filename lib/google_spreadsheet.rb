@@ -316,7 +316,7 @@ module GoogleSpreadsheet
             #{fields}
           </entry>
         EOS
-        p @session.post(@records_url, xml)
+        @session.post(@records_url, xml)
       end
 
       def records
@@ -337,12 +337,7 @@ module GoogleSpreadsheet
           self[field["name"]] = field.inner_html
         end
       end
-
-      def update(values)
-        # TODO
-      end
     end
-    
     
     # Use GoogleSpreadsheet::Spreadsheet#worksheets to get GoogleSpreadsheet::Worksheet object.
     class Worksheet
