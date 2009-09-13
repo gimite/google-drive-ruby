@@ -205,7 +205,7 @@ module GoogleSpreadsheet
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
           url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
-          return Spreadsheet.new(self, url)
+          return Spreadsheet.new(self, url, key)
         end
         
         # Returns GoogleSpreadsheet::Spreadsheet with given +url+. You must specify either of:
@@ -247,10 +247,11 @@ module GoogleSpreadsheet
         
         include(Util)
         
-        def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
+        def initialize(session, worksheets_feed_url, key, title = nil) #:nodoc:
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
+          @key = key
         end
         
         # URL of worksheet-based feed of the spreadsheet.
@@ -259,6 +260,8 @@ module GoogleSpreadsheet
         # Title of the spreadsheet. So far only available if you get this object by
         # GoogleSpreadsheet::Session#spreadsheets.
         attr_reader(:title)
+
+        attr_reader(:key)
         
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
@@ -269,7 +272,7 @@ module GoogleSpreadsheet
             
             url = entry.search(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, url, title))
+            result.push(Worksheet.new(@session, url, key, title))
           end
           return result.freeze()
         end
@@ -289,23 +292,103 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, url, title)
         end
+
         
     end
-    
+
+    class Table
+      include(Util)
+
+      def initialize(session, entry)
+        @columns = {}
+        @records_url = entry.search("content")[0]["src"]
+        @session = session
+      end
+
+      def add_record(values)
+        fields = ""
+        values.each do |name, value|
+          fields += "<gs:field name='#{h(name)}'>#{h(value)}</gs:field>"
+        end
+        xml =<<-EOS
+          <entry xmlns="http://www.w3.org/2005/Atom" xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+            #{fields}
+          </entry>
+        EOS
+        @session.post(@records_url, xml)
+      end
+
+      def records
+        doc = @session.get(@records_url)
+
+        records = []
+        for entry in doc.search("entry")
+          records << Record.new(@session, entry)
+        end
+        records
+      end
+    end
+
+    class Record < Hash
+      def initialize(session, entry)
+        @session = session
+        for field in entry.search('gs:field')
+          self[field["name"]] = field.inner_html
+        end
+      end
+    end
     
     # Use GoogleSpreadsheet::Spreadsheet#worksheets to get GoogleSpreadsheet::Worksheet object.
     class Worksheet
         
         include(Util)
         
-        def initialize(session, cells_feed_url, title = nil) #:nodoc:
+        def initialize(session, cells_feed_url, key, title = nil) #:nodoc:
           @session = session
           @cells_feed_url = cells_feed_url
           @title = title
+          @key = key
           
           @cells = nil
           @input_values = nil
           @modified = Set.new()
+        end
+
+        def add_table(table_title, summary, columns)
+          column_xml = ""
+
+          columns.each do |index, name|
+            column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
+          end
+
+          xml = <<-"EOS"
+            <entry xmlns="http://www.w3.org/2005/Atom"
+              xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+              <title type='text'>#{h(table_title)}</title>
+              <summary type='text'>#{h(summary)}</summary>
+              <gs:worksheet name='#{h(self.title)}' />
+              <gs:header row='1' />
+              <gs:data numRows='0' startRow='2'>
+                #{column_xml}
+              </gs:data>
+            </entry>
+          EOS
+
+          url = "http://spreadsheets.google.com/feeds/#{@key}/tables"
+
+          result = @session.post(url, xml)
+        end
+
+        def tables
+          url = "http://spreadsheets.google.com/feeds/#{@key}/tables"
+          doc = @session.get(url)
+          result = []
+          for entry in doc.search("entry")
+            title = entry.search("title").text
+            
+            result.push(Table.new(@session, entry))
+          end
+          result.freeze()
         end
         
         # URL of cell-based feed of the worksheet.
