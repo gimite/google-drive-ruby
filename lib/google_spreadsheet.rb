@@ -205,7 +205,7 @@ module GoogleSpreadsheet
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
           url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
-          return Spreadsheet.new(self, url, key)
+          return Spreadsheet.new(self, url)
         end
         
         # Returns GoogleSpreadsheet::Spreadsheet with given +url+. You must specify either of:
@@ -236,7 +236,7 @@ module GoogleSpreadsheet
         #   session.worksheet_by_url(
         #     "http://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
-          return Worksheet.new(self, url)
+          return Worksheet.new(self, nil, url)
         end
         
     end
@@ -247,11 +247,10 @@ module GoogleSpreadsheet
         
         include(Util)
         
-        def initialize(session, worksheets_feed_url, key, title = nil) #:nodoc:
+        def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
-          @key = key
         end
         
         # URL of worksheet-based feed of the spreadsheet.
@@ -260,8 +259,21 @@ module GoogleSpreadsheet
         # Title of the spreadsheet. So far only available if you get this object by
         # GoogleSpreadsheet::Session#spreadsheets.
         attr_reader(:title)
-
-        attr_reader(:key)
+        
+        # Key of the spreadsheet.
+        def key
+          if !(@worksheets_feed_url =~
+              %r{http://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+            raise(GoogleSpreadsheet::Error,
+              "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
+          end
+          return $1
+        end
+        
+        # Tables feed URL of the spreadsheet.
+        def tables_feed_url
+          return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
+        end
         
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
@@ -269,10 +281,9 @@ module GoogleSpreadsheet
           result = []
           for entry in doc.search("entry")
             title = entry.search("title").text
-            
             url = entry.search(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, url, key, title))
+            result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
         end
@@ -290,52 +301,72 @@ module GoogleSpreadsheet
           doc = @session.post(@worksheets_feed_url, xml)
           url = doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-          return Worksheet.new(@session, url, title)
+          return Worksheet.new(@session, self, url, title)
         end
-
+        
+        # Returns list of tables in the spreadsheet.
+        def tables
+          doc = @session.get(self.tables_feed_url)
+          return doc.search("entry").map(){ |e| Table.new(@session, e) }.freeze()
+        end
         
     end
-
+    
+    # Use GoogleSpreadsheet::Worksheet#add_table to create table.
+    # Use GoogleSpreadsheet::Worksheet#tables to get GoogleSpreadsheet::Table objects.
     class Table
-      include(Util)
+        
+        include(Util)
 
-      def initialize(session, entry)
-        @columns = {}
-        @records_url = entry.search("content")[0]["src"]
-        @session = session
-      end
-
-      def add_record(values)
-        fields = ""
-        values.each do |name, value|
-          fields += "<gs:field name='#{h(name)}'>#{h(value)}</gs:field>"
+        def initialize(session, entry) #:nodoc:
+          @columns = {}
+          @worksheet_title = entry.search("gs:worksheet")[0]["name"]
+          @records_url = entry.search("content")[0]["src"]
+          @session = session
         end
-        xml =<<-EOS
-          <entry xmlns="http://www.w3.org/2005/Atom" xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-            #{fields}
-          </entry>
-        EOS
-        @session.post(@records_url, xml)
-      end
+        
+        # Title of the worksheet the table belongs to.
+        attr_reader(:worksheet_title)
 
-      def records
-        doc = @session.get(@records_url)
-
-        records = []
-        for entry in doc.search("entry")
-          records << Record.new(@session, entry)
+        # Adds a record.
+        def add_record(values)
+          fields = ""
+          values.each do |name, value|
+            fields += "<gs:field name='#{h(name)}'>#{h(value)}</gs:field>"
+          end
+          xml =<<-EOS
+            <entry
+                xmlns="http://www.w3.org/2005/Atom"
+                xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+              #{fields}
+            </entry>
+          EOS
+          @session.post(@records_url, xml)
         end
-        records
-      end
+        
+        # Returns records in the table.
+        def records
+          doc = @session.get(@records_url)
+          return doc.search("entry").map(){ |e| Record.new(@session, e) }
+        end
+        
     end
-
+    
+    # Use GoogleSpreadsheet::Table#records to get GoogleSpreadsheet::Record objects.
     class Record < Hash
-      def initialize(session, entry)
-        @session = session
-        for field in entry.search('gs:field')
-          self[field["name"]] = field.inner_html
+        
+        def initialize(session, entry) #:nodoc:
+          @session = session
+          for field in entry.search('gs:field')
+            self[field["name"]] = field.inner_text
+          end
         end
-      end
+        
+        def inspect #:nodoc:
+          content = self.map(){ |k, v| "%p => %p" % [k, v] }.join(", ")
+          return "\#<%p:{%s}>" % [self.class, content]
+        end
+        
     end
     
     # Use GoogleSpreadsheet::Spreadsheet#worksheets to get GoogleSpreadsheet::Worksheet object.
@@ -343,54 +374,17 @@ module GoogleSpreadsheet
         
         include(Util)
         
-        def initialize(session, cells_feed_url, key, title = nil) #:nodoc:
+        def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
           @session = session
+          @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
-          @key = key
-          
+
           @cells = nil
           @input_values = nil
           @modified = Set.new()
         end
 
-        def add_table(table_title, summary, columns)
-          column_xml = ""
-
-          columns.each do |index, name|
-            column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
-          end
-
-          xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom"
-              xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-              <title type='text'>#{h(table_title)}</title>
-              <summary type='text'>#{h(summary)}</summary>
-              <gs:worksheet name='#{h(self.title)}' />
-              <gs:header row='1' />
-              <gs:data numRows='0' startRow='2'>
-                #{column_xml}
-              </gs:data>
-            </entry>
-          EOS
-
-          url = "http://spreadsheets.google.com/feeds/#{@key}/tables"
-
-          result = @session.post(url, xml)
-        end
-
-        def tables
-          url = "http://spreadsheets.google.com/feeds/#{@key}/tables"
-          doc = @session.get(url)
-          result = []
-          for entry in doc.search("entry")
-            title = entry.search("title").text
-            
-            result.push(Table.new(@session, entry))
-          end
-          result.freeze()
-        end
-        
         # URL of cell-based feed of the worksheet.
         attr_reader(:cells_feed_url)
         
@@ -405,6 +399,19 @@ module GoogleSpreadsheet
               "cells feed URL is in unknown format: #{@cells_feed_url}")
           end
           return "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
+        end
+        
+        # GoogleSpreadsheet::Spreadsheet which this worksheet belongs to.
+        def spreadsheet
+          if !@spreadsheet
+            if !(@cells_feed_url =~
+                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              raise(GoogleSpreadsheet::Error,
+                "cells feed URL is in unknown format: #{@cells_feed_url}")
+            end
+            @spreadsheet = @session.spreadsheet_by_key($1)
+          end
+          return @spreadsheet
         end
         
         # Returns content of the cell as String. Top-left cell is [1, 1].
@@ -631,6 +638,37 @@ module GoogleSpreadsheet
           return !@modified.empty?
         end
         
+        # Creates table for the worksheet and returns GoogleSpreadsheet::Table.
+        # See this document for details:
+        # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
+        def add_table(table_title, summary, columns)
+          column_xml = ""
+          columns.each do |index, name|
+            column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
+          end
+
+          xml = <<-"EOS"
+            <entry xmlns="http://www.w3.org/2005/Atom"
+              xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+              <title type='text'>#{h(table_title)}</title>
+              <summary type='text'>#{h(summary)}</summary>
+              <gs:worksheet name='#{h(self.title)}' />
+              <gs:header row='1' />
+              <gs:data numRows='0' startRow='2'>
+                #{column_xml}
+              </gs:data>
+            </entry>
+          EOS
+
+          result = @session.post(self.spreadsheet.tables_feed_url, xml)
+          return Table.new(@session, result)
+        end
+        
+        # Returns list of tables for the workwheet.
+        def tables
+          return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
+        end
+
     end
     
     
