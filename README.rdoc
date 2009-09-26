@@ -1,4 +1,4 @@
-This is a library to read/write Google Spreadsheet.
+This is a Ruby 1.8/1.9 library to read/write Google Spreadsheet.
 
 
 = How to install
@@ -49,6 +49,11 @@ API document: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
 http://github.com/gimite/google-spreadsheet-ruby/tree/master
 
 The license of this source is "New BSD Licence"
+
+
+= Supported environments
+
+Ruby 1.8.x and Ruby 1.9.x. Checked with Ruby 1.8.7 and Ruby 1.9.1.
 
 
 = Author
