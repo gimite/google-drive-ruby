@@ -5,11 +5,11 @@ Gem::Specification.new do |s|
   s.date = %q{2009-09-26}
   s.description = %q{This is a library to read/write Google Spreadsheet.}
   s.email = ["gimite+github@gmail.com"]
-  s.extra_rdoc_files = ["README.txt"]
-  s.files = ["README.txt", "lib/google_spreadsheet.rb"]
+  s.extra_rdoc_files = ["README.rdoc"]
+  s.files = ["README.rdoc", "lib/google_spreadsheet.rb"]
   s.has_rdoc = true
   s.homepage = %q{http://github.com/gimite/google-spreadsheet-ruby/tree/master}
-  s.rdoc_options = ["--main", "README.txt"]
+  s.rdoc_options = ["--main", "README.rdoc"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.2.0}
   s.summary = %q{This is a library to read/write Google Spreadsheet.}
