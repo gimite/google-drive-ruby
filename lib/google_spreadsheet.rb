@@ -10,6 +10,19 @@ require "hpricot"
 Net::HTTP.version_1_2
 
 
+if RUBY_VERSION < "1.9.0"
+  
+  class String
+      
+      def force_encoding(encoding)
+        return self
+      end
+      
+  end
+  
+end
+
+
 module GoogleSpreadsheet
     
     # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
@@ -27,10 +40,17 @@ module GoogleSpreadsheet
     def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
       session = Session.new(File.exist?(path) ? File.read(path) : nil)
       session.on_auth_fail = proc() do
-        require "password"
-        $stderr.print("Mail: ")
-        mail = $stdin.gets().chomp()
-        password = Password.get()
+        begin
+          require "highline"
+        rescue LoadError
+          raise(LoadError,
+            "GoogleSpreadsheet.saved_session requires Highline library. Run\n" +
+            "  \$ sudo gem install highline\n" +
+            "to install it.")
+        end
+        highline = HighLine.new()
+        mail = highline.ask("Mail: ")
+        password = highline.ask("Password: "){ |q| q.echo = false }
         session.login(mail, password)
         open(path, "w", 0600){ |f| f.write(session.auth_token) }
         true
@@ -76,6 +96,10 @@ module GoogleSpreadsheet
         
         def h(str)
           return CGI.escapeHTML(str.to_s())
+        end
+        
+        def as_utf8(str)
+          str.force_encoding("UTF-8")
         end
         
     end
@@ -190,9 +214,9 @@ module GoogleSpreadsheet
           doc = get("http://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           for entry in doc.search("entry")
-            title = entry.search("title").text
-            url = entry.search(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
+            title = as_utf8(entry.search("title").text)
+            url = as_utf8(entry.search(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
             result.push(Spreadsheet.new(self, url, title))
           end
           return result
@@ -280,9 +304,9 @@ module GoogleSpreadsheet
           doc = @session.get(@worksheets_feed_url)
           result = []
           for entry in doc.search("entry")
-            title = entry.search("title").text
-            url = entry.search(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
+            title = as_utf8(entry.search("title").text)
+            url = as_utf8(entry.search(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
             result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
@@ -299,8 +323,8 @@ module GoogleSpreadsheet
             </entry>
           EOS
           doc = @session.post(@worksheets_feed_url, xml)
-          url = doc.search(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
+          url = as_utf8(doc.search(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
           return Worksheet.new(@session, self, url, title)
         end
         
@@ -320,8 +344,8 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = entry.search("gs:worksheet")[0]["name"]
-          @records_url = entry.search("content")[0]["src"]
+          @worksheet_title = as_utf8(entry.search("gs:worksheet")[0]["name"])
+          @records_url = as_utf8(entry.search("content")[0]["src"])
           @session = session
         end
         
@@ -357,8 +381,8 @@ module GoogleSpreadsheet
         
         def initialize(session, entry) #:nodoc:
           @session = session
-          for field in entry.search('gs:field')
-            self[field["name"]] = field.inner_text
+          for field in entry.search("gs:field")
+            self[as_utf8(field["name"])] = as_utf8(field.inner_text)
           end
         end
         
@@ -517,7 +541,7 @@ module GoogleSpreadsheet
           doc = @session.get(@cells_feed_url)
           @max_rows = doc.search("gs:rowCount").text.to_i()
           @max_cols = doc.search("gs:colCount").text.to_i()
-          @title = doc.search("title").text
+          @title = as_utf8(doc.search("title").text)
           
           @cells = {}
           @input_values = {}
@@ -525,8 +549,8 @@ module GoogleSpreadsheet
             cell = entry.search("gs:cell")[0]
             row = cell["row"].to_i()
             col = cell["col"].to_i()
-            @cells[[row, col]] = cell.inner_text
-            @input_values[[row, col]] = cell["inputValue"]
+            @cells[[row, col]] = as_utf8(cell.inner_text)
+            @input_values[[row, col]] = as_utf8(cell["inputValue"])
           end
           @modified.clear()
           @meta_modified = false
