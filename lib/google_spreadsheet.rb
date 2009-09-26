@@ -41,10 +41,11 @@ module GoogleSpreadsheet
       session = Session.new(File.exist?(path) ? File.read(path) : nil)
       session.on_auth_fail = proc() do
         begin
-          require "highline"
+          require "highline2"
         rescue LoadError
           raise(LoadError,
-            "GoogleSpreadsheet.saved_session requires Highline library. Run\n" +
+            "GoogleSpreadsheet.saved_session requires Highline library.\n" +
+            "Run\n" +
             "  \$ sudo gem install highline\n" +
             "to install it.")
         end
