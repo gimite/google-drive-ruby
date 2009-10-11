@@ -1,6 +1,7 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
+require "enumerator"
 require "set"
 require "net/https"
 require "open-uri"
@@ -41,7 +42,7 @@ module GoogleSpreadsheet
       session = Session.new(File.exist?(path) ? File.read(path) : nil)
       session.on_auth_fail = proc() do
         begin
-          require "highline2"
+          require "highline"
         rescue LoadError
           raise(LoadError,
             "GoogleSpreadsheet.saved_session requires Highline library.\n" +
@@ -404,7 +405,7 @@ module GoogleSpreadsheet
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
-
+          
           @cells = nil
           @input_values = nil
           @modified = Set.new()
@@ -599,43 +600,48 @@ module GoogleSpreadsheet
             end
             
             # Updates cell values using batch operation.
-            xml = <<-"EOS"
-              <feed xmlns="http://www.w3.org/2005/Atom"
-                    xmlns:batch="http://schemas.google.com/gdata/batch"
-                    xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                <id>#{h(@cells_feed_url)}</id>
-            EOS
-            for row, col in @modified
-              value = @cells[[row, col]]
-              entry = cell_entries[[row, col]]
-              id = entry.search("id").text
-              edit_url = entry.search("link[@rel='edit']")[0]["href"]
-              xml << <<-"EOS"
-                <entry>
-                  <batch:id>#{h(row)},#{h(col)}</batch:id>
-                  <batch:operation type="update"/>
-                  <id>#{h(id)}</id>
-                  <link rel="edit" type="application/atom+xml"
-                    href="#{h(edit_url)}"/>
-                  <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                </entry>
+            # If the data is large, we split it into multiple operations, otherwise batch may fail.
+            @modified.each_slice(250) do |chunk|
+              
+              xml = <<-EOS
+                <feed xmlns="http://www.w3.org/2005/Atom"
+                      xmlns:batch="http://schemas.google.com/gdata/batch"
+                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+                  <id>#{h(@cells_feed_url)}</id>
               EOS
-            end
-            xml << <<-"EOS"
-              </feed>
-            EOS
+              for row, col in chunk
+                value = @cells[[row, col]]
+                entry = cell_entries[[row, col]]
+                id = entry.search("id").text
+                edit_url = entry.search("link[@rel='edit']")[0]["href"]
+                xml << <<-EOS
+                  <entry>
+                    <batch:id>#{h(row)},#{h(col)}</batch:id>
+                    <batch:operation type="update"/>
+                    <id>#{h(id)}</id>
+                    <link rel="edit" type="application/atom+xml"
+                      href="#{h(edit_url)}"/>
+                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                  </entry>
+                EOS
+              end
+              xml << <<-"EOS"
+                </feed>
+              EOS
             
-            result = @session.post("#{@cells_feed_url}/batch", xml)
-            for entry in result.search("atom:entry")
-              interrupted = entry.search("batch:interrupted")[0]
-              if interrupted
-                raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
-                  interrupted["reason"])
+              result = @session.post("#{@cells_feed_url}/batch", xml)
+              for entry in result.search("atom:entry")
+                interrupted = entry.search("batch:interrupted")[0]
+                if interrupted
+                  raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
+                    interrupted["reason"])
+                end
+                if !(entry.search("batch:status")[0]["code"] =~ /^2/)
+                  raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
+                    [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
+                end
               end
-              if !(entry.search("batch:status")[0]["code"] =~ /^2/)
-                raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                  [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
-              end
+              
             end
             
             @modified.clear()
