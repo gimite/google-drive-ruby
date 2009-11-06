@@ -10,20 +10,6 @@ require "rubygems"
 require "hpricot"
 Net::HTTP.version_1_2
 
-
-if RUBY_VERSION < "1.9.0"
-  
-  class String
-      
-      def force_encoding(encoding)
-        return self
-      end
-      
-  end
-  
-end
-
-
 module GoogleSpreadsheet
     
     # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
@@ -101,7 +87,11 @@ module GoogleSpreadsheet
         end
         
         def as_utf8(str)
-          str.force_encoding("UTF-8")
+          if str.respond_to?(:force_encoding)
+            str.force_encoding("UTF-8")
+          else
+            str
+          end
         end
         
     end
