@@ -23,9 +23,18 @@ module GoogleSpreadsheet
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
     #
-    # This method requires Ruby/Password library: http://www.caliban.org/ruby/ruby-password.shtml
+    # This method requires Highline library: http://rubyforge.org/projects/highline/
     def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
-      session = Session.new(File.exist?(path) ? File.read(path) : nil)
+      tokens = {}
+      if File.exist?(path)
+        open(path) do |f|
+          for auth in [:wise, :writely]
+            line = f.gets()
+            tokens[auth] = line && line.chomp()
+          end
+        end
+      end
+      session = Session.new(tokens)
       session.on_auth_fail = proc() do
         begin
           require "highline"
@@ -40,10 +49,13 @@ module GoogleSpreadsheet
         mail = highline.ask("Mail: ")
         password = highline.ask("Password: "){ |q| q.echo = false }
         session.login(mail, password)
-        open(path, "w", 0600){ |f| f.write(session.auth_token(:wise)) }
+        open(path, "w", 0600) do |f|
+          f.puts(session.auth_token(:wise))
+          f.puts(session.auth_token(:writely))
+        end
         true
       end
-      if !session.auth_token(:wise)
+      if !session.auth_token
         session.on_auth_fail.call()
       end
       return session
@@ -54,32 +66,8 @@ module GoogleSpreadsheet
       
       module_function
         
-        def http_request(method, url, data, header = {})
-          uri = URI.parse(url)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = uri.scheme == "https"
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          http.start() do
-            path = uri.path + (uri.query ? "?#{uri.query}" : "")
-            if method == :delete || method == :get
-              response = http.__send__(method, path, header)
-            else
-              response = http.__send__(method, path, data, header)
-            end
-            if !(response.code =~ /^2/)
-              raise(GoogleSpreadsheet::Error, "Response code #{response.code} for POST #{url}: " +
-                CGI.unescapeHTML(response.body))
-            end
-            return response.body
-          end
-        end
-        
         def encode_query(params)
-          return params.map(){ |k, v| uri_encode(k) + "=" + uri_encode(v) }.join("&")
-        end
-        
-        def uri_encode(str)
-          return URI.encode(str, /#{URI::UNSAFE}|&/n)
+          return params.map(){ |k, v| CGI.escape(k) + "=" + CGI.escape(v) }.join("&")
         end
         
         def h(str)
@@ -123,8 +111,8 @@ module GoogleSpreadsheet
           return session
         end
         
-        # Creates session object with given authentication tokens.
-        def initialize(auth_tokens = nil)
+        # Restores session using return value of auth_tokens method of previous session.
+        def initialize(auth_tokens = {})
           @auth_tokens = auth_tokens
         end
         
@@ -134,75 +122,54 @@ module GoogleSpreadsheet
         def login(mail, password)
           begin
             @auth_tokens = {}
-            
-            params = {
-              "accountType" => "HOSTED_OR_GOOGLE",
-              "Email" => mail,
-              "Passwd" => password,
-              "service" => "wise",
-              "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
-            }
-            response = http_request(:post,
-              "https://www.google.com/accounts/ClientLogin", encode_query(params))
-            @auth_tokens[:wise] = response.slice(/^Auth=(.*)$/, 1)
-
-            params = {
-              "accountType" => "HOSTED_OR_GOOGLE",
-              "Email" => mail,
-              "Passwd" => password,
-              "service" => "writely",
-              "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
-            }
-            response = http_request(:post,
-              "https://www.google.com/accounts/ClientLogin", encode_query(params))
-            @auth_tokens[:writely] = response.slice(/^Auth=(.*)$/, 1)
+            authenticate(mail, password, :wise)
+            authenticate(mail, password, :writely)
           rescue GoogleSpreadsheet::Error => ex
             return true if @on_auth_fail && @on_auth_fail.call()
             raise(AuthenticationError, "authentication failed for #{mail}: #{ex.message}")
           end
         end
         
+        # Authentication tokens.
+        attr_reader(:auth_tokens)
+        
         # Authentication token.
-        attr_accessor :wise_auth_token, :writely_auth_token
+        def auth_token(auth = :wise)
+          return @auth_tokens[auth]
+        end
         
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
         
         def get(url, auth = :wise) #:nodoc:
-          header = auth_header(auth)
-          response = http_request(:get, url, nil, header);
+          response = http_request(:get, url, nil, auth)
           return Hpricot.XML(response)
         end
 
         def get_raw(url, auth = :wise)
-          header = auth_header(auth)
-          response = http_request(:get, url, nil, header);
-          response
+          return http_request(:get, url, nil, auth)
         end
         
         def post(url, data, auth = :wise) #:nodoc:
-          header = auth_header(auth).merge({"Content-Type" => "application/atom+xml"})
-          response = http_request(:post, url, data, header)
+          response = http_request(:post, url, data, auth, {"Content-Type" => "application/atom+xml"})
           return Hpricot.XML(response)
         end
         
         def put(url, data, auth = :wise) #:nodoc:
-          header = auth_header(auth).merge({"Content-Type" => "application/atom+xml"})
-          response = http_request(:put, url, data, header)
+          response = http_request(:put, url, data, auth, {"Content-Type" => "application/atom+xml"})
           return Hpricot.XML(response)
         end
         
         def delete(url, auth = :wise) #:nodoc:
-          header = auth_header(auth).merge({"Content-Type" => "application/atom+xml"})
-          response = http_request(:delete, url, nil, header)
+          response = http_request(:delete, url, nil, auth, {"Content-Type" => "application/atom+xml"})
           return Hpricot.XML(response)
         end
 
         def upload(url, ods_file, name)
-          header = auth_header(:writely).merge({"Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
-                                            "Slug" => name})
-          response = http_request(:post, url, ods_file, header)
+          response = http_request(:post, url, ods_file, :writely,
+            {"Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
+             "Slug" => name})
           return Hpricot.XML(response)
         end
         
@@ -271,9 +238,13 @@ module GoogleSpreadsheet
           return Worksheet.new(self, nil, url)
         end
         
-
-        def create_spreadsheet title = "Untitled", 
-          url = "http://docs.google.com/feeds/documents/private/full"
+        # Creates new spreadsheet and returns the new GoogleSpreadsheet::Spreadsheet.
+        #
+        # e.g.
+        #   session.create_spreadsheet("My new sheet")
+        def create_spreadsheet(
+            title = "Untitled",
+            feed_url = "http://docs.google.com/feeds/documents/private/full")
 
           xml = <<-"EOS"
             <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
@@ -283,11 +254,55 @@ module GoogleSpreadsheet
             </atom:entry>
           EOS
 
-          doc = post(url, xml, :writely)
+          doc = post(feed_url, xml, :writely)
           ss_url = as_utf8(doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
           return Spreadsheet.new(self, ss_url, title)
         end
+        
+      private
+        
+        def authenticate(mail, password, auth)
+          params = {
+            "accountType" => "HOSTED_OR_GOOGLE",
+            "Email" => mail,
+            "Passwd" => password,
+            "service" => auth.to_s(),
+            "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
+          }
+          response = http_request(:post,
+            "https://www.google.com/accounts/ClientLogin", encode_query(params), nil)
+          @auth_tokens[auth] = response.slice(/^Auth=(.*)$/, 1)
+        end
+        
+        def http_request(method, url, data, auth, add_header = {})
+          uri = URI.parse(url)
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = uri.scheme == "https"
+          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          http.start() do
+            while true
+              path = uri.path + (uri.query ? "?#{uri.query}" : "")
+              header = (auth ? auth_header(auth) : {}).merge(add_header)
+              if method == :delete || method == :get
+                response = http.__send__(method, path, header)
+              else
+                response = http.__send__(method, path, data, header)
+              end
+              if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
+                next
+              end
+              if !(response.code =~ /^2/)
+                raise(
+                  response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                  "Response code #{response.code} for #{method} #{url}: " +
+                  CGI.unescapeHTML(response.body))
+              end
+              return response.body
+            end
+          end
+        end
+        
     end
     
     
@@ -321,7 +336,7 @@ module GoogleSpreadsheet
         
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
-          return "http://spreadsheets.google.com/feeds/#{key}/tables"
+          return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
 
         def duplicate(new_name = nil)
