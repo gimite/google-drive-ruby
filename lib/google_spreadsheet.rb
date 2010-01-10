@@ -6,6 +6,7 @@ require "set"
 require "net/https"
 require "open-uri"
 require "cgi"
+require "uri"
 require "rubygems"
 require "hpricot"
 Net::HTTP.version_1_2
@@ -222,7 +223,7 @@ module GoogleSpreadsheet
             <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
               <atom:category scheme="http://schemas.google.com/g/2005#kind"
                   term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
-              <atom:title>#{title}</atom:title>
+              <atom:title>#{h(title)}</atom:title>
             </atom:entry>
           EOS
 
@@ -342,7 +343,7 @@ module GoogleSpreadsheet
           url = "http://docs.google.com/feeds/documents/private/full"
           header = {
             "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
-            "Slug" => new_name,
+            "Slug" => URI.encode(new_name),
           }
           doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
           ss_url = as_utf8(doc.search(
@@ -548,6 +549,7 @@ module GoogleSpreadsheet
         # Updates number of rows.
         # Note that update is not sent to the server until you call save().
         def max_rows=(rows)
+          reload() if !@cells
           @max_rows = rows
           @meta_modified = true
         end
@@ -561,6 +563,7 @@ module GoogleSpreadsheet
         # Updates number of columns.
         # Note that update is not sent to the server until you call save().
         def max_cols=(cols)
+          reload() if !@cells
           @max_cols = cols
           @meta_modified = true
         end
@@ -574,6 +577,7 @@ module GoogleSpreadsheet
         # Updates title of the worksheet.
         # Note that update is not sent to the server until you call save().
         def title=(title)
+          reload() if !@cells
           @title = title
           @meta_modified = true
         end
@@ -600,7 +604,7 @@ module GoogleSpreadsheet
           doc = @session.request(:get, @cells_feed_url)
           @max_rows = doc.search("gs:rowCount").text.to_i()
           @max_cols = doc.search("gs:colCount").text.to_i()
-          @title = as_utf8(doc.search("title").text)
+          @title = as_utf8(doc.search("/feed/title").text)
           
           @cells = {}
           @input_values = {}
