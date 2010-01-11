@@ -20,10 +20,13 @@ Gem::Specification.new do |s|
 
     if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0')
       s.add_development_dependency(%q<hpricot>, [">= 0.3"])
+      s.add_development_dependency(%q<oauth>, [">= 0.3.6"])
     else
       s.add_dependency(%q<hpricot>, [">= 0.3"])
+      s.add_dependency(%q<oauth>, [">= 0.3.6"])
     end
   else
     s.add_dependency(%q<hpricot>, [">= 0.3"])
+    s.add_dependency(%q<oauth>, [">= 0.3.6"])
   end
 end

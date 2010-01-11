@@ -6,60 +6,84 @@ require "set"
 require "net/https"
 require "open-uri"
 require "cgi"
+require "uri"
 require "rubygems"
 require "hpricot"
+require "oauth"
 Net::HTTP.version_1_2
 
 module GoogleSpreadsheet
     
-    # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
-    # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
-    # Google Apps account is supported.
-    def self.login(mail, password)
-      return Session.login(mail, password)
+  # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
+  # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
+  # Google Apps account is supported.
+  def self.login(mail, password)
+    return Session.login(mail, password)
+  end
+
+  # If already authorized by Google then just pass in your oauth_token to begin
+  # For generating oauth_token,you can proceed as follow:
+  # 1) First generate OAuth consumer object with key and secret for your site by registering site with google  
+  # @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
+
+  # 2) Request token with OAuth
+  # @request_token=@consumer.get_request_token
+  # session[:request_token] = @request_token
+  # redirect_to @request_token.authorize_url
+
+  # 3) Create an oauth acess token
+  # @oauth_access_token = @request_token.get_access_token
+  # @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
+
+  # See these documents for details:
+  # http://oauth.rubyforge.org/
+  # http://code.google.com/apis/accounts/docs/OAuth.html
+
+  def self.authorized(oauth_token)
+    return Session.authorized(oauth_token)
+  end
+
+  # Restores GoogleSpreadsheet::Session from +path+ and returns it.
+  # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
+  # authenticates with them, stores the session to +path+ and returns it.
+  #
+  # This method requires Highline library: http://rubyforge.org/projects/highline/
+  def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
+    tokens = {}
+    if File.exist?(path)
+      open(path) do |f|
+        for auth in [:wise, :writely]
+          line = f.gets()
+          tokens[auth] = line && line.chomp()
+        end
+      end
     end
-    
-    # Restores GoogleSpreadsheet::Session from +path+ and returns it.
-    # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
-    # authenticates with them, stores the session to +path+ and returns it.
-    #
-    # This method requires Highline library: http://rubyforge.org/projects/highline/
-    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
-      tokens = {}
-      if File.exist?(path)
-        open(path) do |f|
-          for auth in [:wise, :writely]
-            line = f.gets()
-            tokens[auth] = line && line.chomp()
-          end
-        end
+    session = Session.new(tokens)
+    session.on_auth_fail = proc() do
+      begin
+        require "highline"
+      rescue LoadError
+        raise(LoadError,
+        "GoogleSpreadsheet.saved_session requires Highline library.\n" +
+        "Run\n" +
+        "  \$ sudo gem install highline\n" +
+        "to install it.")
       end
-      session = Session.new(tokens)
-      session.on_auth_fail = proc() do
-        begin
-          require "highline"
-        rescue LoadError
-          raise(LoadError,
-            "GoogleSpreadsheet.saved_session requires Highline library.\n" +
-            "Run\n" +
-            "  \$ sudo gem install highline\n" +
-            "to install it.")
-        end
-        highline = HighLine.new()
-        mail = highline.ask("Mail: ")
-        password = highline.ask("Password: "){ |q| q.echo = false }
-        session.login(mail, password)
-        open(path, "w", 0600) do |f|
-          f.puts(session.auth_token(:wise))
-          f.puts(session.auth_token(:writely))
-        end
-        true
+      highline = HighLine.new()
+      mail = highline.ask("Mail: ")
+      password = highline.ask("Password: "){ |q| q.echo = false }
+      session.login(mail, password)
+      open(path, "w", 0600) do |f|
+        f.puts(session.auth_token(:wise))
+        f.puts(session.auth_token(:writely))
       end
-      if !session.auth_token
-        session.on_auth_fail.call()
-      end
-      return session
+      true
     end
+    if !session.auth_token
+      session.on_auth_fail.call()
+    end
+    return session
+  end
     
     
     module Util #:nodoc:
@@ -110,12 +134,21 @@ module GoogleSpreadsheet
           session.login(mail, password)
           return session
         end
-        
-        # Restores session using return value of auth_tokens method of previous session.
-        def initialize(auth_tokens = {})
-          @auth_tokens = auth_tokens
+
+        def self.authorized(oauth_token)
+          session = Session.new(nil, oauth_token)
         end
-        
+
+        # Restores session using return value of auth_tokens method of previous session.
+        # You can use oauth_token instead of gmail username and password if you have used Google hybrid protocol (Open ID+ OAuth)
+        def initialize(auth_tokens, oauth_token)
+          if oauth_token
+            @oauth_token = oauth_token
+          else  
+            @auth_tokens = auth_tokens
+          end
+        end
+
         # Authenticates with given +mail+ and +password+, and updates current session object
         # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
         # Google Apps account is supported.
@@ -142,39 +175,12 @@ module GoogleSpreadsheet
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
         
-        def get(url, auth = :wise) #:nodoc:
-          response = http_request(:get, url, nil, auth)
-          return Hpricot.XML(response)
-        end
-
-        def get_raw(url, auth = :wise)
-          return http_request(:get, url, nil, auth)
-        end
-        
-        def post(url, data, auth = :wise) #:nodoc:
-          response = http_request(:post, url, data, auth, {"Content-Type" => "application/atom+xml"})
-          return Hpricot.XML(response)
-        end
-        
-        def put(url, data, auth = :wise) #:nodoc:
-          response = http_request(:put, url, data, auth, {"Content-Type" => "application/atom+xml"})
-          return Hpricot.XML(response)
-        end
-        
-        def delete(url, auth = :wise) #:nodoc:
-          response = http_request(:delete, url, nil, auth, {"Content-Type" => "application/atom+xml"})
-          return Hpricot.XML(response)
-        end
-
-        def upload(url, ods_file, name)
-          response = http_request(:post, url, ods_file, :writely,
-            {"Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
-             "Slug" => name})
-          return Hpricot.XML(response)
-        end
-        
-        def auth_header auth #:nodoc:
-          return {"Authorization" => "GoogleLogin auth=#{@auth_tokens[auth]}"}
+        def auth_header(auth) #:nodoc:
+          if auth == :none
+            return {}
+          else
+            return {"Authorization" => "GoogleLogin auth=#{@auth_tokens[auth]}"}
+          end
         end
 
         # Returns list of spreadsheets for the user as array of GoogleSpreadsheet::Spreadsheet.
@@ -186,7 +192,7 @@ module GoogleSpreadsheet
         #   session.spreadsheets("title" => "hoge")
         def spreadsheets(params = {})
           query = encode_query(params)
-          doc = get("http://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
+          doc = request(:get, "http://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           for entry in doc.search("entry")
             title = as_utf8(entry.search("title").text)
@@ -245,19 +251,72 @@ module GoogleSpreadsheet
         def create_spreadsheet(
             title = "Untitled",
             feed_url = "http://docs.google.com/feeds/documents/private/full")
-
           xml = <<-"EOS"
             <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
               <atom:category scheme="http://schemas.google.com/g/2005#kind"
                   term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
-              <atom:title>#{title}</atom:title>
+              <atom:title>#{h(title)}</atom:title>
             </atom:entry>
           EOS
 
-          doc = post(feed_url, xml, :writely)
+          doc = request(:post, feed_url, :data => xml, :auth => :writely)
           ss_url = as_utf8(doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
           return Spreadsheet.new(self, ss_url, title)
+        end
+        
+        def request(method, url, params = {}) #:nodoc:
+          if @oauth_token  
+            if method == :get
+              response = @oauth_token.get(url)
+              return Hpricot.XML(response.body)
+            elsif method == :post
+              response = @oauth_token.post(url,params[:data])
+              return Hpricot.XML(response.body)
+            end
+          else
+            uri = URI.parse(url)
+            data = params[:data]
+            auth = params[:auth] || :wise
+            if params[:header]
+              add_header = params[:header]
+            else
+              add_header = data ? {"Content-Type" => "application/atom+xml"} : {}
+            end
+            response_type = params[:response_type] || :xml
+
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.use_ssl = uri.scheme == "https"
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            http.start() do
+              while true
+                path = uri.path + (uri.query ? "?#{uri.query}" : "")
+                header = auth_header(auth).merge(add_header)
+                if method == :delete || method == :get
+                  response = http.__send__(method, path, header)
+                else
+                  response = http.__send__(method, path, data, header)
+                end
+                if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
+                  next
+                end
+                if !(response.code =~ /^2/)
+                  raise(
+                  response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                  "Response code #{response.code} for #{method} #{url}: " +
+                  CGI.unescapeHTML(response.body))
+                end
+                case response_type
+                when :xml
+                  return Hpricot.XML(response.body)
+                when :raw
+                  return response.body
+                else
+                  raise("unknown params[:response_type]: %s" % response_type)
+                end
+              end
+            end
+          end
         end
         
       private
@@ -270,37 +329,10 @@ module GoogleSpreadsheet
             "service" => auth.to_s(),
             "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
           }
-          response = http_request(:post,
-            "https://www.google.com/accounts/ClientLogin", encode_query(params), nil)
+          response = request(:post,
+            "https://www.google.com/accounts/ClientLogin",
+            :data => encode_query(params), :auth => :none, :header => {}, :response_type => :raw)
           @auth_tokens[auth] = response.slice(/^Auth=(.*)$/, 1)
-        end
-        
-        def http_request(method, url, data, auth, add_header = {})
-          uri = URI.parse(url)
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = uri.scheme == "https"
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          http.start() do
-            while true
-              path = uri.path + (uri.query ? "?#{uri.query}" : "")
-              header = (auth ? auth_header(auth) : {}).merge(add_header)
-              if method == :delete || method == :get
-                response = http.__send__(method, path, header)
-              else
-                response = http.__send__(method, path, data, header)
-              end
-              if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
-                next
-              end
-              if !(response.code =~ /^2/)
-                raise(
-                  response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                  "Response code #{response.code} for #{method} #{url}: " +
-                  CGI.unescapeHTML(response.body))
-              end
-              return response.body
-            end
-          end
         end
         
     end
@@ -338,23 +370,40 @@ module GoogleSpreadsheet
         def tables_feed_url
           return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
-
+        
+        # URL of feed used in document list feed API.
+        def document_feed_url
+          return "http://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
+        end
+        
+        # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
-          new_name ||= "Copy of " + @title
+          new_name ||= (@title ? "Copy of " + @title : "Untitled")
           get_url = "http://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
-          ods = @session.get_raw(get_url)
+          ods = @session.request(:get, get_url, :response_type => :raw)
           
           url = "http://docs.google.com/feeds/documents/private/full"
-
-          doc = @session.upload(url, ods, new_name)
+          header = {
+            "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
+            "Slug" => URI.encode(new_name),
+          }
+          doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
           ss_url = as_utf8(doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
           return Spreadsheet.new(@session, ss_url, title)
         end
         
+        # If +permanent+ is +false+, moves the spreadsheet to the trash.
+        # If +permanent+ is +true+, deletes the spreadsheet permanently.
+        def delete(permanent = false)
+          @session.request(:delete,
+            self.document_feed_url + (permanent ? "?delete=true" : ""),
+            :auth => :writely, :header => {"If-Match" => "*"})
+        end
+        
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
-          doc = @session.get(@worksheets_feed_url)
+          doc = @session.request(:get, @worksheets_feed_url)
           result = []
           for entry in doc.search("entry")
             title = as_utf8(entry.search("title").text)
@@ -375,7 +424,7 @@ module GoogleSpreadsheet
               <gs:colCount>#{h(max_cols)}</gs:colCount>
             </entry>
           EOS
-          doc = @session.post(@worksheets_feed_url, xml)
+          doc = @session.request(:post, @worksheets_feed_url, :data => xml)
           url = as_utf8(doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
           return Worksheet.new(@session, self, url, title)
@@ -383,7 +432,7 @@ module GoogleSpreadsheet
         
         # Returns list of tables in the spreadsheet.
         def tables
-          doc = @session.get(self.tables_feed_url)
+          doc = @session.request(:get, self.tables_feed_url)
           return doc.search("entry").map(){ |e| Table.new(@session, e) }.freeze()
         end
         
@@ -418,12 +467,12 @@ module GoogleSpreadsheet
               #{fields}
             </entry>
           EOS
-          @session.post(@records_url, xml)
+          @session.request(:post, @records_url, :data => xml)
         end
         
         # Returns records in the table.
         def records
-          doc = @session.get(@records_url)
+          doc = @session.request(:get, @records_url)
           return doc.search("entry").map(){ |e| Record.new(@session, e) }
         end
         
@@ -542,6 +591,7 @@ module GoogleSpreadsheet
         # Updates number of rows.
         # Note that update is not sent to the server until you call save().
         def max_rows=(rows)
+          reload() if !@cells
           @max_rows = rows
           @meta_modified = true
         end
@@ -555,6 +605,7 @@ module GoogleSpreadsheet
         # Updates number of columns.
         # Note that update is not sent to the server until you call save().
         def max_cols=(cols)
+          reload() if !@cells
           @max_cols = cols
           @meta_modified = true
         end
@@ -568,6 +619,7 @@ module GoogleSpreadsheet
         # Updates title of the worksheet.
         # Note that update is not sent to the server until you call save().
         def title=(title)
+          reload() if !@cells
           @title = title
           @meta_modified = true
         end
@@ -591,10 +643,10 @@ module GoogleSpreadsheet
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
-          doc = @session.get(@cells_feed_url)
+          doc = @session.request(:get, @cells_feed_url)
           @max_rows = doc.search("gs:rowCount").text.to_i()
           @max_cols = doc.search("gs:colCount").text.to_i()
-          @title = as_utf8(doc.search("title").text)
+          @title = as_utf8(doc.search("/feed/title").text)
           
           @cells = {}
           @input_values = {}
@@ -616,7 +668,7 @@ module GoogleSpreadsheet
           
           if @meta_modified
             
-            ws_doc = @session.get(self.worksheet_feed_url)
+            ws_doc = @session.request(:get, self.worksheet_feed_url)
             edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
@@ -627,7 +679,7 @@ module GoogleSpreadsheet
               </entry>
             EOS
             
-            @session.put(edit_url, xml)
+            @session.request(:put, edit_url, :data => xml)
             
             @meta_modified = false
             sent = true
@@ -643,7 +695,7 @@ module GoogleSpreadsheet
             cols = @modified.map(){ |r, c| c }
             url = "#{@cells_feed_url}?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
               "&min-col=#{cols.min}&max-col=#{cols.max}"
-            doc = @session.get(url)
+            doc = @session.request(:get, url)
             for entry in doc.search("entry")
               row = entry.search("gs:cell")[0]["row"].to_i()
               col = entry.search("gs:cell")[0]["col"].to_i()
@@ -680,7 +732,7 @@ module GoogleSpreadsheet
                 </feed>
               EOS
             
-              result = @session.post("#{@cells_feed_url}/batch", xml)
+              result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
               for entry in result.search("atom:entry")
                 interrupted = entry.search("batch:interrupted")[0]
                 if interrupted
@@ -709,10 +761,10 @@ module GoogleSpreadsheet
         end
         
         # Deletes this worksheet. Deletion takes effect right away without calling save().
-        def delete
-          ws_doc = @session.get(self.worksheet_feed_url)
+        def delete()
+          ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          @session.delete(edit_url)
+          @session.request(:delete, edit_url)
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
@@ -742,7 +794,7 @@ module GoogleSpreadsheet
             </entry>
           EOS
 
-          result = @session.post(self.spreadsheet.tables_feed_url, xml)
+          result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
           return Table.new(@session, result)
         end
         

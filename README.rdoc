@@ -13,10 +13,33 @@ Example:
   
   require "rubygems"
   require "google_spreadsheet"
-  
-  # Logs in.
-  session = GoogleSpreadsheet.login("username@gmail.com", "mypassword")
-  
+   
+ # METHOD #1: With usual google username and password 
+ 				# Logs in.
+  				session = GoogleSpreadsheet.login("username@gmail.com", "mypassword")
+
+  # METHOD #2: Getting rid of usual google username and password,using google OAuth protocol
+   			   	# 1) First generate OAuth consumer object with key and secret for your site by registering site with google  
+   				 @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
+
+   				# 2) Request token with OAuth
+   				 @request_token=@consumer.get_request_token
+ 				 session[:request_token] = @request_token
+ 				 redirect_to @request_token.authorize_url
+
+				# 3) Create an oauth acess token
+				 @oauth_access_token = @request_token.get_access_token
+			     @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
+				
+					 	
+				# See these documents for details:
+		 			# http://oauth.rubyforge.org/
+		 			# http://code.google.com/apis/accounts/docs/OAuth.html
+					# Passing the access token for log in to the Google Spreadsheet
+			   
+			  # Creates GoogleSpreadsheet object with access_token
+			  session = GoogleSpreadsheet.authorized(@access_token)
+		       				
   # First worksheet of http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en
   ws = session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg").worksheets[0]
   
@@ -41,6 +64,8 @@ Example:
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
 
+
+
 API document: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
 
 
@@ -57,5 +82,4 @@ Ruby 1.8.x and Ruby 1.9.x. Checked with Ruby 1.8.7 and Ruby 1.9.1.
 
 
 = Author
-
-Hiroshi Ichikawa - http://gimite.net/en/index.php?Contact
+Sprout Technology Services - http://sprout-technology.com
