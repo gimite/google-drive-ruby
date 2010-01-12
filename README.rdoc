@@ -4,7 +4,7 @@ This is a Ruby 1.8/1.9 library to read/write Google Spreadsheet.
 = How to install
 
   $ gem sources -a http://gems.github.com
-  $ sudo gem install sprout-google-spreadsheet-ruby
+  $ sudo gem install gimite-google-spreadsheet-ruby
 
 
 = How to use
