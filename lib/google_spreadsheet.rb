@@ -31,7 +31,7 @@ module GoogleSpreadsheet
   # session[:request_token] = @request_token
   # redirect_to @request_token.authorize_url
 
-  # 3) Create an oauth acess token
+  # 3) Create an oauth access token
   # @oauth_access_token = @request_token.get_access_token
   # @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
 
