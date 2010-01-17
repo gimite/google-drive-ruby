@@ -9,6 +9,7 @@ require "cgi"
 require "uri"
 require "rubygems"
 require "hpricot"
+require "oauth"
 Net::HTTP.version_1_2
 
 module GoogleSpreadsheet
@@ -19,7 +20,29 @@ module GoogleSpreadsheet
     def self.login(mail, password)
       return Session.login(mail, password)
     end
-    
+
+    # Authenticates with given OAuth token.
+    #
+    # For generating oauth_token, you can proceed as follow:
+    #
+    # 1) First generate OAuth consumer object with key and secret for your site by registering site with google
+    #   @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
+    # 2) Request token with OAuth
+    #   @request_token = @consumer.get_request_token
+    #   session[:request_token] = @request_token
+    #   redirect_to @request_token.authorize_url
+    # 3) Create an oauth access token
+    #   @oauth_access_token = @request_token.get_access_token
+    #   @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
+    #
+    # See these documents for details:
+    #
+    # - http://oauth.rubyforge.org/
+    # - http://code.google.com/apis/accounts/docs/OAuth.html
+    def self.login_with_oauth(oauth_token)
+      return Session.login_with_oauth(oauth_token)
+    end
+
     # Restores GoogleSpreadsheet::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
@@ -111,12 +134,21 @@ module GoogleSpreadsheet
           session.login(mail, password)
           return session
         end
-        
-        # Restores session using return value of auth_tokens method of previous session.
-        def initialize(auth_tokens = {})
-          @auth_tokens = auth_tokens
+
+        # The same as GoogleSpreadsheet.login_with_oauth.
+        def self.login_with_oauth(oauth_token)
+          session = Session.new(nil, oauth_token)
         end
-        
+
+        # Restores session using return value of auth_tokens method of previous session.
+        def initialize(auth_tokens, oauth_token = nil)
+          if oauth_token
+            @oauth_token = oauth_token
+          else
+            @auth_tokens = auth_tokens
+          end
+        end
+
         # Authenticates with given +mail+ and +password+, and updates current session object
         # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
         # Google Apps account is supported.
@@ -244,40 +276,57 @@ module GoogleSpreadsheet
           end
           response_type = params[:response_type] || :xml
           
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = uri.scheme == "https"
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          http.start() do
-            while true
-              path = uri.path + (uri.query ? "?#{uri.query}" : "")
-              header = auth_header(auth).merge(add_header)
-              if method == :delete || method == :get
-                response = http.__send__(method, path, header)
-              else
-                response = http.__send__(method, path, data, header)
-              end
-              if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
-                next
-              end
-              if !(response.code =~ /^2/)
-                raise(
-                  response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                  "Response code #{response.code} for #{method} #{url}: " +
-                  CGI.unescapeHTML(response.body))
-              end
-              case response_type
-                when :xml
-                  return Hpricot.XML(response.body)
-                when :raw
-                  return response.body
+          if @oauth_token
+            
+            if method == :delete || method == :get
+              response = @oauth_token.__send__(method, url)
+            else
+              response = @oauth_token.__send__(method, url, data)
+            end
+            return convert_response(response, response_type)
+            
+          else
+            
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.use_ssl = uri.scheme == "https"
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            http.start() do
+              while true
+                path = uri.path + (uri.query ? "?#{uri.query}" : "")
+                header = auth_header(auth).merge(add_header)
+                if method == :delete || method == :get
+                  response = http.__send__(method, path, header)
                 else
-                  raise("unknown params[:response_type]: %s" % response_type)
+                  response = http.__send__(method, path, data, header)
+                end
+                if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
+                  next
+                end
+                if !(response.code =~ /^2/)
+                  raise(
+                    response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                    "Response code #{response.code} for #{method} #{url}: " +
+                    CGI.unescapeHTML(response.body))
+                end
+                return convert_response(response, response_type)
               end
             end
+            
           end
         end
         
       private
+        
+        def convert_response(response, response_type)
+          case response_type
+            when :xml
+              return Hpricot.XML(response.body)
+            when :raw
+              return response.body
+            else
+              raise("unknown params[:response_type]: %s" % response_type)
+          end
+        end
         
         def authenticate(mail, password, auth)
           params = {

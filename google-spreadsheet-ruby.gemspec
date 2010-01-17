@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
   s.name = %q{google-spreadsheet-ruby}
-  s.version = "0.0.9"
+  s.version = "0.1.0"
   s.authors = ["Hiroshi Ichikawa"]
-  s.date = %q{2010-01-11}
+  s.date = %q{2010-01-17}
   s.description = %q{This is a library to read/write Google Spreadsheet.}
   s.email = ["gimite+github@gmail.com"]
   s.extra_rdoc_files = ["README.rdoc"]
@@ -20,10 +20,13 @@ Gem::Specification.new do |s|
 
     if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0')
       s.add_development_dependency(%q<hpricot>, [">= 0.3"])
+      s.add_development_dependency(%q<oauth>, [">= 0.3.6"])
     else
       s.add_dependency(%q<hpricot>, [">= 0.3"])
+      s.add_dependency(%q<oauth>, [">= 0.3.6"])
     end
   else
     s.add_dependency(%q<hpricot>, [">= 0.3"])
+    s.add_dependency(%q<oauth>, [">= 0.3.6"])
   end
 end

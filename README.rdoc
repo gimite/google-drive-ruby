@@ -17,6 +17,7 @@ Example:
   require "google_spreadsheet"
   
   # Logs in.
+  # You can also use OAuth. See document of GoogleSpreadsheet.login_with_oauth for details.
   session = GoogleSpreadsheet.login("username@gmail.com", "mypassword")
   
   # First worksheet of http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en
