@@ -141,7 +141,7 @@ module GoogleSpreadsheet
         end
 
         # Restores session using return value of auth_tokens method of previous session.
-        def initialize(auth_tokens, oauth_token = nil)
+        def initialize(auth_tokens = nil, oauth_token = nil)
           if oauth_token
             @oauth_token = oauth_token
           else
