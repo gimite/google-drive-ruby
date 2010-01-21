@@ -14,76 +14,76 @@ Net::HTTP.version_1_2
 
 module GoogleSpreadsheet
     
-  # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
-  # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
-  # Google Apps account is supported.
-  def self.login(mail, password)
-    return Session.login(mail, password)
-  end
+    # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
+    # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
+    # Google Apps account is supported.
+    def self.login(mail, password)
+      return Session.login(mail, password)
+    end
 
-  # If already authorized by Google then just pass in your oauth_token to begin
-  # For generating oauth_token,you can proceed as follow:
-  # 1) First generate OAuth consumer object with key and secret for your site by registering site with google  
-  # @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
+    # Authenticates with given OAuth token.
+    #
+    # For generating oauth_token, you can proceed as follow:
+    #
+    # 1) First generate OAuth consumer object with key and secret for your site by registering site with google
+    #   @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
+    # 2) Request token with OAuth
+    #   @request_token = @consumer.get_request_token
+    #   session[:request_token] = @request_token
+    #   redirect_to @request_token.authorize_url
+    # 3) Create an oauth access token
+    #   @oauth_access_token = @request_token.get_access_token
+    #   @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
+    #
+    # See these documents for details:
+    #
+    # - http://oauth.rubyforge.org/
+    # - http://code.google.com/apis/accounts/docs/OAuth.html
+    def self.login_with_oauth(oauth_token)
+      return Session.login_with_oauth(oauth_token)
+    end
 
-  # 2) Request token with OAuth
-  # @request_token=@consumer.get_request_token
-  # session[:request_token] = @request_token
-  # redirect_to @request_token.authorize_url
-
-  # 3) Create an oauth access token
-  # @oauth_access_token = @request_token.get_access_token
-  # @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
-
-  # See these documents for details:
-  # http://oauth.rubyforge.org/
-  # http://code.google.com/apis/accounts/docs/OAuth.html
-
-  def self.authorized(oauth_token)
-    return Session.authorized(oauth_token)
-  end
-
-  # Restores GoogleSpreadsheet::Session from +path+ and returns it.
-  # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
-  # authenticates with them, stores the session to +path+ and returns it.
-  #
-  # This method requires Highline library: http://rubyforge.org/projects/highline/
-  def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
-    tokens = {}
-    if File.exist?(path)
-      open(path) do |f|
-        for auth in [:wise, :writely]
-          line = f.gets()
-          tokens[auth] = line && line.chomp()
+    # Restores GoogleSpreadsheet::Session from +path+ and returns it.
+    # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
+    # authenticates with them, stores the session to +path+ and returns it.
+    #
+    # This method requires Highline library: http://rubyforge.org/projects/highline/
+    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
+      tokens = {}
+      if File.exist?(path)
+        open(path) do |f|
+          for auth in [:wise, :writely]
+            line = f.gets()
+            tokens[auth] = line && line.chomp()
+          end
         end
       end
-    end
-    session = Session.new(tokens)
-    session.on_auth_fail = proc() do
-      begin
-        require "highline"
-      rescue LoadError
-        raise(LoadError,
-        "GoogleSpreadsheet.saved_session requires Highline library.\n" +
-        "Run\n" +
-        "  \$ sudo gem install highline\n" +
-        "to install it.")
+      session = Session.new(tokens)
+      session.on_auth_fail = proc() do
+        begin
+          require "highline"
+        rescue LoadError
+          raise(LoadError,
+            "GoogleSpreadsheet.saved_session requires Highline library.\n" +
+            "Run\n" +
+            "  \$ sudo gem install highline\n" +
+            "to install it.")
+        end
+        highline = HighLine.new()
+        mail = highline.ask("Mail: ")
+        password = highline.ask("Password: "){ |q| q.echo = false }
+        session.login(mail, password)
+        open(path, "w", 0600) do |f|
+          f.puts(session.auth_token(:wise))
+          f.puts(session.auth_token(:writely))
+        end
+        true
       end
-      highline = HighLine.new()
-      mail = highline.ask("Mail: ")
-      password = highline.ask("Password: "){ |q| q.echo = false }
-      session.login(mail, password)
-      open(path, "w", 0600) do |f|
-        f.puts(session.auth_token(:wise))
-        f.puts(session.auth_token(:writely))
+      if !session.auth_token
+        session.on_auth_fail.call()
       end
-      true
+      return session
     end
-    if !session.auth_token
-      session.on_auth_fail.call()
-    end
-    return session
-  end
     
     
     module Util #:nodoc:
@@ -135,16 +135,16 @@ module GoogleSpreadsheet
           return session
         end
 
-        def self.authorized(oauth_token)
+        # The same as GoogleSpreadsheet.login_with_oauth.
+        def self.login_with_oauth(oauth_token)
           session = Session.new(nil, oauth_token)
         end
 
         # Restores session using return value of auth_tokens method of previous session.
-        # You can use oauth_token instead of gmail username and password if you have used Google hybrid protocol (Open ID+ OAuth)
-        def initialize(auth_tokens, oauth_token)
+        def initialize(auth_tokens = nil, oauth_token = nil)
           if oauth_token
             @oauth_token = oauth_token
-          else  
+          else
             @auth_tokens = auth_tokens
           end
         end
@@ -266,25 +266,27 @@ module GoogleSpreadsheet
         end
         
         def request(method, url, params = {}) #:nodoc:
-          if @oauth_token  
-            if method == :get
-              response = @oauth_token.get(url)
-              return Hpricot.XML(response.body)
-            elsif method == :post
-              response = @oauth_token.post(url,params[:data])
-              return Hpricot.XML(response.body)
-            end
+          uri = URI.parse(url)
+          data = params[:data]
+          auth = params[:auth] || :wise
+          if params[:header]
+            add_header = params[:header]
           else
-            uri = URI.parse(url)
-            data = params[:data]
-            auth = params[:auth] || :wise
-            if params[:header]
-              add_header = params[:header]
+            add_header = data ? {"Content-Type" => "application/atom+xml"} : {}
+          end
+          response_type = params[:response_type] || :xml
+          
+          if @oauth_token
+            
+            if method == :delete || method == :get
+              response = @oauth_token.__send__(method, url)
             else
-              add_header = data ? {"Content-Type" => "application/atom+xml"} : {}
+              response = @oauth_token.__send__(method, url, data, add_header)
             end
-            response_type = params[:response_type] || :xml
-
+            return convert_response(response, response_type)
+            
+          else
+            
             http = Net::HTTP.new(uri.host, uri.port)
             http.use_ssl = uri.scheme == "https"
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -302,24 +304,29 @@ module GoogleSpreadsheet
                 end
                 if !(response.code =~ /^2/)
                   raise(
-                  response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                  "Response code #{response.code} for #{method} #{url}: " +
-                  CGI.unescapeHTML(response.body))
+                    response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                    "Response code #{response.code} for #{method} #{url}: " +
+                    CGI.unescapeHTML(response.body))
                 end
-                case response_type
-                when :xml
-                  return Hpricot.XML(response.body)
-                when :raw
-                  return response.body
-                else
-                  raise("unknown params[:response_type]: %s" % response_type)
-                end
+                return convert_response(response, response_type)
               end
             end
+            
           end
         end
         
       private
+        
+        def convert_response(response, response_type)
+          case response_type
+            when :xml
+              return Hpricot.XML(response.body)
+            when :raw
+              return response.body
+            else
+              raise("unknown params[:response_type]: %s" % response_type)
+          end
+        end
         
         def authenticate(mail, password, auth)
           params = {
@@ -370,12 +377,13 @@ module GoogleSpreadsheet
         def tables_feed_url
           return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
-        
+
         # URL of feed used in document list feed API.
         def document_feed_url
           return "http://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
-        
+
+      
         # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
@@ -801,6 +809,45 @@ module GoogleSpreadsheet
         # Returns list of tables for the workwheet.
         def tables
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
+        end
+
+        # list feed URL of the worksheet.
+        def list_feed_url
+          # Get the worksheets metafeed 
+          entry = @session.request(:get, self.worksheet_feed_url)
+
+          # Get the URL of list-based feed for the given spreadsheet
+          url = as_utf8(entry.search(
+          "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
+          return url
+        end
+      
+        # Inserts row at the end of worksheet with given values for worksheet
+        # values is 2-Dimesional array containing colname and content pair eg. values = [["colname1","content1"],["colname2","col2 content2"]]
+        # See this document for details
+        # -http://code.google.com/apis/spreadsheets/data/3.0/developers_guide_protocol.html#CreatingListRows
+        def add_row(values)
+          
+          fields = ""
+          values.each do |colname, value|
+            fields += "<gsx:#{h(colname)}>#{h(value)}</gsx:#{h(colname)}>"
+          end
+          
+          # Get list-based feed
+          list_meta_feed = @session.request(:get, self.list_feed_url)
+          
+          post_url = as_utf8(list_meta_feed.search(
+          "link[@rel='http://schemas.google.com/g/2005#post']")[0]["href"])
+          
+           xml =<<-EOS
+              <entry
+                  xmlns="http://www.w3.org/2005/Atom"
+                  xmlns:gsx="http://schemas.google.com/spreadsheets/2006/extended">
+                #{fields}
+              </entry>
+            EOS
+          
+          @session.request(:post, post_url, :data => xml)
         end
 
     end
