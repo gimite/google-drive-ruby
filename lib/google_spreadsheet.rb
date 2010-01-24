@@ -279,9 +279,9 @@ module GoogleSpreadsheet
           if @oauth_token
             
             if method == :delete || method == :get
-              response = @oauth_token.__send__(method, url)
+              response = @oauth_token.__send__(method, url, add_header)
             else
-              response = @oauth_token.__send__(method, url, data)
+              response = @oauth_token.__send__(method, url, data, add_header)
             end
             return convert_response(response, response_type)
             
