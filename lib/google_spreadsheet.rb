@@ -279,7 +279,7 @@ module GoogleSpreadsheet
           if @oauth_token
             
             if method == :delete || method == :get
-              response = @oauth_token.__send__(method, url)
+              response = @oauth_token.__send__(method, url, add_header)
             else
               response = @oauth_token.__send__(method, url, data, add_header)
             end
@@ -772,7 +772,7 @@ module GoogleSpreadsheet
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          @session.request(:delete, edit_url)
+          result = @session.request(:delete, edit_url)
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
@@ -821,35 +821,57 @@ module GoogleSpreadsheet
           "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
           return url
         end
-      
-        # Inserts row at the end of worksheet with given values for worksheet
-        # values is 2-Dimesional array containing colname and content pair eg. values = [["colname1","content1"],["colname2","col2 content2"]]
+
+        # Inserts row at the end of worksheet with given contents for worksheet row 
+        # contents may be simple array eg. contents = ["hoge", "foo", "bar"] where each n-th item is simply value of n-th column
+        # OR hash containing colname,colcontent eg. contents = {"colname1"=>"column content1", "colname2"=>"column content2"}
         # See this document for details
-        # -http://code.google.com/apis/spreadsheets/data/3.0/developers_guide_protocol.html#CreatingListRows
-        def add_row(values)
-          
+        # - http://code.google.com/apis/spreadsheets/data/3.0/developers_guide_protocol.html#CreatingListRows
+        def add_row(contents)
+
+          # if given argument is not hash(simply array),construct a hash containing column name,column content pair
+          if contents.class != Hash
+
+            # Get column names as array
+            col_names = Array.new
+            1.upto self.num_cols do |col|
+              col_names << self[1,col]
+            end
+
+            # Hash containing colname and values pair
+            values = Hash.new
+            col_names.each_with_index do |col,index|
+              values[col] = contents[index]
+            end
+
+            # passed argument is already in required hash form
+          else
+            values = contents 
+          end
+
           fields = ""
           values.each do |colname, value|
             fields += "<gsx:#{h(colname)}>#{h(value)}</gsx:#{h(colname)}>"
           end
-          
+
           # Get list-based feed
           list_meta_feed = @session.request(:get, self.list_feed_url)
-          
+
           post_url = as_utf8(list_meta_feed.search(
           "link[@rel='http://schemas.google.com/g/2005#post']")[0]["href"])
-          
-           xml =<<-EOS
-              <entry
-                  xmlns="http://www.w3.org/2005/Atom"
-                  xmlns:gsx="http://schemas.google.com/spreadsheets/2006/extended">
-                #{fields}
-              </entry>
-            EOS
-          
-          @session.request(:post, post_url, :data => xml)
-        end
 
+          xml =<<-EOS
+          <entry
+          xmlns="http://www.w3.org/2005/Atom"
+          xmlns:gsx="http://schemas.google.com/spreadsheets/2006/extended">
+          #{fields}
+          </entry>
+          EOS
+
+          @session.request(:post, post_url, :data => xml)
+
+        end
+        
     end
     
     
