@@ -192,7 +192,7 @@ module GoogleSpreadsheet
         #   session.spreadsheets("title" => "hoge")
         def spreadsheets(params = {})
           query = encode_query(params)
-          doc = request(:get, "http://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
+          doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           for entry in doc.search("entry")
             title = as_utf8(entry.search("title").text)
@@ -206,10 +206,10 @@ module GoogleSpreadsheet
         # Returns GoogleSpreadsheet::Spreadsheet with given +key+.
         #
         # e.g.
-        #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
+        #   # https://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
-          url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
+          url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
           return Spreadsheet.new(self, url)
         end
         
@@ -219,9 +219,9 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.spreadsheet_by_url(
-        #     "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
+        #     "https://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
         #   session.spreadsheet_by_url(
-        #     "http://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
+        #     "https://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
         def spreadsheet_by_url(url)
           # Tries to parse it as URL of human-readable spreadsheet.
           uri = URI.parse(url)
@@ -239,7 +239,7 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.worksheet_by_url(
-        #     "http://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
+        #     "https://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
@@ -366,7 +366,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{http://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+              %r{https://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
@@ -375,7 +375,7 @@ module GoogleSpreadsheet
         
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
-          return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
+          return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
         
         # URL of feed used in document list feed API.
@@ -386,7 +386,7 @@ module GoogleSpreadsheet
         # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
-          get_url = "http://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
+          get_url = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
           ods = @session.request(:get, get_url, :response_type => :raw)
           
           url = "http://docs.google.com/feeds/documents/private/full"
@@ -527,18 +527,18 @@ module GoogleSpreadsheet
           # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
           # from it.
           if !(@cells_feed_url =~
-              %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
             raise(GoogleSpreadsheet::Error,
               "cells feed URL is in unknown format: #{@cells_feed_url}")
           end
-          return "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
+          return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
         end
         
         # GoogleSpreadsheet::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
