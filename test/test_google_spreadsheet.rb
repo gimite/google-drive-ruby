@@ -54,7 +54,7 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_equal(ss.worksheets_feed_url, ss2.worksheets_feed_url)
       assert_equal("hoge", ss2.worksheets[0].title)
       assert_equal("3", ss2.worksheets[0][1, 1])
-      ss3 = session.spreadsheet_by_url("https://spreadsheets.google.com/ccc?key=#{ss.key}&hl=en")
+      ss3 = session.spreadsheet_by_url("http://spreadsheets.google.com/ccc?key=#{ss.key}&hl=en")
       assert_equal(ss.worksheets_feed_url, ss3.worksheets_feed_url)
       ss4 = session.spreadsheet_by_url(ss.worksheets_feed_url)
       assert_equal(ss.worksheets_feed_url, ss4.worksheets_feed_url)

@@ -105,10 +105,6 @@ module GoogleSpreadsheet
             str
           end
         end
-
-        def as_https(str)
-          str.start_with?('https') ? str : str.gsub(/http/, 'https') 
-        end
         
     end
     
@@ -210,10 +206,10 @@ module GoogleSpreadsheet
         # Returns GoogleSpreadsheet::Spreadsheet with given +key+.
         #
         # e.g.
-        #   # https://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
+        #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
-          url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
+          url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
           return Spreadsheet.new(self, url)
         end
         
@@ -223,7 +219,7 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.spreadsheet_by_url(
-        #     "https://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
+        #     "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
         #   session.spreadsheet_by_url(
         #     "https://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
         def spreadsheet_by_url(url)
@@ -254,7 +250,7 @@ module GoogleSpreadsheet
         #   session.create_spreadsheet("My new sheet")
         def create_spreadsheet(
             title = "Untitled",
-            feed_url = "http://docs.google.com/feeds/documents/private/full")
+            feed_url = "https://docs.google.com/feeds/documents/private/full")
           xml = <<-"EOS"
             <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
               <atom:category scheme="http://schemas.google.com/g/2005#kind"
@@ -270,7 +266,8 @@ module GoogleSpreadsheet
         end
         
         def request(method, url, params = {}) #:nodoc:
-          uri = URI.parse(url)
+          # Always uses HTTPS.
+          uri = URI.parse(url.gsub(%r{^http://}, "https://"))
           data = params[:data]
           auth = params[:auth] || :wise
           if params[:header]
@@ -292,7 +289,7 @@ module GoogleSpreadsheet
           else
             
             http = Net::HTTP.new(uri.host, uri.port)
-            http.use_ssl = uri.scheme == "https"
+            http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
             http.start() do
               while true
@@ -356,7 +353,7 @@ module GoogleSpreadsheet
         
         def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
           @session = session
-          @worksheets_feed_url = as_https(worksheets_feed_url)
+          @worksheets_feed_url = worksheets_feed_url
           @title = title
         end
         
@@ -370,7 +367,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{https://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/full$})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
@@ -458,7 +455,7 @@ module GoogleSpreadsheet
         def initialize(session, entry) #:nodoc:
           @columns = {}
           @worksheet_title = as_utf8(entry.search("gs:worksheet")[0]["name"])
-          @records_url = as_https(as_utf8(entry.search("content")[0]["src"]))
+          @records_url = as_utf8(entry.search("content")[0]["src"])
           @session = session
         end
         
@@ -514,7 +511,7 @@ module GoogleSpreadsheet
         def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
           @session = session
           @spreadsheet = spreadsheet
-          @cells_feed_url = as_https(cells_feed_url)
+          @cells_feed_url = cells_feed_url
           @title = title
           
           @cells = nil
@@ -531,7 +528,7 @@ module GoogleSpreadsheet
           # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
           # from it.
           if !(@cells_feed_url =~
-              %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
             raise(GoogleSpreadsheet::Error,
               "cells feed URL is in unknown format: #{@cells_feed_url}")
           end
@@ -542,7 +539,7 @@ module GoogleSpreadsheet
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
@@ -690,7 +687,7 @@ module GoogleSpreadsheet
               </entry>
             EOS
             
-            @session.request(:put, as_https(edit_url), :data => xml)
+            @session.request(:put, edit_url, :data => xml)
             
             @meta_modified = false
             sent = true
@@ -775,7 +772,7 @@ module GoogleSpreadsheet
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          @session.request(:delete, as_https(edit_url))
+          @session.request(:delete, edit_url)
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
