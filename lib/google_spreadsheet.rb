@@ -105,6 +105,10 @@ module GoogleSpreadsheet
             str
           end
         end
+
+        def as_https(str)
+          str.start_with?('https') ? str : str.gsub(/http/, 'https') 
+        end
         
     end
     
@@ -209,7 +213,7 @@ module GoogleSpreadsheet
         #   # https://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
-          url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
+          url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
           return Spreadsheet.new(self, url)
         end
         
@@ -239,7 +243,7 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.worksheet_by_url(
-        #     "https://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
+        #     "http://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
@@ -352,7 +356,7 @@ module GoogleSpreadsheet
         
         def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
           @session = session
-          @worksheets_feed_url = worksheets_feed_url
+          @worksheets_feed_url = as_https(worksheets_feed_url)
           @title = title
         end
         
@@ -366,7 +370,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{https://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+              %r{http://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
@@ -380,7 +384,7 @@ module GoogleSpreadsheet
         
         # URL of feed used in document list feed API.
         def document_feed_url
-          return "http://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
+          return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
         
         # Creates copy of this spreadsheet with the given name.
@@ -389,7 +393,7 @@ module GoogleSpreadsheet
           get_url = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
           ods = @session.request(:get, get_url, :response_type => :raw)
           
-          url = "http://docs.google.com/feeds/documents/private/full"
+          url = "https://docs.google.com/feeds/documents/private/full"
           header = {
             "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
             "Slug" => URI.encode(new_name),
@@ -454,7 +458,7 @@ module GoogleSpreadsheet
         def initialize(session, entry) #:nodoc:
           @columns = {}
           @worksheet_title = as_utf8(entry.search("gs:worksheet")[0]["name"])
-          @records_url = as_utf8(entry.search("content")[0]["src"])
+          @records_url = as_https(as_utf8(entry.search("content")[0]["src"]))
           @session = session
         end
         
@@ -510,7 +514,7 @@ module GoogleSpreadsheet
         def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
           @session = session
           @spreadsheet = spreadsheet
-          @cells_feed_url = cells_feed_url
+          @cells_feed_url = as_https(cells_feed_url)
           @title = title
           
           @cells = nil
@@ -538,7 +542,7 @@ module GoogleSpreadsheet
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
