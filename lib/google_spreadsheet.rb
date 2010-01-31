@@ -370,7 +370,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{http://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+              %r{https://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
@@ -542,7 +542,7 @@ module GoogleSpreadsheet
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^https://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
@@ -690,7 +690,7 @@ module GoogleSpreadsheet
               </entry>
             EOS
             
-            @session.request(:put, edit_url, :data => xml)
+            @session.request(:put, as_https(edit_url), :data => xml)
             
             @meta_modified = false
             sent = true
@@ -775,7 +775,7 @@ module GoogleSpreadsheet
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          @session.request(:delete, edit_url)
+          @session.request(:delete, as_https(edit_url))
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
