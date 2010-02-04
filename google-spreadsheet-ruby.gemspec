@@ -13,20 +13,8 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.2.0}
   s.summary = %q{This is a library to read/write Google Spreadsheet.}
+  s.specification_version = 2 if s.respond_to? :specification_version=
 
-  if s.respond_to? :specification_version
-    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
-    s.specification_version = 2
-
-    if Gem::Version.new(Gem::RubyGemsVersion) >= Gem::Version.new('1.2.0')
-      s.add_development_dependency(%q<hpricot>, [">= 0.3"])
-      s.add_development_dependency(%q<oauth>, [">= 0.3.6"])
-    else
-      s.add_dependency(%q<hpricot>, [">= 0.3"])
-      s.add_dependency(%q<oauth>, [">= 0.3.6"])
-    end
-  else
-    s.add_dependency(%q<hpricot>, [">= 0.3"])
-    s.add_dependency(%q<oauth>, [">= 0.3.6"])
-  end
+  s.add_dependency("hpricot", [">= 0.3"])
+  s.add_dependency("oauth", [">= 0.3.6"])
 end
