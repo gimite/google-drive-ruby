@@ -265,27 +265,7 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, ss_url, title)
         end
         
-        # Creates new spreadsheet with the file uploaded and returns the new GoogleSpreadsheet::Spreadsheet.
-        def upload_file(
-            title = "Untitled",
-            feed_url = "http://docs.google.com/feeds/documents/private/full")
-            # session = GoogleSpreadsheet.login_with_oauth(User.first.access_token)
-            # session.spreadsheets[0]
-                   
-          header = {
-             "Content-Type" => "text/csv ",
-             "Slug" => "New_school.csv",
-          }
-         
-                   
-                  
-         doc = request(:post, feed_url, :data => "name,phone,address\nshyam,,ktm\nbinod,,bktpur", :auth => :writely, :header => header)
-         ss_url = as_utf8(doc.search(
-           "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
-         return Spreadsheet.new(self, ss_url, title)
-                            
-        end
-        
+                
         def request(method, url, params = {}) #:nodoc:
           uri = URI.parse(url)
           data = params[:data]
@@ -429,6 +409,21 @@ module GoogleSpreadsheet
             self.document_feed_url + (permanent ? "?delete=true" : ""),
             :auth => :writely, :header => {"If-Match" => "*"})
         end
+        
+         # Renames title of the spreadsheet
+          def rename(title)
+            doc = @session.request(:get, self.document_feed_url)
+            edit_url = doc.search("link[@rel='edit']")[0]["href"]
+              xml = <<-"EOS"
+                  <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
+                    <atom:category scheme="http://schemas.google.com/g/2005#kind"
+                        term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
+                    <atom:title>#{h(title)}</atom:title>
+                  </atom:entry>
+              EOS
+
+              @session.request(:put, edit_url, :data => xml)
+          end
         
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
