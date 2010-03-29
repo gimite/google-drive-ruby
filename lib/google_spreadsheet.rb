@@ -248,7 +248,7 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.create_spreadsheet("My new sheet")
-        def create_spreadsheet(
+         def create_spreadsheet(
             title = "Untitled",
             feed_url = "http://docs.google.com/feeds/documents/private/full")
           xml = <<-"EOS"
@@ -263,6 +263,27 @@ module GoogleSpreadsheet
           ss_url = as_utf8(doc.search(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
           return Spreadsheet.new(self, ss_url, title)
+        end
+        
+        # Creates new spreadsheet with the file uploaded and returns the new GoogleSpreadsheet::Spreadsheet.
+        def upload_file(
+            title = "Untitled",
+            feed_url = "http://docs.google.com/feeds/documents/private/full")
+            # session = GoogleSpreadsheet.login_with_oauth(User.first.access_token)
+            # session.spreadsheets[0]
+                   
+          header = {
+             "Content-Type" => "text/csv ",
+             "Slug" => "New_school.csv",
+          }
+         
+                   
+                  
+         doc = request(:post, feed_url, :data => "name,phone,address\nshyam,,ktm\nbinod,,bktpur", :auth => :writely, :header => header)
+         ss_url = as_utf8(doc.search(
+           "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
+         return Spreadsheet.new(self, ss_url, title)
+                            
         end
         
         def request(method, url, params = {}) #:nodoc:
@@ -444,6 +465,7 @@ module GoogleSpreadsheet
           return doc.search("entry").map(){ |e| Table.new(@session, e) }.freeze()
         end
         
+                
     end
     
     # Use GoogleSpreadsheet::Worksheet#add_table to create table.
@@ -869,8 +891,12 @@ module GoogleSpreadsheet
           EOS
 
           @session.request(:post, post_url, :data => xml)
-
+          reload()
+          
+          # POST_URL(with gadget)  = http://spreadsheets.google.com/feeds/list/t2Nee90hJkYQH557HZmIkMg/od9/private/full
+          # http://spreadsheets.google.com/feeds/list/t2Nee90hJkYQH557HZmIkMg/od8/private/full
         end
+        
         
     end
     
