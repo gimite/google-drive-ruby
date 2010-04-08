@@ -142,11 +142,8 @@ module GoogleSpreadsheet
 
         # Restores session using return value of auth_tokens method of previous session.
         def initialize(auth_tokens = nil, oauth_token = nil)
-          if oauth_token
-            @oauth_token = oauth_token
-          else
-            @auth_tokens = auth_tokens
-          end
+          @oauth_token = oauth_token
+          @auth_tokens = auth_tokens || {}
         end
 
         # Authenticates with given +mail+ and +password+, and updates current session object
@@ -176,10 +173,11 @@ module GoogleSpreadsheet
         attr_accessor :on_auth_fail
         
         def auth_header(auth) #:nodoc:
-          if auth == :none
-            return {}
+          token = auth == :none ? nil : @auth_tokens[auth]
+          if token
+            return {"Authorization" => "GoogleLogin auth=#{token}"}
           else
-            return {"Authorization" => "GoogleLogin auth=#{@auth_tokens[auth]}"}
+            return {}
           end
         end
 
