@@ -378,12 +378,12 @@ module GoogleSpreadsheet
         def tables_feed_url
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
-        
+
         # URL of feed used in document list feed API.
         def document_feed_url
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
-        
+
         # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
@@ -407,6 +407,24 @@ module GoogleSpreadsheet
           @session.request(:delete,
             self.document_feed_url + (permanent ? "?delete=true" : ""),
             :auth => :writely, :header => {"If-Match" => "*"})
+        end
+        
+        # Renames title of the spreadsheet.
+        def rename(title)
+          doc = @session.request(:get, self.document_feed_url)
+          edit_url = doc.search("link[@rel='edit']")[0]["href"]
+          xml = <<-"EOS"
+            <atom:entry
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                xmlns:docs="http://schemas.google.com/docs/2007">
+              <atom:category
+                scheme="http://schemas.google.com/g/2005#kind"
+                term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
+              <atom:title>#{h(title)}</atom:title>
+            </atom:entry>
+          EOS
+
+          @session.request(:put, edit_url, :data => xml)
         end
         
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
@@ -809,6 +827,16 @@ module GoogleSpreadsheet
         # Returns list of tables for the workwheet.
         def tables
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
+        end
+
+        # List feed URL of the worksheet.
+        def list_feed_url
+          # Gets the worksheets metafeed.
+          entry = @session.request(:get, self.worksheet_feed_url)
+
+          # Gets the URL of list-based feed for the given spreadsheet.
+          return as_utf8(entry.search(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
         end
 
     end
