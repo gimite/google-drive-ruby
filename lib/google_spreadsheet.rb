@@ -142,11 +142,8 @@ module GoogleSpreadsheet
 
         # Restores session using return value of auth_tokens method of previous session.
         def initialize(auth_tokens = nil, oauth_token = nil)
-          if oauth_token
-            @oauth_token = oauth_token
-          else
-            @auth_tokens = auth_tokens
-          end
+          @oauth_token = oauth_token
+          @auth_tokens = auth_tokens || {}
         end
 
         # Authenticates with given +mail+ and +password+, and updates current session object
@@ -176,10 +173,11 @@ module GoogleSpreadsheet
         attr_accessor :on_auth_fail
         
         def auth_header(auth) #:nodoc:
-          if auth == :none
-            return {}
+          token = auth == :none ? nil : @auth_tokens[auth]
+          if token
+            return {"Authorization" => "GoogleLogin auth=#{token}"}
           else
-            return {"Authorization" => "GoogleLogin auth=#{@auth_tokens[auth]}"}
+            return {}
           end
         end
 
@@ -192,7 +190,7 @@ module GoogleSpreadsheet
         #   session.spreadsheets("title" => "hoge")
         def spreadsheets(params = {})
           query = encode_query(params)
-          doc = request(:get, "http://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
+          doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           for entry in doc.search("entry")
             title = as_utf8(entry.search("title").text)
@@ -209,7 +207,7 @@ module GoogleSpreadsheet
         #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
         #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
         def spreadsheet_by_key(key)
-          url = "http://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
+          url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
           return Spreadsheet.new(self, url)
         end
         
@@ -221,7 +219,7 @@ module GoogleSpreadsheet
         #   session.spreadsheet_by_url(
         #     "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
         #   session.spreadsheet_by_url(
-        #     "http://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
+        #     "https://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
         def spreadsheet_by_url(url)
           # Tries to parse it as URL of human-readable spreadsheet.
           uri = URI.parse(url)
@@ -248,9 +246,9 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.create_spreadsheet("My new sheet")
-         def create_spreadsheet(
+        def create_spreadsheet(
             title = "Untitled",
-            feed_url = "http://docs.google.com/feeds/documents/private/full")
+            feed_url = "https://docs.google.com/feeds/documents/private/full")
           xml = <<-"EOS"
             <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
               <atom:category scheme="http://schemas.google.com/g/2005#kind"
@@ -265,9 +263,9 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, ss_url, title)
         end
         
-                
         def request(method, url, params = {}) #:nodoc:
-          uri = URI.parse(url)
+          # Always uses HTTPS.
+          uri = URI.parse(url.gsub(%r{^http://}, "https://"))
           data = params[:data]
           auth = params[:auth] || :wise
           if params[:header]
@@ -278,8 +276,9 @@ module GoogleSpreadsheet
           response_type = params[:response_type] || :xml
           
           if @oauth_token
-            
+            url = url.start_with?('https') ? url : url.gsub(/http/, 'https')
             if method == :delete || method == :get
+              
               response = @oauth_token.__send__(method, url, add_header)
             else
               response = @oauth_token.__send__(method, url, data, add_header)
@@ -289,7 +288,7 @@ module GoogleSpreadsheet
           else
             
             http = Net::HTTP.new(uri.host, uri.port)
-            http.use_ssl = uri.scheme == "https"
+            http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
             http.start() do
               while true
@@ -367,7 +366,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{http://spreadsheets.google.com/feeds/worksheets/(.*)/private/full})
+              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/full$})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
@@ -376,22 +375,21 @@ module GoogleSpreadsheet
         
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
-          return "http://spreadsheets.google.com/feeds/#{self.key}/tables"
+          return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
 
         # URL of feed used in document list feed API.
         def document_feed_url
-          return "http://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
+          return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
 
-      
         # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
-          get_url = "http://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
+          get_url = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
           ods = @session.request(:get, get_url, :response_type => :raw)
           
-          url = "http://docs.google.com/feeds/documents/private/full"
+          url = "https://docs.google.com/feeds/documents/private/full"
           header = {
             "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
             "Slug" => URI.encode(new_name),
@@ -410,20 +408,23 @@ module GoogleSpreadsheet
             :auth => :writely, :header => {"If-Match" => "*"})
         end
         
-         # Renames title of the spreadsheet
-          def rename(title)
-            doc = @session.request(:get, self.document_feed_url)
-            edit_url = doc.search("link[@rel='edit']")[0]["href"]
-              xml = <<-"EOS"
-                  <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
-                    <atom:category scheme="http://schemas.google.com/g/2005#kind"
-                        term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
-                    <atom:title>#{h(title)}</atom:title>
-                  </atom:entry>
-              EOS
+        # Renames title of the spreadsheet.
+        def rename(title)
+          doc = @session.request(:get, self.document_feed_url)
+          edit_url = doc.search("link[@rel='edit']")[0]["href"]
+          xml = <<-"EOS"
+            <atom:entry
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                xmlns:docs="http://schemas.google.com/docs/2007">
+              <atom:category
+                scheme="http://schemas.google.com/g/2005#kind"
+                term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
+              <atom:title>#{h(title)}</atom:title>
+            </atom:entry>
+          EOS
 
-              @session.request(:put, edit_url, :data => xml)
-          end
+          @session.request(:put, edit_url, :data => xml)
+        end
         
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
@@ -460,7 +461,6 @@ module GoogleSpreadsheet
           return doc.search("entry").map(){ |e| Table.new(@session, e) }.freeze()
         end
         
-                
     end
     
     # Use GoogleSpreadsheet::Worksheet#add_table to create table.
@@ -545,18 +545,18 @@ module GoogleSpreadsheet
           # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
           # from it.
           if !(@cells_feed_url =~
-              %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
             raise(GoogleSpreadsheet::Error,
               "cells feed URL is in unknown format: #{@cells_feed_url}")
           end
-          return "http://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
+          return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
         end
         
         # GoogleSpreadsheet::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^http://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
@@ -789,7 +789,7 @@ module GoogleSpreadsheet
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
-          result = @session.request(:delete, edit_url)
+          @session.request(:delete, edit_url)
         end
         
         # Returns true if you have changes made by []= which haven't been saved.
@@ -828,71 +828,16 @@ module GoogleSpreadsheet
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
         end
 
-        # list feed URL of the worksheet.
+        # List feed URL of the worksheet.
         def list_feed_url
-          # Get the worksheets metafeed 
+          # Gets the worksheets metafeed.
           entry = @session.request(:get, self.worksheet_feed_url)
 
-          # Get the URL of list-based feed for the given spreadsheet
-          url = as_utf8(entry.search(
-          "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
-          return url
+          # Gets the URL of list-based feed for the given spreadsheet.
+          return as_utf8(entry.search(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
         end
 
-        # Inserts row at the end of worksheet with given contents for worksheet row 
-        # contents may be simple array eg. contents = ["hoge", "foo", "bar"] where each n-th item is simply value of n-th column
-        # OR hash containing colname,colcontent eg. contents = {"colname1"=>"column content1", "colname2"=>"column content2"}
-        # See this document for details
-        # - http://code.google.com/apis/spreadsheets/data/3.0/developers_guide_protocol.html#CreatingListRows
-        def add_row(contents)
-
-          # if given argument is not hash(simply array),construct a hash containing column name,column content pair
-          if contents.class != Hash
-
-            # Get column names as array
-            col_names = Array.new
-            1.upto self.num_cols do |col|
-              col_names << self[1,col]
-            end
-
-            # Hash containing colname and values pair
-            values = Hash.new
-            col_names.each_with_index do |col,index|
-              values[col] = contents[index]
-            end
-
-            # passed argument is already in required hash form
-          else
-            values = contents 
-          end
-
-          fields = ""
-          values.each do |colname, value|
-            fields += "<gsx:#{h(colname)}>#{h(value)}</gsx:#{h(colname)}>"
-          end
-
-          # Get list-based feed
-          list_meta_feed = @session.request(:get, self.list_feed_url)
-
-          post_url = as_utf8(list_meta_feed.search(
-          "link[@rel='http://schemas.google.com/g/2005#post']")[0]["href"])
-
-          xml =<<-EOS
-          <entry
-          xmlns="http://www.w3.org/2005/Atom"
-          xmlns:gsx="http://schemas.google.com/spreadsheets/2006/extended">
-          #{fields}
-          </entry>
-          EOS
-
-          @session.request(:post, post_url, :data => xml)
-          reload()
-          
-          # POST_URL(with gadget)  = http://spreadsheets.google.com/feeds/list/t2Nee90hJkYQH557HZmIkMg/od9/private/full
-          # http://spreadsheets.google.com/feeds/list/t2Nee90hJkYQH557HZmIkMg/od8/private/full
-        end
-        
-        
     end
     
     
