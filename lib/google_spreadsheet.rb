@@ -265,7 +265,8 @@ module GoogleSpreadsheet
         
         def request(method, url, params = {}) #:nodoc:
           # Always uses HTTPS.
-          uri = URI.parse(url.gsub(%r{^http://}, "https://"))
+          url = url.gsub(%r{^http://}, "https://")
+          uri = URI.parse(url)
           data = params[:data]
           auth = params[:auth] || :wise
           if params[:header]
