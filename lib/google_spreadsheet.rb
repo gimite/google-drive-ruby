@@ -266,56 +266,57 @@ module GoogleSpreadsheet
         def request(method, url, params = {}) #:nodoc:
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
-          uri = URI.parse(url)
           data = params[:data]
           auth = params[:auth] || :wise
           if params[:header]
-            add_header = params[:header]
+            extra_header = params[:header]
+          elsif data
+            extra_header = {"Content-Type" => "application/atom+xml"}
           else
-            add_header = data ? {"Content-Type" => "application/atom+xml"} : {}
+            extra_header = {}
           end
           response_type = params[:response_type] || :xml
           
-          if @oauth_token
-            
-            if method == :delete || method == :get
-              response = @oauth_token.__send__(method, url, add_header)
-            else
-              response = @oauth_token.__send__(method, url, data, add_header)
+          while true
+            response = request_raw(method, url, data, extra_header, auth)
+            if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
+              next
+            end
+            if !(response.code =~ /^2/)
+              raise(
+                response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                "Response code #{response.code} for #{method} #{url}: " +
+                CGI.unescapeHTML(response.body))
             end
             return convert_response(response, response_type)
-            
-          else
-            
-            http = Net::HTTP.new(uri.host, uri.port)
-            http.use_ssl = true
-            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-            http.start() do
-              while true
-                path = uri.path + (uri.query ? "?#{uri.query}" : "")
-                header = auth_header(auth).merge(add_header)
-                if method == :delete || method == :get
-                  response = http.__send__(method, path, header)
-                else
-                  response = http.__send__(method, path, data, header)
-                end
-                if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
-                  next
-                end
-                if !(response.code =~ /^2/)
-                  raise(
-                    response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                    "Response code #{response.code} for #{method} #{url}: " +
-                    CGI.unescapeHTML(response.body))
-                end
-                return convert_response(response, response_type)
-              end
-            end
-            
           end
         end
         
       private
+        
+        def request_raw(method, url, data, extra_header, auth)
+          if @oauth_token
+            if method == :delete || method == :get
+              return @oauth_token.__send__(method, url, extra_header)
+            else
+              return @oauth_token.__send__(method, url, data, extra_header)
+            end
+          else
+            uri = URI.parse(url)
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.use_ssl = true
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            http.start() do
+              path = uri.path + (uri.query ? "?#{uri.query}" : "")
+              header = auth_header(auth).merge(extra_header)
+              if method == :delete || method == :get
+                return http.__send__(method, path, header)
+              else
+                return http.__send__(method, path, data, header)
+              end
+            end
+          end
+        end
         
         def convert_response(response, response_type)
           case response_type
