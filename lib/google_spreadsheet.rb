@@ -808,7 +808,10 @@ module GoogleSpreadsheet
         # Creates table for the worksheet and returns GoogleSpreadsheet::Table.
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
-        def add_table(table_title, summary, columns)
+        def add_table(table_title, summary, columns, options)
+          default_options = { :header_row => 1, :num_rows => 0, :start_row => 2}
+          options = default_options.merge(options)
+          
           column_xml = ""
           columns.each do |index, name|
             column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
@@ -820,8 +823,8 @@ module GoogleSpreadsheet
               <title type='text'>#{h(table_title)}</title>
               <summary type='text'>#{h(summary)}</summary>
               <gs:worksheet name='#{h(self.title)}' />
-              <gs:header row='1' />
-              <gs:data numRows='0' startRow='2'>
+              <gs:header row='#{options[:header_row]}' />
+              <gs:data numRows='#{options[:num_rows]}' startRow='#{options[:start_row]}'>
                 #{column_xml}
               </gs:data>
             </entry>
