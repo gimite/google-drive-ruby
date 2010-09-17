@@ -2,3 +2,5 @@ experiment
 doc
 *~
 *.gem
+.rvmrc
+

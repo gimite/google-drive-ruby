@@ -506,6 +506,7 @@ module GoogleSpreadsheet
     
     # Use GoogleSpreadsheet::Table#records to get GoogleSpreadsheet::Record objects.
     class Record < Hash
+        include(Util)
         
         def initialize(session, entry) #:nodoc:
           @session = session
