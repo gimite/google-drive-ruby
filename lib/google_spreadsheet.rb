@@ -474,6 +474,7 @@ module GoogleSpreadsheet
           @columns = {}
           @worksheet_title = as_utf8(entry.search("gs:worksheet")[0]["name"])
           @records_url = as_utf8(entry.search("content")[0]["src"])
+          @edit_url = as_utf8(entry.search("//link[@rel='edit']")[0]['href'])
           @session = session
         end
         
@@ -500,6 +501,11 @@ module GoogleSpreadsheet
         def records
           doc = @session.request(:get, @records_url)
           return doc.search("entry").map(){ |e| Record.new(@session, e) }
+        end
+        
+        # Deletes this table. Deletion takes effect right away without calling save().
+        def delete
+          @session.request(:delete, @edit_url, :header => {"If-Match" => "*"})
         end
         
     end
