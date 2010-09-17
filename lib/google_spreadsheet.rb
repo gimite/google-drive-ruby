@@ -194,9 +194,9 @@ module GoogleSpreadsheet
           query = encode_query(params)
           doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
-          for entry in doc.search("entry")
-            title = as_utf8(entry.search("title").text)
-            url = as_utf8(entry.search(
+          doc.css("feed > entry").each do |entry|
+            title = as_utf8(entry.css("title").text)
+            url = as_utf8(entry.css(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
             result.push(Spreadsheet.new(self, url, title))
           end
@@ -443,8 +443,8 @@ module GoogleSpreadsheet
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           result = []
-          for entry in doc.search("entry")
-            title = as_utf8(entry.search("title").text)
+          doc.css("entry").each do |entry|
+            title = as_utf8(entry.css("title").text)
             url = as_utf8(entry.search(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
             result.push(Worksheet.new(@session, self, url, title))
@@ -484,9 +484,9 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = as_utf8(entry.search(".//gs:worksheet")[0]["name"])
-          @records_url = as_utf8(entry.search("content")[0]["src"])
-          @edit_url = as_utf8(entry.search("link[@rel='edit']")[0]['href'])
+          @worksheet_title = as_utf8(entry.xpath(".//gs:worksheet")[0]["name"])
+          @records_url = as_utf8(entry.css("content")[0]["src"])
+          @edit_url = as_utf8(entry.css("link[@rel='edit']")[0]['href'])
           @session = session
         end
         
@@ -528,8 +528,7 @@ module GoogleSpreadsheet
         
         def initialize(session, entry) #:nodoc:
           @session = session
-          debugger
-          for field in entry.search(".//gs:field")
+          entry.search(".//gs:field").each do |field|
             self[as_utf8(field["name"])] = as_utf8(field.inner_text)
           end
         end
