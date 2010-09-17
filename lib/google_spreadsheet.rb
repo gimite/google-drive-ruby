@@ -8,7 +8,9 @@ require "open-uri"
 require "cgi"
 require "uri"
 require "rubygems"
-require "hpricot"
+# require "hpricot"
+require 'nokogiri'
+
 require "oauth"
 Net::HTTP.version_1_2
 
@@ -288,6 +290,9 @@ module GoogleSpreadsheet
                 "Response code #{response.code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
+            puts 
+            puts "RECIEVED DATA:"
+            puts response.body
             return convert_response(response, response_type)
           end
         end
@@ -309,9 +314,16 @@ module GoogleSpreadsheet
             http.start() do
               path = uri.path + (uri.query ? "?#{uri.query}" : "")
               header = auth_header(auth).merge(extra_header)
+                puts
+                puts "-----"
+                puts "Sending request"
+                puts "METHOD: #{method}"
+                puts "URI: #{uri}"
               if method == :delete || method == :get
                 return http.__send__(method, path, header)
               else
+                puts "DATA:"
+                puts data
                 return http.__send__(method, path, data, header)
               end
             end
@@ -321,7 +333,7 @@ module GoogleSpreadsheet
         def convert_response(response, response_type)
           case response_type
             when :xml
-              return Hpricot.XML(response.body)
+              return Nokogiri.XML(response.body)
             when :raw
               return response.body
             else
@@ -472,9 +484,9 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = as_utf8(entry.search("gs:worksheet")[0]["name"])
+          @worksheet_title = as_utf8(entry.search(".//gs:worksheet")[0]["name"])
           @records_url = as_utf8(entry.search("content")[0]["src"])
-          @edit_url = as_utf8(entry.search("//link[@rel='edit']")[0]['href'])
+          @edit_url = as_utf8(entry.search("link[@rel='edit']")[0]['href'])
           @session = session
         end
         
@@ -516,7 +528,8 @@ module GoogleSpreadsheet
         
         def initialize(session, entry) #:nodoc:
           @session = session
-          for field in entry.search("gs:field")
+          debugger
+          for field in entry.search(".//gs:field")
             self[as_utf8(field["name"])] = as_utf8(field.inner_text)
           end
         end
@@ -677,18 +690,19 @@ module GoogleSpreadsheet
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
           doc = @session.request(:get, @cells_feed_url)
-          @max_rows = doc.search("gs:rowCount").text.to_i()
-          @max_cols = doc.search("gs:colCount").text.to_i()
-          @title = as_utf8(doc.search("/feed/title").text)
+          @max_rows = doc.xpath("//gs:rowCount").text.to_i()
+          @max_cols = doc.xpath("//gs:colCount").text.to_i()
+          @title = as_utf8(doc.css('feed > title')[0].text)
           
           @cells = {}
           @input_values = {}
-          for entry in doc.search("entry")
-            cell = entry.search("gs:cell")[0]
+          doc.css("feed > entry").each do |entry|
+            cell = entry.search(".//gs:cell")[0]
             row = cell["row"].to_i()
             col = cell["col"].to_i()
             @cells[[row, col]] = as_utf8(cell.inner_text)
             @input_values[[row, col]] = as_utf8(cell["inputValue"])
+            
           end
           @modified.clear()
           @meta_modified = false
@@ -730,8 +744,8 @@ module GoogleSpreadsheet
               "&min-col=#{cols.min}&max-col=#{cols.max}"
             doc = @session.request(:get, url)
             for entry in doc.search("entry")
-              row = entry.search("gs:cell")[0]["row"].to_i()
-              col = entry.search("gs:cell")[0]["col"].to_i()
+              row = entry.search(".//gs:cell")[0]["row"].to_i()
+              col = entry.search(".//gs:cell")[0]["col"].to_i()
               cell_entries[[row, col]] = entry
             end
             

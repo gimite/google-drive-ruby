@@ -15,6 +15,6 @@ Gem::Specification.new do |s|
   s.summary = %q{This is a library to read/write Google Spreadsheet.}
   s.specification_version = 2 if s.respond_to? :specification_version=
 
-  s.add_dependency("hpricot", [">= 0.3"])
+  s.add_dependency("nokogiri", [">= 1.4.3.1"])
   s.add_dependency("oauth", [">= 0.3.6"])
 end
