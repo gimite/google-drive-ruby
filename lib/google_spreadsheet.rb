@@ -348,9 +348,10 @@ module GoogleSpreadsheet
             "service" => auth.to_s(),
             "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
           }
+          header = {"Content-Type" => "application/x-www-form-urlencoded"}
           response = request(:post,
             "https://www.google.com/accounts/ClientLogin",
-            :data => encode_query(params), :auth => :none, :header => {}, :response_type => :raw)
+            :data => encode_query(params), :auth => :none, :header => header, :response_type => :raw)
           @auth_tokens[auth] = response.slice(/^Auth=(.*)$/, 1)
         end
         
