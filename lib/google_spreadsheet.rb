@@ -8,7 +8,6 @@ require "open-uri"
 require "cgi"
 require "uri"
 require "rubygems"
-# require "hpricot"
 require 'nokogiri'
 
 require "oauth"
@@ -742,7 +741,8 @@ module GoogleSpreadsheet
             url = "#{@cells_feed_url}?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
               "&min-col=#{cols.min}&max-col=#{cols.max}"
             doc = @session.request(:get, url)
-            for entry in doc.search("entry")
+
+            doc.search("entry").each do |entry|
               row = entry.search(".//gs:cell")[0]["row"].to_i()
               col = entry.search(".//gs:cell")[0]["col"].to_i()
               cell_entries[[row, col]] = entry
@@ -779,15 +779,16 @@ module GoogleSpreadsheet
               EOS
             
               result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
-              for entry in result.search("atom:entry")
-                interrupted = entry.search("batch:interrupted")[0]
+
+              result.search("//atom:entry").each do |entry|
+                interrupted = entry.search("./batch:interrupted")[0]
                 if interrupted
                   raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
                     interrupted["reason"])
                 end
-                if !(entry.search("batch:status")[0]["code"] =~ /^2/)
+                if !(entry.search("./batch:status")[0]["code"] =~ /^2/)
                   raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                    [entry.search("atom:id").text, entry.search("batch:status")[0]["reason"]])
+                    [entry.search("./atom:id").text, entry.search("./batch:status")[0]["reason"]])
                 end
               end
               
