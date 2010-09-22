@@ -259,8 +259,8 @@ module GoogleSpreadsheet
           EOS
 
           doc = request(:post, feed_url, :data => xml, :auth => :writely)
-          ss_url = as_utf8(doc.search(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
+          ss_url = as_utf8(doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href'])
           return Spreadsheet.new(self, ss_url, title)
         end
         
@@ -408,8 +408,8 @@ module GoogleSpreadsheet
             "Slug" => URI.encode(new_name),
           }
           doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
-          ss_url = as_utf8(doc.search(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
+          ss_url = as_utf8(doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href'])
           return Spreadsheet.new(@session, ss_url, title)
         end
         
@@ -424,7 +424,7 @@ module GoogleSpreadsheet
         # Renames title of the spreadsheet.
         def rename(title)
           doc = @session.request(:get, self.document_feed_url)
-          edit_url = doc.search("link[@rel='edit']")[0]["href"]
+          edit_url = doc.css("link[@rel='edit']").first['href']
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"
@@ -443,10 +443,10 @@ module GoogleSpreadsheet
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           result = []
-          doc.css("entry").each do |entry|
-            title = as_utf8(entry.css("title").text)
-            url = as_utf8(entry.search(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
+          doc.css('entry').each do |entry|
+            title = as_utf8(entry.css('title').text)
+            url = as_utf8(entry.css(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href'])
             result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
@@ -463,15 +463,15 @@ module GoogleSpreadsheet
             </entry>
           EOS
           doc = @session.request(:post, @worksheets_feed_url, :data => xml)
-          url = as_utf8(doc.search(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"])
+          url = as_utf8(doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href'])
           return Worksheet.new(@session, self, url, title)
         end
         
         # Returns list of tables in the spreadsheet.
         def tables
           doc = @session.request(:get, self.tables_feed_url)
-          return doc.search("entry").map(){ |e| Table.new(@session, e) }.freeze()
+          return doc.css('entry').map(){ |e| Table.new(@session, e) }.freeze()
         end
         
     end
@@ -484,7 +484,7 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = as_utf8(entry.xpath(".//gs:worksheet")[0]["name"])
+          @worksheet_title = as_utf8(entry.css('gs|worksheet').first['name'])
           @records_url = as_utf8(entry.css("content")[0]["src"])
           @edit_url = as_utf8(entry.css("link[@rel='edit']")[0]['href'])
           @session = session
@@ -512,7 +512,7 @@ module GoogleSpreadsheet
         # Returns records in the table.
         def records
           doc = @session.request(:get, @records_url)
-          return doc.search("entry").map(){ |e| Record.new(@session, e) }
+          return doc.css('entry').map(){ |e| Record.new(@session, e) }
         end
         
         # Deletes this table. Deletion takes effect right away without calling save().
@@ -528,7 +528,7 @@ module GoogleSpreadsheet
         
         def initialize(session, entry) #:nodoc:
           @session = session
-          entry.search(".//gs:field").each do |field|
+          entry.css('gs|field').each do |field|
             self[as_utf8(field["name"])] = as_utf8(field.inner_text)
           end
         end
@@ -689,14 +689,14 @@ module GoogleSpreadsheet
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
           doc = @session.request(:get, @cells_feed_url)
-          @max_rows = doc.xpath("//gs:rowCount").text.to_i()
-          @max_cols = doc.xpath("//gs:colCount").text.to_i()
+          @max_rows = doc.css('gs|rowCount').text.to_i
+          @max_cols = doc.css('gs|colCount').text.to_i
           @title = as_utf8(doc.css('feed > title')[0].text)
           
           @cells = {}
           @input_values = {}
-          doc.css("feed > entry").each do |entry|
-            cell = entry.search(".//gs:cell")[0]
+          doc.css('feed > entry').each do |entry|
+            cell = entry.css('gs|cell').first
             row = cell["row"].to_i()
             col = cell["col"].to_i()
             @cells[[row, col]] = as_utf8(cell.inner_text)
@@ -715,7 +715,7 @@ module GoogleSpreadsheet
           if @meta_modified
             
             ws_doc = @session.request(:get, self.worksheet_feed_url)
-            edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
+            edit_url = ws_doc.css("link[@rel='edit']").first['href']
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
@@ -743,9 +743,9 @@ module GoogleSpreadsheet
               "&min-col=#{cols.min}&max-col=#{cols.max}"
             doc = @session.request(:get, url)
 
-            doc.search("entry").each do |entry|
-              row = entry.search(".//gs:cell")[0]["row"].to_i()
-              col = entry.search(".//gs:cell")[0]["col"].to_i()
+            doc.css('entry').each do |entry|
+              row = entry.css('gs|cell').first['row'].to_i
+              col = entry.css('gs|cell').first['col'].to_i
               cell_entries[[row, col]] = entry
             end
             
@@ -762,8 +762,8 @@ module GoogleSpreadsheet
               for row, col in chunk
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
-                id = entry.search("id").text
-                edit_url = entry.search("link[@rel='edit']")[0]["href"]
+                id = entry.css('id').text
+                edit_url = entry.css("link[@rel='edit']").first['href']
                 xml << <<-EOS
                   <entry>
                     <batch:id>#{h(row)},#{h(col)}</batch:id>
@@ -780,16 +780,15 @@ module GoogleSpreadsheet
               EOS
             
               result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
-
-              result.search("//atom:entry").each do |entry|
-                interrupted = entry.search("./batch:interrupted")[0]
+              result.css('atom|entry').each do |entry|
+                interrupted = entry.css('batch|interrupted').first
                 if interrupted
                   raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
                     interrupted["reason"])
                 end
-                if !(entry.search("./batch:status")[0]["code"] =~ /^2/)
+                if !(entry.css('batch|status').first['code'] =~ /^2/)
                   raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                    [entry.search("./atom:id").text, entry.search("./batch:status")[0]["reason"]])
+                    [entry.css('atom|id').text, entry.css('batch|status').first['reason']])
                 end
               end
               
@@ -811,7 +810,7 @@ module GoogleSpreadsheet
         # Deletes this worksheet. Deletion takes effect right away without calling save().
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
-          edit_url = ws_doc.search("link[@rel='edit']")[0]["href"]
+          edit_url = ws_doc.css("link[@rel='edit']").first['href']
           @session.request(:delete, edit_url)
         end
         
@@ -860,8 +859,8 @@ module GoogleSpreadsheet
           entry = @session.request(:get, self.worksheet_feed_url)
 
           # Gets the URL of list-based feed for the given spreadsheet.
-          return as_utf8(entry.search(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"])
+          return as_utf8(entry.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href'])
         end
 
     end
