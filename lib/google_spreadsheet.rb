@@ -289,9 +289,6 @@ module GoogleSpreadsheet
                 "Response code #{response.code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
-            puts 
-            puts "RECIEVED DATA:"
-            puts response.body
             return convert_response(response, response_type)
           end
         end
@@ -313,16 +310,9 @@ module GoogleSpreadsheet
             http.start() do
               path = uri.path + (uri.query ? "?#{uri.query}" : "")
               header = auth_header(auth).merge(extra_header)
-                puts
-                puts "-----"
-                puts "Sending request"
-                puts "METHOD: #{method}"
-                puts "URI: #{uri}"
               if method == :delete || method == :get
                 return http.__send__(method, path, header)
               else
-                puts "DATA:"
-                puts data
                 return http.__send__(method, path, data, header)
               end
             end
