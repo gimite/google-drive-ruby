@@ -193,7 +193,7 @@ module GoogleSpreadsheet
           query = encode_query(params)
           doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
-          doc.css("feed > entry").each do |entry|
+          doc.css("feed > entry").each() do |entry|
             title = as_utf8(entry.css("title").text)
             url = as_utf8(entry.css(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
@@ -433,7 +433,7 @@ module GoogleSpreadsheet
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           result = []
-          doc.css('entry').each do |entry|
+          doc.css('entry').each() do |entry|
             title = as_utf8(entry.css('title').text)
             url = as_utf8(entry.css(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href'])
@@ -486,7 +486,7 @@ module GoogleSpreadsheet
         # Adds a record.
         def add_record(values)
           fields = ""
-          values.each do |name, value|
+          values.each() do |name, value|
             fields += "<gs:field name='#{h(name)}'>#{h(value)}</gs:field>"
           end
           xml =<<-EOS
@@ -518,7 +518,7 @@ module GoogleSpreadsheet
         
         def initialize(session, entry) #:nodoc:
           @session = session
-          entry.css('gs|field').each do |field|
+          entry.css('gs|field').each() do |field|
             self[as_utf8(field["name"])] = as_utf8(field.inner_text)
           end
         end
@@ -685,7 +685,7 @@ module GoogleSpreadsheet
           
           @cells = {}
           @input_values = {}
-          doc.css('feed > entry').each do |entry|
+          doc.css('feed > entry').each() do |entry|
             cell = entry.css('gs|cell').first
             row = cell["row"].to_i()
             col = cell["col"].to_i()
@@ -733,7 +733,7 @@ module GoogleSpreadsheet
               "&min-col=#{cols.min}&max-col=#{cols.max}"
             doc = @session.request(:get, url)
 
-            doc.css('entry').each do |entry|
+            doc.css('entry').each() do |entry|
               row = entry.css('gs|cell').first['row'].to_i
               col = entry.css('gs|cell').first['col'].to_i
               cell_entries[[row, col]] = entry
@@ -770,7 +770,7 @@ module GoogleSpreadsheet
               EOS
             
               result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
-              result.css('atom|entry').each do |entry|
+              result.css('atom|entry').each() do |entry|
                 interrupted = entry.css('batch|interrupted').first
                 if interrupted
                   raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
@@ -817,7 +817,7 @@ module GoogleSpreadsheet
           options = default_options.merge(options)
           
           column_xml = ""
-          columns.each do |index, name|
+          columns.each() do |index, name|
             column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
           end
 
