@@ -99,14 +99,6 @@ module GoogleSpreadsheet
           return CGI.escapeHTML(str.to_s())
         end
         
-        def as_utf8(str)
-          if str.respond_to?(:force_encoding)
-            str.force_encoding("UTF-8")
-          else
-            str
-          end
-        end
-        
     end
     
     
@@ -194,9 +186,9 @@ module GoogleSpreadsheet
           doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           doc.css("feed > entry").each() do |entry|
-            title = as_utf8(entry.css("title").text)
-            url = as_utf8(entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"])
+            title = entry.css("title").text
+            url = entry.css(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
             result.push(Spreadsheet.new(self, url, title))
           end
           return result
@@ -259,8 +251,8 @@ module GoogleSpreadsheet
           EOS
 
           doc = request(:post, feed_url, :data => xml, :auth => :writely)
-          ss_url = as_utf8(doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href'])
+          ss_url = doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
           return Spreadsheet.new(self, ss_url, title)
         end
         
@@ -398,8 +390,8 @@ module GoogleSpreadsheet
             "Slug" => URI.encode(new_name),
           }
           doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
-          ss_url = as_utf8(doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href'])
+          ss_url = doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
           return Spreadsheet.new(@session, ss_url, title)
         end
         
@@ -434,9 +426,9 @@ module GoogleSpreadsheet
           doc = @session.request(:get, @worksheets_feed_url)
           result = []
           doc.css('entry').each() do |entry|
-            title = as_utf8(entry.css('title').text)
-            url = as_utf8(entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href'])
+            title = entry.css('title').text
+            url = entry.css(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href']
             result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
@@ -453,8 +445,8 @@ module GoogleSpreadsheet
             </entry>
           EOS
           doc = @session.request(:post, @worksheets_feed_url, :data => xml)
-          url = as_utf8(doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href'])
+          url = doc.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href']
           return Worksheet.new(@session, self, url, title)
         end
         
@@ -474,9 +466,9 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = as_utf8(entry.css('gs|worksheet').first['name'])
-          @records_url = as_utf8(entry.css("content")[0]["src"])
-          @edit_url = as_utf8(entry.css("link[@rel='edit']")[0]['href'])
+          @worksheet_title = entry.css('gs|worksheet').first['name']
+          @records_url = entry.css("content")[0]["src"]
+          @edit_url = entry.css("link[@rel='edit']")[0]['href']
           @session = session
         end
         
@@ -519,7 +511,7 @@ module GoogleSpreadsheet
         def initialize(session, entry) #:nodoc:
           @session = session
           entry.css('gs|field').each() do |field|
-            self[as_utf8(field["name"])] = as_utf8(field.inner_text)
+            self[field["name"]] = field.inner_text
           end
         end
         
@@ -681,7 +673,7 @@ module GoogleSpreadsheet
           doc = @session.request(:get, @cells_feed_url)
           @max_rows = doc.css('gs|rowCount').text.to_i
           @max_cols = doc.css('gs|colCount').text.to_i
-          @title = as_utf8(doc.css('feed > title')[0].text)
+          @title = doc.css('feed > title')[0].text
           
           @cells = {}
           @input_values = {}
@@ -689,8 +681,8 @@ module GoogleSpreadsheet
             cell = entry.css('gs|cell').first
             row = cell["row"].to_i()
             col = cell["col"].to_i()
-            @cells[[row, col]] = as_utf8(cell.inner_text)
-            @input_values[[row, col]] = as_utf8(cell["inputValue"])
+            @cells[[row, col]] = cell.inner_text
+            @input_values[[row, col]] = cell["inputValue"]
             
           end
           @modified.clear()
@@ -849,8 +841,8 @@ module GoogleSpreadsheet
           entry = @session.request(:get, self.worksheet_feed_url)
 
           # Gets the URL of list-based feed for the given spreadsheet.
-          return as_utf8(entry.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href'])
+          return entry.css(
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href']
         end
 
     end

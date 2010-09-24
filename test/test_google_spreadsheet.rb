@@ -49,6 +49,9 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_equal("3", ws[1, 1])
       assert_equal("5", ws[1, 2])
       assert_equal("8", ws[1, 3])
+      if RUBY_VERSION >= "1.9.0"
+        assert_equal(Encoding::UTF_8, ws[1, 1].encoding)
+      end
       
       ss2 = session.spreadsheet_by_key(ss.key)
       assert_equal(ss.worksheets_feed_url, ss2.worksheets_feed_url)
