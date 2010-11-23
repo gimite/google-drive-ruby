@@ -1,7 +1,9 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
+require "rubygems"
+require "bundler/setup"
+
 require "test/unit"
 require "google_spreadsheet"
-require "rubygems"
 require "highline"
 
 

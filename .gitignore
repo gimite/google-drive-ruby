@@ -3,4 +3,4 @@ doc
 *~
 *.gem
 .rvmrc
-
+Gemfile.lock
