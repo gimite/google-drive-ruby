@@ -8,9 +8,7 @@ require "open-uri"
 require "cgi"
 require "uri"
 require "rubygems"
-require 'nokogiri'
-require 'ostruct'
-
+require "nokogiri"
 require "oauth"
 Net::HTTP.version_1_2
 
@@ -297,9 +295,12 @@ module GoogleSpreadsheet
             end
           else
             uri = URI.parse(url)
-            # Check for proxy
-            proxy = ENV['http_proxy'] ? URI.parse(ENV['http_proxy']) : OpenStruct.new
-            http = Net::HTTP::Proxy(proxy.host, proxy.port).new(uri.host, uri.port)
+            if ENV["http_proxy"]
+            	proxy = URI.parse(ENV["http_proxy"])
+            	http = Net::HTTP.Proxy(proxy.host, proxy.port).new(uri.host, uri.port)
+            else
+            	http = Net::HTTP.new(uri.host, uri.port)
+            end
             http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
             http.start() do
