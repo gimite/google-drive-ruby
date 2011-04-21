@@ -9,12 +9,13 @@ require "cgi"
 require "uri"
 require "rubygems"
 require 'nokogiri'
+require 'ostruct'
 
 require "oauth"
 Net::HTTP.version_1_2
 
 module GoogleSpreadsheet
-    
+
     # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
     # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
     # Google Apps account is supported.
@@ -85,42 +86,42 @@ module GoogleSpreadsheet
       end
       return session
     end
-    
-    
+
+
     module Util #:nodoc:
-      
+
       module_function
-        
+
         def encode_query(params)
           return params.map(){ |k, v| CGI.escape(k) + "=" + CGI.escape(v) }.join("&")
         end
-        
+
         def h(str)
           return CGI.escapeHTML(str.to_s())
         end
-        
+
     end
-    
-    
+
+
     # Raised when spreadsheets.google.com has returned error.
     class Error < RuntimeError
-        
+
     end
-    
-    
+
+
     # Raised when GoogleSpreadsheet.login has failed.
     class AuthenticationError < GoogleSpreadsheet::Error
-        
+
     end
-    
-    
+
+
     # Use GoogleSpreadsheet.login or GoogleSpreadsheet.saved_session to get
     # GoogleSpreadsheet::Session object.
     class Session
-        
+
         include(Util)
         extend(Util)
-        
+
         # The same as GoogleSpreadsheet.login.
         def self.login(mail, password)
           session = Session.new()
@@ -152,19 +153,19 @@ module GoogleSpreadsheet
             raise(AuthenticationError, "authentication failed for #{mail}: #{ex.message}")
           end
         end
-        
+
         # Authentication tokens.
         attr_reader(:auth_tokens)
-        
+
         # Authentication token.
         def auth_token(auth = :wise)
           return @auth_tokens[auth]
         end
-        
+
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
-        
+
         def auth_header(auth) #:nodoc:
           token = auth == :none ? nil : @auth_tokens[auth]
           if token
@@ -193,7 +194,7 @@ module GoogleSpreadsheet
           end
           return result
         end
-        
+
         # Returns GoogleSpreadsheet::Spreadsheet with given +key+.
         #
         # e.g.
@@ -203,7 +204,7 @@ module GoogleSpreadsheet
           url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
           return Spreadsheet.new(self, url)
         end
-        
+
         # Returns GoogleSpreadsheet::Spreadsheet with given +url+. You must specify either of:
         # - URL of the page you open to access the spreadsheet in your browser
         # - URL of worksheet-based feed of the spreadseet
@@ -224,7 +225,7 @@ module GoogleSpreadsheet
           # Assumes the URL is worksheets feed URL.
           return Spreadsheet.new(self, url)
         end
-        
+
         # Returns GoogleSpreadsheet::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
@@ -234,7 +235,7 @@ module GoogleSpreadsheet
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
-        
+
         # Creates new spreadsheet and returns the new GoogleSpreadsheet::Spreadsheet.
         #
         # e.g.
@@ -255,7 +256,7 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
           return Spreadsheet.new(self, ss_url, title)
         end
-        
+
         def request(method, url, params = {}) #:nodoc:
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
@@ -269,7 +270,7 @@ module GoogleSpreadsheet
             extra_header = {}
           end
           response_type = params[:response_type] || :xml
-          
+
           while true
             response = request_raw(method, url, data, extra_header, auth)
             if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
@@ -284,9 +285,9 @@ module GoogleSpreadsheet
             return convert_response(response, response_type)
           end
         end
-        
+
       private
-        
+
         def request_raw(method, url, data, extra_header, auth)
           if @oauth_token
             if method == :delete || method == :get
@@ -296,7 +297,9 @@ module GoogleSpreadsheet
             end
           else
             uri = URI.parse(url)
-            http = Net::HTTP.new(uri.host, uri.port)
+            # Check for proxy
+            proxy = ENV['http_proxy'] ? URI.parse(ENV['http_proxy']) : OpenStruct.new
+            http = Net::HTTP::Proxy(proxy.host, proxy.port).new(uri.host, uri.port)
             http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
             http.start() do
@@ -310,7 +313,7 @@ module GoogleSpreadsheet
             end
           end
         end
-        
+
         def convert_response(response, response_type)
           case response_type
             when :xml
@@ -321,7 +324,7 @@ module GoogleSpreadsheet
               raise("unknown params[:response_type]: %s" % response_type)
           end
         end
-        
+
         def authenticate(mail, password, auth)
           params = {
             "accountType" => "HOSTED_OR_GOOGLE",
@@ -336,28 +339,28 @@ module GoogleSpreadsheet
             :data => encode_query(params), :auth => :none, :header => header, :response_type => :raw)
           @auth_tokens[auth] = response.slice(/^Auth=(.*)$/, 1)
         end
-        
+
     end
-    
-    
+
+
     # Use methods in GoogleSpreadsheet::Session to get GoogleSpreadsheet::Spreadsheet object.
     class Spreadsheet
-        
+
         include(Util)
-        
+
         def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
         end
-        
+
         # URL of worksheet-based feed of the spreadsheet.
         attr_reader(:worksheets_feed_url)
-        
+
         # Title of the spreadsheet. So far only available if you get this object by
         # GoogleSpreadsheet::Session#spreadsheets.
         attr_reader(:title)
-        
+
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
@@ -367,7 +370,7 @@ module GoogleSpreadsheet
           end
           return $1
         end
-        
+
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
@@ -383,7 +386,7 @@ module GoogleSpreadsheet
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
           get_url = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
           ods = @session.request(:get, get_url, :response_type => :raw)
-          
+
           url = "https://docs.google.com/feeds/documents/private/full"
           header = {
             "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
@@ -394,7 +397,7 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
           return Spreadsheet.new(@session, ss_url, title)
         end
-        
+
         # If +permanent+ is +false+, moves the spreadsheet to the trash.
         # If +permanent+ is +true+, deletes the spreadsheet permanently.
         def delete(permanent = false)
@@ -402,7 +405,7 @@ module GoogleSpreadsheet
             self.document_feed_url + (permanent ? "?delete=true" : ""),
             :auth => :writely, :header => {"If-Match" => "*"})
         end
-        
+
         # Renames title of the spreadsheet.
         def rename(title)
           doc = @session.request(:get, self.document_feed_url)
@@ -420,7 +423,7 @@ module GoogleSpreadsheet
 
           @session.request(:put, edit_url, :data => xml)
         end
-        
+
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
@@ -433,7 +436,7 @@ module GoogleSpreadsheet
           end
           return result.freeze()
         end
-        
+
         # Adds a new worksheet to the spreadsheet. Returns added GoogleSpreadsheet::Worksheet.
         def add_worksheet(title, max_rows = 100, max_cols = 20)
           xml = <<-"EOS"
@@ -449,19 +452,19 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href']
           return Worksheet.new(@session, self, url, title)
         end
-        
+
         # Returns list of tables in the spreadsheet.
         def tables
           doc = @session.request(:get, self.tables_feed_url)
           return doc.css('entry').map(){ |e| Table.new(@session, e) }.freeze()
         end
-        
+
     end
-    
+
     # Use GoogleSpreadsheet::Worksheet#add_table to create table.
     # Use GoogleSpreadsheet::Worksheet#tables to get GoogleSpreadsheet::Table objects.
     class Table
-        
+
         include(Util)
 
         def initialize(session, entry) #:nodoc:
@@ -471,7 +474,7 @@ module GoogleSpreadsheet
           @edit_url = entry.css("link[@rel='edit']")[0]['href']
           @session = session
         end
-        
+
         # Title of the worksheet the table belongs to.
         attr_reader(:worksheet_title)
 
@@ -490,49 +493,49 @@ module GoogleSpreadsheet
           EOS
           @session.request(:post, @records_url, :data => xml)
         end
-        
+
         # Returns records in the table.
         def records
           doc = @session.request(:get, @records_url)
           return doc.css('entry').map(){ |e| Record.new(@session, e) }
         end
-        
+
         # Deletes this table. Deletion takes effect right away without calling save().
         def delete
           @session.request(:delete, @edit_url, :header => {"If-Match" => "*"})
         end
-        
+
     end
-    
+
     # Use GoogleSpreadsheet::Table#records to get GoogleSpreadsheet::Record objects.
     class Record < Hash
         include(Util)
-        
+
         def initialize(session, entry) #:nodoc:
           @session = session
           entry.css('gs|field').each() do |field|
             self[field["name"]] = field.inner_text
           end
         end
-        
+
         def inspect #:nodoc:
           content = self.map(){ |k, v| "%p => %p" % [k, v] }.join(", ")
           return "\#<%p:{%s}>" % [self.class, content]
         end
-        
+
     end
-    
+
     # Use GoogleSpreadsheet::Spreadsheet#worksheets to get GoogleSpreadsheet::Worksheet object.
     class Worksheet
-        
+
         include(Util)
-        
+
         def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
           @session = session
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
-          
+
           @cells = nil
           @input_values = nil
           @modified = Set.new()
@@ -540,7 +543,7 @@ module GoogleSpreadsheet
 
         # URL of cell-based feed of the worksheet.
         attr_reader(:cells_feed_url)
-        
+
         # URL of worksheet feed URL of the worksheet.
         def worksheet_feed_url
           # I don't know good way to get worksheet feed URL from cells feed URL.
@@ -553,7 +556,7 @@ module GoogleSpreadsheet
           end
           return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
         end
-        
+
         # GoogleSpreadsheet::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
@@ -566,12 +569,12 @@ module GoogleSpreadsheet
           end
           return @spreadsheet
         end
-        
+
         # Returns content of the cell as String. Top-left cell is [1, 1].
         def [](row, col)
           return self.cells[[row, col]] || ""
         end
-        
+
         # Updates content of the cell.
         # Note that update is not sent to the server until you call save().
         # Top-left cell is [1, 1].
@@ -587,7 +590,7 @@ module GoogleSpreadsheet
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
         end
-        
+
         # Returns the value or the formula of the cell. Top-left cell is [1, 1].
         #
         # If user input "=A1+B1" to cell [1, 3], worksheet[1, 3] is "3" for example and
@@ -596,25 +599,25 @@ module GoogleSpreadsheet
           reload() if !@cells
           return @input_values[[row, col]] || ""
         end
-        
+
         # Row number of the bottom-most non-empty row.
         def num_rows
           reload() if !@cells
           return @cells.keys.map(){ |r, c| r }.max || 0
         end
-        
+
         # Column number of the right-most non-empty column.
         def num_cols
           reload() if !@cells
           return @cells.keys.map(){ |r, c| c }.max || 0
         end
-        
+
         # Number of rows including empty rows.
         def max_rows
           reload() if !@cells
           return @max_rows
         end
-        
+
         # Updates number of rows.
         # Note that update is not sent to the server until you call save().
         def max_rows=(rows)
@@ -622,13 +625,13 @@ module GoogleSpreadsheet
           @max_rows = rows
           @meta_modified = true
         end
-        
+
         # Number of columns including empty columns.
         def max_cols
           reload() if !@cells
           return @max_cols
         end
-        
+
         # Updates number of columns.
         # Note that update is not sent to the server until you call save().
         def max_cols=(cols)
@@ -636,13 +639,13 @@ module GoogleSpreadsheet
           @max_cols = cols
           @meta_modified = true
         end
-        
+
         # Title of the worksheet (shown as tab label in Web interface).
         def title
           reload() if !@title
           return @title
         end
-        
+
         # Updates title of the worksheet.
         # Note that update is not sent to the server until you call save().
         def title=(title)
@@ -650,12 +653,12 @@ module GoogleSpreadsheet
           @title = title
           @meta_modified = true
         end
-        
+
         def cells #:nodoc:
           reload() if !@cells
           return @cells
         end
-        
+
         # An array of spreadsheet rows. Each row contains an array of
         # columns. Note that resulting array is 0-origin so
         # worksheet.rows[0][0] == worksheet[1, 1].
@@ -666,7 +669,7 @@ module GoogleSpreadsheet
           end
           return result.freeze()
         end
-        
+
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= is discarded if you haven't called save().
         def reload()
@@ -674,7 +677,7 @@ module GoogleSpreadsheet
           @max_rows = doc.css('gs|rowCount').text.to_i
           @max_cols = doc.css('gs|colCount').text.to_i
           @title = doc.css('feed > title')[0].text
-          
+
           @cells = {}
           @input_values = {}
           doc.css('feed > entry').each() do |entry|
@@ -683,19 +686,19 @@ module GoogleSpreadsheet
             col = cell["col"].to_i()
             @cells[[row, col]] = cell.inner_text
             @input_values[[row, col]] = cell["inputValue"]
-            
+
           end
           @modified.clear()
           @meta_modified = false
           return true
         end
-        
+
         # Saves your changes made by []=, etc. to the server.
         def save()
           sent = false
-          
+
           if @meta_modified
-            
+
             ws_doc = @session.request(:get, self.worksheet_feed_url)
             edit_url = ws_doc.css("link[@rel='edit']").first['href']
             xml = <<-"EOS"
@@ -706,16 +709,16 @@ module GoogleSpreadsheet
                 <gs:colCount>#{h(self.max_cols)}</gs:colCount>
               </entry>
             EOS
-            
+
             @session.request(:put, edit_url, :data => xml)
-            
+
             @meta_modified = false
             sent = true
-            
+
           end
-          
+
           if !@modified.empty?
-            
+
             # Gets id and edit URL for each cell.
             # Note that return-empty=true is required to get those info for empty cells.
             cell_entries = {}
@@ -730,11 +733,11 @@ module GoogleSpreadsheet
               col = entry.css('gs|cell').first['col'].to_i
               cell_entries[[row, col]] = entry
             end
-            
+
             # Updates cell values using batch operation.
             # If the data is large, we split it into multiple operations, otherwise batch may fail.
             @modified.each_slice(250) do |chunk|
-              
+
               xml = <<-EOS
                 <feed xmlns="http://www.w3.org/2005/Atom"
                       xmlns:batch="http://schemas.google.com/gdata/batch"
@@ -760,7 +763,7 @@ module GoogleSpreadsheet
               xml << <<-"EOS"
                 </feed>
               EOS
-            
+
               result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
               result.css('atom|entry').each() do |entry|
                 interrupted = entry.css('batch|interrupted').first
@@ -773,41 +776,41 @@ module GoogleSpreadsheet
                     [entry.css('atom|id').text, entry.css('batch|status').first['reason']])
                 end
               end
-              
+
             end
-            
+
             @modified.clear()
             sent = true
-            
+
           end
           return sent
         end
-        
+
         # Calls save() and reload().
         def synchronize()
           save()
           reload()
         end
-        
+
         # Deletes this worksheet. Deletion takes effect right away without calling save().
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
           edit_url = ws_doc.css("link[@rel='edit']").first['href']
           @session.request(:delete, edit_url)
         end
-        
+
         # Returns true if you have changes made by []= which haven't been saved.
         def dirty?
           return !@modified.empty?
         end
-        
+
         # Creates table for the worksheet and returns GoogleSpreadsheet::Table.
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
           default_options = { :header_row => 1, :num_rows => 0, :start_row => 2}
           options = default_options.merge(options)
-          
+
           column_xml = ""
           columns.each() do |index, name|
             column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
@@ -829,7 +832,7 @@ module GoogleSpreadsheet
           result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
           return Table.new(@session, result)
         end
-        
+
         # Returns list of tables for the workwheet.
         def tables
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
@@ -846,6 +849,6 @@ module GoogleSpreadsheet
         end
 
     end
-    
-    
+
+
 end
