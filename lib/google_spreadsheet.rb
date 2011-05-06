@@ -17,8 +17,13 @@ module GoogleSpreadsheet
     # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
     # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
     # Google Apps account is supported.
-    def self.login(mail, password)
-      return Session.login(mail, password)
+    #
+    # +proxy+ can be nil or return value of Net::HTTP.Proxy. If +proxy+ is specified, all
+    # HTTP access in the session uses the proxy. If +proxy+ is nil, it uses the proxy
+    # specified by http_proxy environment variable if available. Otherwise it performs direct
+    # access.
+    def self.login(mail, password, proxy = nil)
+      return Session.login(mail, password, proxy)
     end
 
     # Authenticates with given OAuth token.
@@ -47,8 +52,10 @@ module GoogleSpreadsheet
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
     #
+    # See login for description of parameter +proxy+.
+    #
     # This method requires Highline library: http://rubyforge.org/projects/highline/
-    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token")
+    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token", proxy = nil)
       tokens = {}
       if File.exist?(path)
         open(path) do |f|
@@ -58,7 +65,7 @@ module GoogleSpreadsheet
           end
         end
       end
-      session = Session.new(tokens)
+      session = Session.new(tokens, nil, proxy)
       session.on_auth_fail = proc() do
         begin
           require "highline"
@@ -121,8 +128,8 @@ module GoogleSpreadsheet
         extend(Util)
 
         # The same as GoogleSpreadsheet.login.
-        def self.login(mail, password)
-          session = Session.new()
+        def self.login(mail, password, proxy = nil)
+          session = Session.new(nil, nil, proxy)
           session.login(mail, password)
           return session
         end
@@ -133,9 +140,19 @@ module GoogleSpreadsheet
         end
 
         # Restores session using return value of auth_tokens method of previous session.
-        def initialize(auth_tokens = nil, oauth_token = nil)
+        #
+        # See GoogleSpreadsheet.login for description of parameter +proxy+.
+        def initialize(auth_tokens = nil, oauth_token = nil, proxy = nil)
           @oauth_token = oauth_token
           @auth_tokens = auth_tokens || {}
+          if proxy
+            @proxy = proxy
+          elsif ENV["http_proxy"] && !ENV["http_proxy"].empty?
+            proxy_url = URI.parse(ENV["http_proxy"])
+            @proxy = Net::HTTP.Proxy(proxy_url.host, proxy_url.port)
+          else
+            @proxy = Net::HTTP
+          end
         end
 
         # Authenticates with given +mail+ and +password+, and updates current session object
@@ -295,12 +312,7 @@ module GoogleSpreadsheet
             end
           else
             uri = URI.parse(url)
-            if ENV["http_proxy"]
-            	proxy = URI.parse(ENV["http_proxy"])
-            	http = Net::HTTP.Proxy(proxy.host, proxy.port).new(uri.host, uri.port)
-            else
-            	http = Net::HTTP.new(uri.host, uri.port)
-            end
+            http = @proxy.new(uri.host, uri.port)
             http.use_ssl = true
             http.verify_mode = OpenSSL::SSL::VERIFY_NONE
             http.start() do
