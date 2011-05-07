@@ -384,6 +384,9 @@ module GoogleSpreadsheet
           return $1
         end
 
+        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+        # March 2012.
+        #
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
@@ -466,6 +469,9 @@ module GoogleSpreadsheet
           return Worksheet.new(@session, self, url, title)
         end
 
+        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+        # March 2012.
+        #
         # Returns list of tables in the spreadsheet.
         def tables
           doc = @session.request(:get, self.tables_feed_url)
@@ -474,6 +480,9 @@ module GoogleSpreadsheet
 
     end
 
+    # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+    # March 2012.
+    #
     # Use GoogleSpreadsheet::Worksheet#add_table to create table.
     # Use GoogleSpreadsheet::Worksheet#tables to get GoogleSpreadsheet::Table objects.
     class Table
@@ -520,6 +529,9 @@ module GoogleSpreadsheet
 
     end
 
+    # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+    # March 2012.
+    #
     # Use GoogleSpreadsheet::Table#records to get GoogleSpreadsheet::Record objects.
     class Record < Hash
         include(Util)
