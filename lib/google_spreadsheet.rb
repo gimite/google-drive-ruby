@@ -377,7 +377,7 @@ module GoogleSpreadsheet
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/full$})
+              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/(full|values)$})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
