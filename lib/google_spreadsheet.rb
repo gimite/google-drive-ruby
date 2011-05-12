@@ -370,18 +370,36 @@ module GoogleSpreadsheet
         # URL of worksheet-based feed of the spreadsheet.
         attr_reader(:worksheets_feed_url)
 
-        # Title of the spreadsheet. So far only available if you get this object by
-        # GoogleSpreadsheet::Session#spreadsheets.
-        attr_reader(:title)
+        # Title of the spreadsheet.
+        #
+        # Set params[:reload] to true to force reloading the title.
+        def title(params = {})
+          if !@title || params[:reload]
+            @title = spreadsheet_feed_entry(params).css("title").text
+          end
+          return @title
+        end
 
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
-              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/(full|values)$})
+              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/.*$})
             raise(GoogleSpreadsheet::Error,
               "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
           return $1
+        end
+        
+        # Spreadsheet feed URL of the spreadsheet.
+        def spreadsheet_feed_url
+          return "https://spreadsheets.google.com/feeds/spreadsheets/private/full/#{self.key}"
+        end
+        
+        # URL which you can open the spreadsheet in a Web browser with.
+        #
+        # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
+        def human_url
+          return self.spreadsheet_feed_entry.css("link[@rel='alternate']").first["href"]
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -397,6 +415,16 @@ module GoogleSpreadsheet
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
 
+        # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
+        #
+        # Set params[:reload] to true to force reloading the feed.
+        def spreadsheet_feed_entry(params = {})
+          if !@spreadsheet_feed_entry || params[:reload]
+            @spreadsheet_feed_entry = @session.request(:get, self.spreadsheet_feed_url).css("entry").first
+          end
+          return @spreadsheet_feed_entry
+        end
+        
         # Creates copy of this spreadsheet with the given name.
         def duplicate(new_name = nil)
           new_name ||= (@title ? "Copy of " + @title : "Untitled")
@@ -410,7 +438,7 @@ module GoogleSpreadsheet
           }
           doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
           ss_url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
           return Spreadsheet.new(@session, ss_url, title)
         end
 
@@ -425,7 +453,7 @@ module GoogleSpreadsheet
         # Renames title of the spreadsheet.
         def rename(title)
           doc = @session.request(:get, self.document_feed_url)
-          edit_url = doc.css("link[@rel='edit']").first['href']
+          edit_url = doc.css("link[@rel='edit']").first["href"]
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"
