@@ -360,6 +360,8 @@ module GoogleSpreadsheet
     class Spreadsheet
 
         include(Util)
+        
+        SUPPORTED_EXPORT_FORMAT = Set.new(["xls", "csv", "pdf", "ods", "tsv", "html"])
 
         def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
           @session = session
@@ -399,7 +401,8 @@ module GoogleSpreadsheet
         #
         # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
         def human_url
-          return self.spreadsheet_feed_entry.css("link[@rel='alternate']").first["href"]
+          # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
+          return self.document_feed_entry.css("link[@rel='alternate']").first["href"]
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -407,6 +410,9 @@ module GoogleSpreadsheet
         #
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
+          warn(
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
+              "not be available after March 2012.")
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
 
@@ -420,28 +426,40 @@ module GoogleSpreadsheet
         # Set params[:reload] to true to force reloading the feed.
         def spreadsheet_feed_entry(params = {})
           if !@spreadsheet_feed_entry || params[:reload]
-            @spreadsheet_feed_entry = @session.request(:get, self.spreadsheet_feed_url).css("entry").first
+            @spreadsheet_feed_entry =
+                @session.request(:get, self.spreadsheet_feed_url).css("entry").first
           end
           return @spreadsheet_feed_entry
         end
         
-        # Creates copy of this spreadsheet with the given name.
-        def duplicate(new_name = nil)
-          new_name ||= (@title ? "Copy of " + @title : "Untitled")
-          get_url = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=#{key}&exportFormat=ods"
-          ods = @session.request(:get, get_url, :response_type => :raw)
-
-          url = "https://docs.google.com/feeds/documents/private/full"
-          header = {
-            "Content-Type" => "application/x-vnd.oasis.opendocument.spreadsheet",
-            "Slug" => URI.encode(new_name),
-          }
-          doc = @session.request(:post, url, :data => ods, :auth => :writely, :header => header)
-          ss_url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
-          return Spreadsheet.new(@session, ss_url, title)
+        # <entry> element of document list feed as Nokogiri::XML::Element.
+        #
+        # Set params[:reload] to true to force reloading the feed.
+        def document_feed_entry(params = {})
+          if !@document_feed_entry || params[:reload]
+            @document_feed_entry =
+                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry").first
+          end
+          return @document_feed_entry
         end
-
+        
+        # Creates copy of this spreadsheet with the given title.
+        def duplicate(new_title = nil)
+          new_title ||= (self.title ? "Copy of " + self.title : "Untitled")
+          post_url = "https://docs.google.com/feeds/default/private/full/"
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          xml = <<-"EOS"
+            <entry xmlns='http://www.w3.org/2005/Atom'>
+              <id>#{h(self.document_feed_url)}</id>
+              <title>#{h(new_title)}</title>
+            </entry>
+          EOS
+          doc = @session.request(:post, post_url, :data => xml, :header => header, :auth => :writely)
+          ss_url = doc.css(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
+          return Spreadsheet.new(@session, ss_url, new_title)
+        end
+        
         # If +permanent+ is +false+, moves the spreadsheet to the trash.
         # If +permanent+ is +true+, deletes the spreadsheet permanently.
         def delete(permanent = false)
@@ -452,7 +470,7 @@ module GoogleSpreadsheet
 
         # Renames title of the spreadsheet.
         def rename(title)
-          doc = @session.request(:get, self.document_feed_url)
+          doc = @session.request(:get, self.document_feed_url, :auth => :writely)
           edit_url = doc.css("link[@rel='edit']").first["href"]
           xml = <<-"EOS"
             <atom:entry
@@ -465,9 +483,43 @@ module GoogleSpreadsheet
             </atom:entry>
           EOS
 
-          @session.request(:put, edit_url, :data => xml)
+          @session.request(:put, edit_url, :data => xml, :auth => :writely)
         end
-
+        
+        alias title= rename
+        
+        # Exports the spreadsheet in +format+ and returns it as String.
+        #
+        # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
+        # In format such as "csv", only the worksheet specified with +worksheet_index+ is exported.
+        def export_as_string(format, worksheet_index = nil)
+          gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
+          url =
+              "https://spreadsheets.google.com/feeds/download/spreadsheets/Export" +
+              "?key=#{key}&exportFormat=#{format}#{gid_param}"
+          return @session.request(:get, url, :response_type => :raw)
+        end
+        
+        # Exports the spreadsheet in +format+ as a local file.
+        #
+        # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
+        # If +format+ is nil, it is guessed from the file name.
+        # In format such as "csv", only the worksheet specified with +worksheet_index+ is exported.
+        def export_as_file(local_path, format = nil, worksheet_index = nil)
+          if !format
+            format = File.extname(local_path).gsub(/^\./, "")
+            if !SUPPORTED_EXPORT_FORMAT.include?(format)
+              raise(ArgumentError,
+                  ("Cannot guess format from the file name: %s\n" +
+                   "Specify format argument explicitly") %
+                  local_path)
+            end
+          end
+          open(local_path, "wb") do |f|
+            f.write(export_as_string(format, worksheet_index))
+          end
+        end
+        
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
@@ -502,6 +554,9 @@ module GoogleSpreadsheet
         #
         # Returns list of tables in the spreadsheet.
         def tables
+          warn(
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
+              "not be available after March 2012.")
           doc = @session.request(:get, self.tables_feed_url)
           return doc.css('entry').map(){ |e| Table.new(@session, e) }.freeze()
         end
@@ -857,10 +912,16 @@ module GoogleSpreadsheet
           return !@modified.empty?
         end
 
+        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+        # March 2012.
+        #
         # Creates table for the worksheet and returns GoogleSpreadsheet::Table.
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
+          warn(
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
+              "not be available after March 2012.")
           default_options = { :header_row => 1, :num_rows => 0, :start_row => 2}
           options = default_options.merge(options)
 
