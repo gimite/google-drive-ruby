@@ -459,7 +459,21 @@ module GoogleSpreadsheet
               "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
           return Spreadsheet.new(@session, ss_url, new_title)
         end
-        
+
+        # Moves this spreadsheet into a collection
+        def move(post_url)
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          xml = <<-"EOS"
+            <entry xmlns="http://www.w3.org/2005/Atom">
+              <id>#{h(self.document_feed_url)}</id>
+            </entry>
+          EOS
+          doc = @session.request(:post, post_url, :data => xml, :header => header, :auth => :writely)
+          ss_url = doc.css(
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
+          return Spreadsheet.new(@session, ss_url, self.title)
+        end
+
         # If +permanent+ is +false+, moves the spreadsheet to the trash.
         # If +permanent+ is +true+, deletes the spreadsheet permanently.
         def delete(permanent = false)
