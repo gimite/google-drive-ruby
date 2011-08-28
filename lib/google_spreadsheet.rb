@@ -251,6 +251,17 @@ module GoogleSpreadsheet
           return Worksheet.new(self, nil, url)
         end
 
+        # Returns GoogleSpreadsheet::Collection with given +url+.
+        # You must specify URL of collection (folder) feed.
+        #
+        # e.g.
+        #   session.collection_by_url(
+        #     "http://docs.google.com/feeds/default/private/full/folder%3A" +
+        #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
+        def collection_by_url(url)
+          return Collection.new(self, url)
+        end
+
         # Creates new spreadsheet and returns the new GoogleSpreadsheet::Spreadsheet.
         #
         # e.g.
@@ -460,20 +471,6 @@ module GoogleSpreadsheet
           return Spreadsheet.new(@session, ss_url, new_title)
         end
 
-        # Moves this spreadsheet into a collection
-        def move(post_url)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
-          xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom">
-              <id>#{h(self.document_feed_url)}</id>
-            </entry>
-          EOS
-          doc = @session.request(:post, post_url, :data => xml, :header => header, :auth => :writely)
-          ss_url = doc.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
-          return Spreadsheet.new(@session, ss_url, self.title)
-        end
-
         # If +permanent+ is +false+, moves the spreadsheet to the trash.
         # If +permanent+ is +true+, deletes the spreadsheet permanently.
         def delete(permanent = false)
@@ -576,7 +573,35 @@ module GoogleSpreadsheet
         end
 
     end
+    
+    # Use GoogleSpreadsheet::Session#collection_by_url to get GoogleSpreadsheet::Collection object.
+    class Collection
 
+        include(Util)
+        
+        def initialize(session, collection_feed_url) #:nodoc:
+          @session = session
+          @collection_feed_url = collection_feed_url
+        end
+        
+        # Adds the given GoogleSpreadsheet::Spreadsheet to the collection.
+        def add(spreadsheet)
+          contents_url = "#{@collection_feed_url}/contents"
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          xml = <<-"EOS"
+            <entry xmlns="http://www.w3.org/2005/Atom">
+              <id>#{h(spreadsheet.document_feed_url)}</id>
+            </entry>
+          EOS
+          @session.request(
+              :post, contents_url, :data => xml, :header => header, :auth => :writely)
+          return nil
+        end
+        
+        # TODO Add other operations.
+
+    end
+    
     # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
     # March 2012.
     #
