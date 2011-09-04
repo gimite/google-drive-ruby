@@ -9,12 +9,11 @@ require "highline"
 
 class TC_GoogleSpreadsheet < Test::Unit::TestCase
     
-    USE_SAVED_SESSION = false
-    
     def test_all()
       puts("This test will create spreadsheets with your account, read/write them")
       puts("and finally delete them (if everything goes well).")
-      if USE_SAVED_SESSION
+      use_saved_session = ENV["GOOGLE_SPREADSHEET_RUBY_USE_SAVED_SESSION"]
+      if use_saved_session && !use_saved_session.empty?
         session = GoogleSpreadsheet.saved_session
       else
         highline = HighLine.new()
