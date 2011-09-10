@@ -10,18 +10,24 @@ require "highline"
 class TC_GoogleSpreadsheet < Test::Unit::TestCase
     
     def test_all()
+      
       puts("This test will create spreadsheets with your account, read/write them")
       puts("and finally delete them (if everything goes well).")
-      use_saved_session = ENV["GOOGLE_SPREADSHEET_RUBY_USE_SAVED_SESSION"]
-      if use_saved_session && !use_saved_session.empty?
-        session = GoogleSpreadsheet.saved_session
+      account_path = File.join(File.dirname(__FILE__), "account.yaml")
+      if File.exist?(account_path)
+        account = YAML.load_file(account_path)
       else
-          unless session = login_from_fixtures
-              highline = HighLine.new()
-              mail = highline.ask("Mail: ")
-              password = highline.ask("Password: "){ |q| q.echo = false }
-              session = GoogleSpreadsheet.login(mail, password)
-          end
+        account = {}
+      end
+      if account["use_saved_session"]
+        session = GoogleSpreadsheet.saved_session
+      elsif account["mail"] && account["password"]
+        session = GoogleSpreadsheet.login(account["mail"], account["password"])
+      else
+        highline = HighLine.new()
+        mail = highline.ask("Mail: ")
+        password = highline.ask("Password: "){ |q| q.echo = false }
+        session = GoogleSpreadsheet.login(mail, password)
       end
       
       ss_title = "google-spreadsheet-ruby test " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
@@ -97,17 +103,4 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       ss.delete(true)
     end
     
-    #######
-    private
-    #######
-
-    def login_from_fixtures
-      begin
-          fixtures = YAML.load_file(File.join(File.dirname(__FILE__), 'account.yml'))
-      rescue
-          return false
-      end
-      GoogleSpreadsheet.login(fixtures["username"], fixtures['password'])
-    end
-
 end

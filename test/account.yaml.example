@@ -1,0 +1,11 @@
+# This file is in Public Domain.
+
+# test_google_spreadsheet.rb asks you for your Google account each time by default.
+# If you want to automate it, copy this file to account.yaml and set some proper values.
+
+# Set this to true to store session to $HOME/.ruby_google_spreadsheet.token and reuse it.
+use_saved_session: false
+
+# Or you can write your Google account information here directly.
+mail: "example@gmail.com"
+password: "password"

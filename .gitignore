@@ -1,6 +1,6 @@
 experiment
 doc
-test/account.yml
+test/account.yaml
 *~
 *.gem
 .rvmrc
