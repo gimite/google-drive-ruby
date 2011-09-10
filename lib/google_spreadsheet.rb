@@ -100,6 +100,13 @@ module GoogleSpreadsheet
         def encode_query(params)
           return params.map(){ |k, v| CGI.escape(k) + "=" + CGI.escape(v) }.join("&")
         end
+        
+        def concat_url(url, piece)
+          (url_base, url_query) = url.split(/\?/, 2)
+          (piece_base, piece_query) = piece.split(/\?/, 2)
+          result_query = [url_query, piece_query].select(){ |s| s && !s.empty? }.join("&")
+          return url_base + piece_base + (result_query.empty? ? "" : "?#{result_query}")
+        end
 
         def h(str)
           return CGI.escapeHTML(str.to_s())
@@ -586,7 +593,7 @@ module GoogleSpreadsheet
         
         # Adds the given GoogleSpreadsheet::Spreadsheet to the collection.
         def add(spreadsheet)
-          contents_url = "#{@collection_feed_url}/contents"
+          contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           xml = <<-"EOS"
             <entry xmlns="http://www.w3.org/2005/Atom">
@@ -697,18 +704,18 @@ module GoogleSpreadsheet
           # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
           # from it.
           if !(@cells_feed_url =~
-              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
             raise(GoogleSpreadsheet::Error,
               "cells feed URL is in unknown format: #{@cells_feed_url}")
           end
-          return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}"
+          return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
         end
 
         # GoogleSpreadsheet::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
-                %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full$})
+                %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full(\?.*)?$})
               raise(GoogleSpreadsheet::Error,
                 "cells feed URL is in unknown format: #{@cells_feed_url}")
             end
@@ -871,8 +878,9 @@ module GoogleSpreadsheet
             cell_entries = {}
             rows = @modified.map(){ |r, c| r }
             cols = @modified.map(){ |r, c| c }
-            url = "#{@cells_feed_url}?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
-              "&min-col=#{cols.min}&max-col=#{cols.max}"
+            url = concat_url(@cells_feed_url,
+                "?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
+                "&min-col=#{cols.min}&max-col=#{cols.max}")
             doc = @session.request(:get, url)
 
             doc.css('entry').each() do |entry|
@@ -911,7 +919,8 @@ module GoogleSpreadsheet
                 </feed>
               EOS
 
-              result = @session.request(:post, "#{@cells_feed_url}/batch", :data => xml)
+              batch_url = concat_url(@cells_feed_url, "/batch")
+              result = @session.request(:post, batch_url, :data => xml)
               result.css('atom|entry').each() do |entry|
                 interrupted = entry.css('batch|interrupted').first
                 if interrupted
