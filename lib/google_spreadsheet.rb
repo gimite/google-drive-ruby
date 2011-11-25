@@ -10,6 +10,7 @@ require "uri"
 require "rubygems"
 require "nokogiri"
 require "oauth"
+require "oauth2"
 Net::HTTP.version_1_2
 
 module GoogleSpreadsheet
@@ -46,6 +47,21 @@ module GoogleSpreadsheet
     # - http://code.google.com/apis/accounts/docs/OAuth.html
     def self.login_with_oauth(oauth_token)
       return Session.login_with_oauth(oauth_token)
+    end
+
+    # Authenticates with given OAuth2 token.
+    #
+    # Given an OAuth2 token from omniauth/devise you can reuse it with lib 'oauth2':
+    # @access_token = OAuth2::AccessToken.from_hash(@client,  { :refresh_token => current_user.refresh_token, :expires_at => current_user.expires_at } )
+    # @access_token = @access_token.refresh! #not actually sure this is needed yet
+    # session = GoogleSpreadsheet.login_with_oauth2(@access_token)
+    #
+    # See these documents for details:
+    #
+    # - https://github.com/intridea/oauth2
+    # - http://code.google.com/apis/accounts/docs/OAuth2.html
+    def self.login_with_oauth2(oauth2_token)
+      return Session.login_with_oauth2(oauth2_token)
     end
 
     # Restores GoogleSpreadsheet::Session from +path+ and returns it.
@@ -146,11 +162,17 @@ module GoogleSpreadsheet
           session = Session.new(nil, oauth_token)
         end
 
+        # The same as GoogleSpreadsheet.login_with_oauth2.
+        def self.login_with_oauth2(oauth2_token)
+          session = Session.new(nil, nil, nil, oauth2_token)
+        end
+
         # Restores session using return value of auth_tokens method of previous session.
         #
         # See GoogleSpreadsheet.login for description of parameter +proxy+.
-        def initialize(auth_tokens = nil, oauth_token = nil, proxy = nil)
+        def initialize(auth_tokens = nil, oauth_token = nil, proxy = nil, oauth2_token = nil)
           @oauth_token = oauth_token
+          @oauth2_token = oauth2_token
           @auth_tokens = auth_tokens || {}
           if proxy
             @proxy = proxy
@@ -306,13 +328,14 @@ module GoogleSpreadsheet
 
           while true
             response = request_raw(method, url, data, extra_header, auth)
-            if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
+            code = defined?(response.status) ? response.status.to_s : response.code # OAuth2::Response uses "status"
+            if code == "401" && @on_auth_fail && @on_auth_fail.call()
               next
             end
-            if !(response.code =~ /^2/)
+            if !(code =~ /^2/)
               raise(
-                response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                "Response code #{response.code} for #{method} #{url}: " +
+                code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                "Response code #{code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
             return convert_response(response, response_type)
@@ -327,6 +350,12 @@ module GoogleSpreadsheet
               return @oauth_token.__send__(method, url, extra_header)
             else
               return @oauth_token.__send__(method, url, data, extra_header)
+            end
+          elsif @oauth2_token
+            if method == :delete || method == :get
+              return @oauth2_token.request(method, url, {:header => extra_header})
+            else
+              return @oauth2_token.request(method, url, {:header => extra_header, :body => data})
             end
           else
             uri = URI.parse(url)
