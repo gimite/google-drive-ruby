@@ -27,9 +27,31 @@ module GoogleSpreadsheet
       return Session.login(mail, password, proxy)
     end
 
-    # Authenticates with given OAuth token.
+    # Authenticates with given OAuth1 or OAuth2 token.
     #
-    # For generating oauth_token, you can proceed as follow:
+    # OAuth2 code example:
+    #
+    #   client = OAuth2::Client.new(
+    #       your_client_id, your_client_secret,
+    #       :site => "https://accounts.google.com",
+    #       :token_url => "/o/oauth2/token",
+    #       :authorize_url => "/o/oauth2/auth")
+    #   auth_url = client.auth_code.authorize_url(
+    #       :redirect_uri => "http://example.com/",
+    #       "scope" => "https://spreadsheets.google.com/feeds https://docs.google.com/feeds/")
+    #   # Redirect the user to auth_url and get authorization code from redirect URL.
+    #   auth_token = client.auth_code.get_token(
+    #       authorization_code, :redirect_uri => "http://example.com/")
+    #   session = GoogleSpreadsheet.login_with_oauth(auth_token)
+    #
+    # Or, from existing refresh token:
+    #
+    #   access_token = OAuth2::AccessToken.from_hash(client,
+    #       {:refresh_token => refresh_token, :expires_at => expires_at})
+    #   access_token = access_token.refresh!
+    #   session = GoogleSpreadsheet.login_with_oauth(access_token)
+    #
+    # OAuth1 code example:
     #
     # 1) First generate OAuth consumer object with key and secret for your site by registering site with google
     #   @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
@@ -43,27 +65,21 @@ module GoogleSpreadsheet
     #
     # See these documents for details:
     #
+    # - https://github.com/intridea/oauth2
+    # - http://code.google.com/apis/accounts/docs/OAuth2.html
     # - http://oauth.rubyforge.org/
     # - http://code.google.com/apis/accounts/docs/OAuth.html
     def self.login_with_oauth(oauth_token)
       return Session.login_with_oauth(oauth_token)
     end
 
-    # Authenticates with given OAuth2 token.
+    # Restores session using return value of auth_tokens method of previous session.
     #
-    # Given an OAuth2 token from omniauth/devise you can reuse it with lib 'oauth2':
-    # @access_token = OAuth2::AccessToken.from_hash(@client,  { :refresh_token => current_user.refresh_token, :expires_at => current_user.expires_at } )
-    # @access_token = @access_token.refresh! #not actually sure this is needed yet
-    # session = GoogleSpreadsheet.login_with_oauth2(@access_token)
-    #
-    # See these documents for details:
-    #
-    # - https://github.com/intridea/oauth2
-    # - http://code.google.com/apis/accounts/docs/OAuth2.html
-    def self.login_with_oauth2(oauth2_token)
-      return Session.login_with_oauth2(oauth2_token)
+    # See GoogleSpreadsheet.login for description of parameter +proxy+.
+    def self.restore_session(auth_tokens, proxy = nil)
+      return Session.restore_session(auth_tokens, proxy)
     end
-
+    
     # Restores GoogleSpreadsheet::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
@@ -141,6 +157,89 @@ module GoogleSpreadsheet
     class AuthenticationError < GoogleSpreadsheet::Error
 
     end
+    
+    
+    class ClientLoginFetcher #:nodoc:
+        
+        def initialize(auth_tokens, proxy)
+          @auth_tokens = auth_tokens
+          if proxy
+            @proxy = proxy
+          elsif ENV["http_proxy"] && !ENV["http_proxy"].empty?
+            proxy_url = URI.parse(ENV["http_proxy"])
+            @proxy = Net::HTTP.Proxy(proxy_url.host, proxy_url.port)
+          else
+            @proxy = Net::HTTP
+          end
+        end
+        
+        attr_accessor(:auth_tokens)
+        
+        def request_raw(method, url, data, extra_header, auth)
+          uri = URI.parse(url)
+          http = @proxy.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          http.start() do
+            path = uri.path + (uri.query ? "?#{uri.query}" : "")
+            header = auth_header(auth).merge(extra_header)
+            if method == :delete || method == :get
+              return http.__send__(method, path, header)
+            else
+              return http.__send__(method, path, data, header)
+            end
+          end
+        end
+        
+      private
+        
+        def auth_header(auth)
+          token = auth == :none ? nil : @auth_tokens[auth]
+          if token
+            return {"Authorization" => "GoogleLogin auth=#{token}"}
+          else
+            return {}
+          end
+        end
+
+    end
+    
+    
+    class OAuth1Fetcher #:nodoc:
+        
+        def initialize(oauth1_token)
+          @oauth1_token = oauth1_token
+        end
+        
+        def request_raw(method, url, data, extra_header, auth)
+          if method == :delete || method == :get
+            return @oauth1_token.__send__(method, url, extra_header)
+          else
+            return @oauth1_token.__send__(method, url, data, extra_header)
+          end
+        end
+        
+    end
+
+
+    class OAuth2Fetcher #:nodoc:
+        
+        Response = Struct.new(:code, :body)
+        
+        def initialize(oauth2_token)
+          @oauth2_token = oauth2_token
+        end
+        
+        def request_raw(method, url, data, extra_header, auth)
+          if method == :delete || method == :get
+            raw_res = @oauth2_token.request(method, url, {:header => extra_header})
+          else
+            raw_res = @oauth2_token.request(method, url, {:header => extra_header, :body => data})
+          end
+          return Response.new(raw_res.status.to_s(), raw_res.body)
+        end
+        
+    end
 
 
     # Use GoogleSpreadsheet.login or GoogleSpreadsheet.saved_session to get
@@ -152,35 +251,36 @@ module GoogleSpreadsheet
 
         # The same as GoogleSpreadsheet.login.
         def self.login(mail, password, proxy = nil)
-          session = Session.new(nil, nil, proxy)
+          session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
           session.login(mail, password)
           return session
         end
 
         # The same as GoogleSpreadsheet.login_with_oauth.
         def self.login_with_oauth(oauth_token)
-          session = Session.new(nil, oauth_token)
+          case oauth_token
+            when OAuth::AccessToken
+              fetcher = OAuth1Fetcher.new(oauth_token)
+            when OAuth2::AccessToken
+              fetcher = OAuth2Fetcher.new(oauth_token)
+            else
+              raise(GoogleSpreadsheet::Error,
+                  "oauth_token is neither OAuth::Token nor OAuth2::Token: %p" % oauth_token)
+          end
+          return Session.new(nil, fetcher)
         end
 
-        # The same as GoogleSpreadsheet.login_with_oauth2.
-        def self.login_with_oauth2(oauth2_token)
-          session = Session.new(nil, nil, nil, oauth2_token)
+        # The same as GoogleSpreadsheet.restore_session.
+        def self.restore_session(auth_tokens, proxy = nil)
+          return Session.new(auth_tokens, nil, proxy)
         end
 
-        # Restores session using return value of auth_tokens method of previous session.
-        #
-        # See GoogleSpreadsheet.login for description of parameter +proxy+.
-        def initialize(auth_tokens = nil, oauth_token = nil, proxy = nil, oauth2_token = nil)
-          @oauth_token = oauth_token
-          @oauth2_token = oauth2_token
-          @auth_tokens = auth_tokens || {}
-          if proxy
-            @proxy = proxy
-          elsif ENV["http_proxy"] && !ENV["http_proxy"].empty?
-            proxy_url = URI.parse(ENV["http_proxy"])
-            @proxy = Net::HTTP.Proxy(proxy_url.host, proxy_url.port)
+        # DEPRECATED: Use GoogleSpreadsheet.restore_session instead.
+        def initialize(auth_tokens = nil, fetcher = nil, proxy = nil)
+          if fetcher
+            @fetcher = fetcher
           else
-            @proxy = Net::HTTP
+            @fetcher = ClientLoginFetcher.new(auth_tokens || {}, proxy)
           end
         end
 
@@ -188,10 +288,15 @@ module GoogleSpreadsheet
         # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
         # Google Apps account is supported.
         def login(mail, password)
+          if !@fetcher.is_a?(ClientLoginFetcher)
+            raise(GoogleSpreadsheet::Error,
+                "Cannot call login for session created by login_with_oauth or login_with_oauth2.")
+          end
           begin
-            @auth_tokens = {}
-            authenticate(mail, password, :wise)
-            authenticate(mail, password, :writely)
+            @fetcher.auth_tokens = {
+              :wise => authenticate(mail, password, :wise),
+              :writely => authenticate(mail, password, :writely),
+            }
           rescue GoogleSpreadsheet::Error => ex
             return true if @on_auth_fail && @on_auth_fail.call()
             raise(AuthenticationError, "authentication failed for #{mail}: #{ex.message}")
@@ -199,25 +304,23 @@ module GoogleSpreadsheet
         end
 
         # Authentication tokens.
-        attr_reader(:auth_tokens)
+        def auth_tokens
+          if !@fetcher.is_a?(ClientLoginFetcher)
+            raise(GoogleSpreadsheet::Error,
+                "Cannot call auth_tokens for session created by " +
+                "login_with_oauth or login_with_oauth2.")
+          end
+          return @fetcher.auth_tokens
+        end
 
         # Authentication token.
         def auth_token(auth = :wise)
-          return @auth_tokens[auth]
+          return self.auth_tokens[auth]
         end
 
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
-
-        def auth_header(auth) #:nodoc:
-          token = auth == :none ? nil : @auth_tokens[auth]
-          if token
-            return {"Authorization" => "GoogleLogin auth=#{token}"}
-          else
-            return {}
-          end
-        end
 
         # Returns list of spreadsheets for the user as array of GoogleSpreadsheet::Spreadsheet.
         # You can specify query parameters described at
@@ -327,15 +430,14 @@ module GoogleSpreadsheet
           response_type = params[:response_type] || :xml
 
           while true
-            response = request_raw(method, url, data, extra_header, auth)
-            code = defined?(response.status) ? response.status.to_s : response.code # OAuth2::Response uses "status"
-            if code == "401" && @on_auth_fail && @on_auth_fail.call()
+            response = @fetcher.request_raw(method, url, data, extra_header, auth)
+            if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
               next
             end
-            if !(code =~ /^2/)
+            if !(response.code =~ /^2/)
               raise(
-                code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
-                "Response code #{code} for #{method} #{url}: " +
+                response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                "Response code #{response.code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
             return convert_response(response, response_type)
@@ -343,36 +445,6 @@ module GoogleSpreadsheet
         end
 
       private
-
-        def request_raw(method, url, data, extra_header, auth)
-          if @oauth_token
-            if method == :delete || method == :get
-              return @oauth_token.__send__(method, url, extra_header)
-            else
-              return @oauth_token.__send__(method, url, data, extra_header)
-            end
-          elsif @oauth2_token
-            if method == :delete || method == :get
-              return @oauth2_token.request(method, url, {:header => extra_header})
-            else
-              return @oauth2_token.request(method, url, {:header => extra_header, :body => data})
-            end
-          else
-            uri = URI.parse(url)
-            http = @proxy.new(uri.host, uri.port)
-            http.use_ssl = true
-            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-            http.start() do
-              path = uri.path + (uri.query ? "?#{uri.query}" : "")
-              header = auth_header(auth).merge(extra_header)
-              if method == :delete || method == :get
-                return http.__send__(method, path, header)
-              else
-                return http.__send__(method, path, data, header)
-              end
-            end
-          end
-        end
 
         def convert_response(response, response_type)
           case response_type
@@ -397,7 +469,7 @@ module GoogleSpreadsheet
           response = request(:post,
             "https://www.google.com/accounts/ClientLogin",
             :data => encode_query(params), :auth => :none, :header => header, :response_type => :raw)
-          @auth_tokens[auth] = response.slice(/^Auth=(.*)$/, 1)
+          return response.slice(/^Auth=(.*)$/, 1)
         end
 
     end
