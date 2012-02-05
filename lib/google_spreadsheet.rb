@@ -290,7 +290,7 @@ module GoogleSpreadsheet
         def login(mail, password)
           if !@fetcher.is_a?(ClientLoginFetcher)
             raise(GoogleSpreadsheet::Error,
-                "Cannot call login for session created by login_with_oauth or login_with_oauth2.")
+                "Cannot call login for session created by login_with_oauth.")
           end
           begin
             @fetcher.auth_tokens = {
@@ -308,7 +308,7 @@ module GoogleSpreadsheet
           if !@fetcher.is_a?(ClientLoginFetcher)
             raise(GoogleSpreadsheet::Error,
                 "Cannot call auth_tokens for session created by " +
-                "login_with_oauth or login_with_oauth2.")
+                "login_with_oauth.")
           end
           return @fetcher.auth_tokens
         end
@@ -442,6 +442,10 @@ module GoogleSpreadsheet
             end
             return convert_response(response, response_type)
           end
+        end
+        
+        def inspect
+          return '#<%p:0x%x>' % [self.class, self.object_id]
         end
 
       private
@@ -651,6 +655,14 @@ module GoogleSpreadsheet
           end
           return result.freeze()
         end
+        
+        # Returns a GoogleSpreadsheet::Worksheet with the given title in the spreadsheet.
+        #
+        # Returns nil if not found. Returns the first one when multiple worksheets with the
+        # title are found.
+        def worksheet_by_title(title)
+          return self.worksheets.find(){ |ws| ws.title == title }
+        end
 
         # Adds a new worksheet to the spreadsheet. Returns added GoogleSpreadsheet::Worksheet.
         def add_worksheet(title, max_rows = 100, max_cols = 20)
@@ -678,6 +690,12 @@ module GoogleSpreadsheet
               "not be available after March 2012.")
           doc = @session.request(:get, self.tables_feed_url)
           return doc.css('entry').map(){ |e| Table.new(@session, e) }.freeze()
+        end
+        
+        def inspect
+          fields = {:worksheets_feed_url => self.worksheets_feed_url}
+          fields[:title] = @title if @title
+          return '#<%p %s>' % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
 
     end
@@ -1109,6 +1127,12 @@ module GoogleSpreadsheet
           # Gets the URL of list-based feed for the given spreadsheet.
           return entry.css(
             "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href']
+        end
+        
+        def inspect
+          fields = {:worksheet_feed_url => self.worksheet_feed_url}
+          fields[:title] = @title if @title
+          return '#<%p %s>' % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
 
     end

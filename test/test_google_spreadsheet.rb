@@ -70,6 +70,8 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_equal(ss.human_url, ss2.human_url)
       assert_equal("hoge", ss2.worksheets[0].title)
       assert_equal("3", ss2.worksheets[0][1, 1])
+      assert_equal("hoge", ss2.worksheet_by_title("hoge").title)
+      assert_equal(nil, ss2.worksheet_by_title("foo"))
       if RUBY_VERSION >= "1.9.0"
         assert_equal(Encoding::UTF_8, ss2.title.encoding)
         assert_equal(Encoding::UTF_8, ss2.worksheets[0].title.encoding)
