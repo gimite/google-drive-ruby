@@ -734,7 +734,7 @@ module GoogleSpreadsheet
             title = entry.css("title").text
             url = entry.css(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
-            GoogleSpreadsheet::Spreadsheet.new(self, url, title)
+            GoogleSpreadsheet::Spreadsheet.new(@session, url, title)
           end
         end
         
