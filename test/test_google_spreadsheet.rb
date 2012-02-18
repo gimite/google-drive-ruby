@@ -96,6 +96,29 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
       
+      # Access via GoogleSpreadsheet::Worksheet#list.
+      ws.list.keys = ["x", "y"]
+      ws.list.push({"x" => "1", "y" => "2"})
+      ws.list.push({"x" => "3", "y" => "4"})
+      assert_equal(["x", "y"], ws.list.keys)
+      assert_equal(2, ws.list.size)
+      assert_equal("1", ws.list[0]["x"])
+      assert_equal("2", ws.list[0]["y"])
+      assert_equal("3", ws.list[1]["x"])
+      assert_equal("4", ws.list[1]["y"])
+      assert_equal("x", ws[1, 1])
+      assert_equal("y", ws[1, 2])
+      assert_equal("1", ws[2, 1])
+      assert_equal("2", ws[2, 2])
+      assert_equal("3", ws[3, 1])
+      assert_equal("4", ws[3, 2])
+      ws.list[0]["x"] = "5"
+      ws.list[1] = {"x" => "6", "y" => "7"}
+      assert_equal("5", ws.list[0]["x"])
+      assert_equal("2", ws.list[0]["y"])
+      assert_equal("6", ws.list[1]["x"])
+      assert_equal("7", ws.list[1]["y"])
+      
       ss.delete()
       assert_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })

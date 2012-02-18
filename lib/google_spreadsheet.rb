@@ -798,6 +798,7 @@ module GoogleSpreadsheet
 
     end
 
+    # A worksheet (i.e. a tab) in a spreadsheet.
     # Use GoogleSpreadsheet::Spreadsheet#worksheets to get GoogleSpreadsheet::Worksheet object.
     class Worksheet
 
@@ -812,6 +813,7 @@ module GoogleSpreadsheet
           @cells = nil
           @input_values = nil
           @modified = Set.new()
+          @list = nil
         end
 
         # URL of cell-based feed of the worksheet.
@@ -866,8 +868,9 @@ module GoogleSpreadsheet
 
         # Returns the value or the formula of the cell. Top-left cell is [1, 1].
         #
-        # If user input "=A1+B1" to cell [1, 3], worksheet[1, 3] is "3" for example and
-        # worksheet.input_value(1, 3) is "=RC[-2]+RC[-1]".
+        # If user input "=A1+B1" to cell [1, 3]:
+        #   worksheet[1, 3]              #=> "3" for example
+        #   worksheet.input_value(1, 3)  #=> "=RC[-2]+RC[-1]"
         def input_value(row, col)
           reload() if !@cells
           return @input_values[[row, col]] || ""
@@ -876,13 +879,13 @@ module GoogleSpreadsheet
         # Row number of the bottom-most non-empty row.
         def num_rows
           reload() if !@cells
-          return @cells.keys.map(){ |r, c| r }.max || 0
+          return @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| r }.max || 0
         end
 
         # Column number of the right-most non-empty column.
         def num_cols
           reload() if !@cells
-          return @cells.keys.map(){ |r, c| c }.max || 0
+          return @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| c }.max || 0
         end
 
         # Number of rows including empty rows.
@@ -944,7 +947,7 @@ module GoogleSpreadsheet
         end
 
         # Reloads content of the worksheets from the server.
-        # Note that changes you made by []= is discarded if you haven't called save().
+        # Note that changes you made by []= etc. is discarded if you haven't called save().
         def reload()
           doc = @session.request(:get, @cells_feed_url)
           @max_rows = doc.css('gs|rowCount').text.to_i
@@ -959,7 +962,6 @@ module GoogleSpreadsheet
             col = cell["col"].to_i()
             @cells[[row, col]] = cell.inner_text
             @input_values[[row, col]] = cell["inputValue"]
-
           end
           @modified.clear()
           @meta_modified = false
@@ -1129,6 +1131,22 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href']
         end
         
+        # Provides access to cells using column names, assuming the first row contains column
+        # names. Returned object is GoogleSpreadsheet::List which you can use mostly as
+        # Array of Hash.
+        #
+        # e.g. Assuming the first row is ["x", "y"]:
+        #   worksheet.list[0]["x"]  #=> "1"  # i.e. worksheet[2, 1]
+        #   worksheet.list[0]["y"]  #=> "2"  # i.e. worksheet[2, 2]
+        #   worksheet.list[1]["x"] = "3"     # i.e. worksheet[3, 1] = "3"
+        #   worksheet.list[1]["y"] = "4"     # i.e. worksheet[3, 2] = "4"
+        #   worksheet.list.push({"x" => "5", "y" => "6"})
+        #
+        # Note that update is not sent to the server until you call save().
+        def list
+          return @list ||= List.new(self)
+        end
+        
         def inspect
           fields = {:worksheet_feed_url => self.worksheet_feed_url}
           fields[:title] = @title if @title
@@ -1137,5 +1155,181 @@ module GoogleSpreadsheet
 
     end
 
+    
+    # Provides access to cells using column names.
+    # Use GoogleSpreadsheet::Worksheet#list to get GoogleSpreadsheet::List object.
+    #--
+    # This is implemented as wrapper of GoogleSpreadsheet::Worksheet i.e. using cells
+    # feed, not list feed. In this way, we can easily provide consistent API as
+    # GoogleSpreadsheet::Worksheet using save()/reload().
+    class List
+        
+        include(Enumerable)
+        
+        def initialize(worksheet) #:nodoc:
+          @worksheet = worksheet
+        end
+        
+        # Number of non-empty rows in the worksheet excluding the first row.
+        def size
+          return @worksheet.num_rows - 1
+        end
+        
+        # Returns Hash-like object (GoogleSpreadsheet::ListRow) for the row with the
+        # index. Keys of the object are colum names (the first row).
+        # The second row has index 0.
+        #
+        # Note that updates to the returned object are not sent to the server until
+        # you call GoogleSpreadsheet::Worksheet#save().
+        def [](index)
+          return ListRow.new(self, index)
+        end
+        
+        # Updates the row with the index with the given Hash object.
+        # Keys of +hash+ are colum names (the first row).
+        # The second row has index 0.
+        #
+        # Note that update is not sent to the server until
+        # you call GoogleSpreadsheet::Worksheet#save().
+        def []=(index, hash)
+          self[index].replace(hash)
+        end
+        
+        # Iterates over Hash-like object (GoogleSpreadsheet::ListRow) for each row
+        # (except for the first row).
+        # Keys of the object are colum names (the first row).
+        def each(&block)
+          for i in 0...self.size
+            yield(self[i])
+          end
+        end
+        
+        # Column names i.e. the contents of the first row.
+        # Duplicates are removed.
+        def keys
+          return (1..@worksheet.num_cols).map(){ |i| @worksheet[1, i] }.uniq()
+        end
+        
+        # Updates column names i.e. the contents of the first row.
+        #
+        # Note that update is not sent to the server until
+        # you call GoogleSpreadsheet::Worksheet#save().
+        def keys=(ary)
+          for i in 1..ary.size
+            @worksheet[1, i] = ary[i - 1]
+          end
+          for i in (ary.size + 1)..@worksheet.num_cols
+            @worksheet[1, i] = ""
+          end
+        end
+        
+        # Adds a new row to the bottom.
+        # Keys of +hash+ are colum names (the first row).
+        # Returns GoogleSpreadsheet::ListRow for the new row.
+        #
+        # Note that update is not sent to the server until
+        # you call GoogleSpreadsheet::Worksheet#save().
+        def push(hash)
+          row = self[self.size]
+          row.update(hash)
+          return row
+        end
+        
+        # Returns all rows (except for the first row) as Array of Hash.
+        # Keys of Hash objects are colum names (the first row).
+        def to_hash_array()
+          return self.map(){ |r| r.to_hash() }
+        end
+        
+        def get(index, key) #:nodoc:
+          return @worksheet[index + 2, key_to_col(key)]
+        end
+        
+        def set(index, key, value) #:nodoc:
+          @worksheet[index + 2, key_to_col(key)] = value
+        end
+        
+      private
+        
+        def key_to_col(key)
+          key = key.to_s()
+          col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
+          raise(GoogleSpreadsheet::Error, "colunm doesn't exist: %p" % key) if !col
+          return col
+        end
+        
+    end
 
+    # Hash-like object returned by GoogleSpreadsheet::List#[].
+    class ListRow
+        
+        include(Enumerable)
+        extend(Forwardable)
+        
+        def_delegators(:to_hash,
+            :keys, :values, :each_key, :each_value, :each, :each_pair, :hash,
+            :assoc, :fetch, :flatten, :key, :invert, :size, :length, :rassoc,
+            :merge, :reject, :select, :sort, :to_a, :values_at)
+        
+        def initialize(list, index) #:nodoc:
+          @list = list
+          @index = index
+        end
+        
+        def [](key)
+          return @list.get(@index, key)
+        end
+        
+        def []=(key, value)
+          @list.set(@index, key, value)
+        end
+        
+        def has_key?(key)
+          return @list.keys.include?(key)
+        end
+        
+        alias include? has_key?
+        alias key? has_key?
+        alias member? has_key?
+        
+        def update(hash)
+          for k, v in hash
+            self[k] = v
+          end
+        end
+        
+        alias merge! update
+        
+        def replace(hash)
+          clear()
+          update(hash)
+        end
+        
+        def clear()
+          for key in @list.keys
+            self[key] = ""
+          end
+        end
+        
+        def to_hash()
+          result = {}
+          for key in @list.keys
+            result[key] = self[key]
+          end
+          return result
+        end
+        
+        def ==(other)
+          return self.class == other.class && self.to_hash() == other.to_hash()
+        end
+        
+        alias === ==
+        alias eql? ==
+        
+        def inspect
+          return "\#<%p %p>" % [self.class, to_hash()]
+        end
+        
+    end
+    
 end
