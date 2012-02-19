@@ -724,13 +724,13 @@ module GoogleSpreadsheet
           return nil
         end
 
-        # Returns all the spreadsheets in the folder
+        # Returns all the spreadsheets in the collection.
         def spreadsheets
           contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
 
-          doc.css("feed > entry").map do |entry|
+          return doc.css("feed > entry").map() do |entry|
             title = entry.css("title").text
             url = entry.css(
               "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
