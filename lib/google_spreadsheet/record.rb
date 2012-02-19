@@ -16,7 +16,7 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @session = session
-          entry.css('gs|field').each() do |field|
+          entry.css("gs|field").each() do |field|
             self[field["name"]] = field.inner_text
           end
         end

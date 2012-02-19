@@ -19,9 +19,9 @@ module GoogleSpreadsheet
 
         def initialize(session, entry) #:nodoc:
           @columns = {}
-          @worksheet_title = entry.css('gs|worksheet').first['name']
+          @worksheet_title = entry.css("gs|worksheet")[0]["name"]
           @records_url = entry.css("content")[0]["src"]
-          @edit_url = entry.css("link[@rel='edit']")[0]['href']
+          @edit_url = entry.css("link[@rel='edit']")[0]["href"]
           @session = session
         end
 
@@ -47,7 +47,7 @@ module GoogleSpreadsheet
         # Returns records in the table.
         def records
           doc = @session.request(:get, @records_url)
-          return doc.css('entry').map(){ |e| Record.new(@session, e) }
+          return doc.css("entry").map(){ |e| Record.new(@session, e) }
         end
 
         # Deletes this table. Deletion takes effect right away without calling save().

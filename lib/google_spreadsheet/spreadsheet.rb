@@ -55,7 +55,7 @@ module GoogleSpreadsheet
         # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
         def human_url
           # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
-          return self.document_feed_entry.css("link[@rel='alternate']").first["href"]
+          return self.document_feed_entry.css("link[@rel='alternate']")[0]["href"]
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -64,8 +64,8 @@ module GoogleSpreadsheet
         # Tables feed URL of the spreadsheet.
         def tables_feed_url
           warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
-              "not be available after March 2012.")
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
+              "will not be available after March 2012.")
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
         end
 
@@ -80,7 +80,7 @@ module GoogleSpreadsheet
         def spreadsheet_feed_entry(params = {})
           if !@spreadsheet_feed_entry || params[:reload]
             @spreadsheet_feed_entry =
-                @session.request(:get, self.spreadsheet_feed_url).css("entry").first
+                @session.request(:get, self.spreadsheet_feed_url).css("entry")[0]
           end
           return @spreadsheet_feed_entry
         end
@@ -91,7 +91,7 @@ module GoogleSpreadsheet
         def document_feed_entry(params = {})
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
-                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry").first
+                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
           end
           return @document_feed_entry
         end
@@ -107,9 +107,10 @@ module GoogleSpreadsheet
               <title>#{h(new_title)}</title>
             </entry>
           EOS
-          doc = @session.request(:post, post_url, :data => xml, :header => header, :auth => :writely)
+          doc = @session.request(
+              :post, post_url, :data => xml, :header => header, :auth => :writely)
           ss_url = doc.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first["href"]
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(@session, ss_url, new_title)
         end
 
@@ -144,7 +145,8 @@ module GoogleSpreadsheet
         # Exports the spreadsheet in +format+ and returns it as String.
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
-        # In format such as "csv", only the worksheet specified with +worksheet_index+ is exported.
+        # In format such as "csv", only the worksheet specified with +worksheet_index+ is
+        # exported.
         def export_as_string(format, worksheet_index = nil)
           gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
           url =
@@ -164,7 +166,7 @@ module GoogleSpreadsheet
             if !SUPPORTED_EXPORT_FORMAT.include?(format)
               raise(ArgumentError,
                   ("Cannot guess format from the file name: %s\n" +
-                   "Specify format argument explicitly") %
+                   "Specify format argument explicitly.") %
                   local_path)
             end
           end
@@ -177,10 +179,10 @@ module GoogleSpreadsheet
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           result = []
-          doc.css('entry').each() do |entry|
-            title = entry.css('title').text
+          doc.css("entry").each() do |entry|
+            title = entry.css("title").text
             url = entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href']
+              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
             result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
@@ -206,7 +208,7 @@ module GoogleSpreadsheet
           EOS
           doc = @session.request(:post, @worksheets_feed_url, :data => xml)
           url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']").first['href']
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, self, url, title)
         end
 
@@ -216,16 +218,16 @@ module GoogleSpreadsheet
         # Returns list of tables in the spreadsheet.
         def tables
           warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
-              "not be available after March 2012.")
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
+              "will not be available after March 2012.")
           doc = @session.request(:get, self.tables_feed_url)
-          return doc.css('entry').map(){ |e| Table.new(@session, e) }.freeze()
+          return doc.css("entry").map(){ |e| Table.new(@session, e) }.freeze()
         end
         
         def inspect
           fields = {:worksheets_feed_url => self.worksheets_feed_url}
           fields[:title] = @title if @title
-          return '#<%p %s>' % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
+          return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
 
     end

@@ -76,7 +76,7 @@ module GoogleSpreadsheet
             }
           rescue GoogleSpreadsheet::Error => ex
             return true if @on_auth_fail && @on_auth_fail.call()
-            raise(AuthenticationError, "authentication failed for #{mail}: #{ex.message}")
+            raise(AuthenticationError, "Authentication failed for #{mail}: #{ex.message}")
           end
         end
 
@@ -108,7 +108,8 @@ module GoogleSpreadsheet
         #   session.spreadsheets("title" => "hoge")
         def spreadsheets(params = {})
           query = encode_query(params)
-          doc = request(:get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
+          doc = request(
+              :get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
           result = []
           doc.css("feed > entry").each() do |entry|
             title = entry.css("title").text
@@ -137,7 +138,8 @@ module GoogleSpreadsheet
         #   session.spreadsheet_by_url(
         #     "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
         #   session.spreadsheet_by_url(
-        #     "https://spreadsheets.google.com/feeds/worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
+        #     "https://spreadsheets.google.com/feeds/" +
+        #     "worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
         def spreadsheet_by_url(url)
           # Tries to parse it as URL of human-readable spreadsheet.
           uri = URI.parse(url)
@@ -155,7 +157,8 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.worksheet_by_url(
-        #     "http://spreadsheets.google.com/feeds/cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
+        #     "http://spreadsheets.google.com/feeds/" +
+        #     "cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
@@ -178,21 +181,28 @@ module GoogleSpreadsheet
         def create_spreadsheet(
             title = "Untitled",
             feed_url = "https://docs.google.com/feeds/documents/private/full")
+          
           xml = <<-"EOS"
-            <atom:entry xmlns:atom="http://www.w3.org/2005/Atom" xmlns:docs="http://schemas.google.com/docs/2007">
-              <atom:category scheme="http://schemas.google.com/g/2005#kind"
-                  term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
+            <atom:entry
+                xmlns:atom="http://www.w3.org/2005/Atom"
+                xmlns:docs="http://schemas.google.com/docs/2007">
+              <atom:category
+                  scheme="http://schemas.google.com/g/2005#kind"
+                  term="http://schemas.google.com/docs/2007#spreadsheet"
+                  label="spreadsheet"/>
               <atom:title>#{h(title)}</atom:title>
             </atom:entry>
           EOS
 
           doc = request(:post, feed_url, :data => xml, :auth => :writely)
           ss_url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']").first['href']
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(self, ss_url, title)
+          
         end
 
         def request(method, url, params = {}) #:nodoc:
+          
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
@@ -219,10 +229,11 @@ module GoogleSpreadsheet
             end
             return convert_response(response, response_type)
           end
+          
         end
         
         def inspect
-          return '#<%p:0x%x>' % [self.class, self.object_id]
+          return "#<%p:0x%x>" % [self.class, self.object_id]
         end
 
       private
@@ -234,7 +245,8 @@ module GoogleSpreadsheet
             when :raw
               return response.body
             else
-              raise("unknown params[:response_type]: %s" % response_type)
+              raise(GoogleSpreadsheet::Error,
+                  "Unknown params[:response_type]: %s" % response_type)
           end
         end
 
@@ -249,7 +261,10 @@ module GoogleSpreadsheet
           header = {"Content-Type" => "application/x-www-form-urlencoded"}
           response = request(:post,
             "https://www.google.com/accounts/ClientLogin",
-            :data => encode_query(params), :auth => :none, :header => header, :response_type => :raw)
+            :data => encode_query(params),
+            :auth => :none,
+            :header => header,
+            :response_type => :raw)
           return response.slice(/^Auth=(.*)$/, 1)
         end
 

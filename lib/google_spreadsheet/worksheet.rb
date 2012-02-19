@@ -40,7 +40,7 @@ module GoogleSpreadsheet
           if !(@cells_feed_url =~
               %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
             raise(GoogleSpreadsheet::Error,
-              "cells feed URL is in unknown format: #{@cells_feed_url}")
+              "Cells feed URL is in unknown format: #{@cells_feed_url}")
           end
           return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
         end
@@ -51,7 +51,7 @@ module GoogleSpreadsheet
             if !(@cells_feed_url =~
                 %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full(\?.*)?$})
               raise(GoogleSpreadsheet::Error,
-                "cells feed URL is in unknown format: #{@cells_feed_url}")
+                "Cells feed URL is in unknown format: #{@cells_feed_url}")
             end
             @spreadsheet = @session.spreadsheet_by_key($1)
           end
@@ -162,15 +162,16 @@ module GoogleSpreadsheet
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= etc. is discarded if you haven't called save().
         def reload()
+          
           doc = @session.request(:get, @cells_feed_url)
-          @max_rows = doc.css('gs|rowCount').text.to_i
-          @max_cols = doc.css('gs|colCount').text.to_i
-          @title = doc.css('feed > title')[0].text
+          @max_rows = doc.css("gs|rowCount").text.to_i()
+          @max_cols = doc.css("gs|colCount").text.to_i()
+          @title = doc.css("feed > title")[0].text
 
           @cells = {}
           @input_values = {}
-          doc.css('feed > entry').each() do |entry|
-            cell = entry.css('gs|cell').first
+          doc.css("feed > entry").each() do |entry|
+            cell = entry.css("gs|cell")[0]
             row = cell["row"].to_i()
             col = cell["col"].to_i()
             @cells[[row, col]] = cell.inner_text
@@ -179,16 +180,18 @@ module GoogleSpreadsheet
           @modified.clear()
           @meta_modified = false
           return true
+          
         end
 
         # Saves your changes made by []=, etc. to the server.
         def save()
+          
           sent = false
 
           if @meta_modified
 
             ws_doc = @session.request(:get, self.worksheet_feed_url)
-            edit_url = ws_doc.css("link[@rel='edit']").first['href']
+            edit_url = ws_doc.css("link[@rel='edit']")[0]["href"]
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
@@ -217,9 +220,9 @@ module GoogleSpreadsheet
                 "&min-col=#{cols.min}&max-col=#{cols.max}")
             doc = @session.request(:get, url)
 
-            doc.css('entry').each() do |entry|
-              row = entry.css('gs|cell').first['row'].to_i
-              col = entry.css('gs|cell').first['col'].to_i
+            doc.css("entry").each() do |entry|
+              row = entry.css("gs|cell")[0]["row"].to_i()
+              col = entry.css("gs|cell")[0]["col"].to_i()
               cell_entries[[row, col]] = entry
             end
 
@@ -236,8 +239,8 @@ module GoogleSpreadsheet
               for row, col in chunk
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
-                id = entry.css('id').text
-                edit_url = entry.css("link[@rel='edit']").first['href']
+                id = entry.css("id").text
+                edit_url = entry.css("link[@rel='edit']")[0]["href"]
                 xml << <<-EOS
                   <entry>
                     <batch:id>#{h(row)},#{h(col)}</batch:id>
@@ -255,15 +258,15 @@ module GoogleSpreadsheet
 
               batch_url = concat_url(@cells_feed_url, "/batch")
               result = @session.request(:post, batch_url, :data => xml)
-              result.css('atom|entry').each() do |entry|
-                interrupted = entry.css('batch|interrupted').first
+              result.css("atom|entry").each() do |entry|
+                interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
                   raise(GoogleSpreadsheet::Error, "Update has failed: %s" %
                     interrupted["reason"])
                 end
-                if !(entry.css('batch|status').first['code'] =~ /^2/)
+                if !(entry.css("batch|status").first["code"] =~ /^2/)
                   raise(GoogleSpreadsheet::Error, "Updating cell %s has failed: %s" %
-                    [entry.css('atom|id').text, entry.css('batch|status').first['reason']])
+                    [entry.css("atom|id").text, entry.css("batch|status")[0]["reason"]])
                 end
               end
 
@@ -273,7 +276,9 @@ module GoogleSpreadsheet
             sent = true
 
           end
+          
           return sent
+          
         end
 
         # Calls save() and reload().
@@ -285,7 +290,7 @@ module GoogleSpreadsheet
         # Deletes this worksheet. Deletion takes effect right away without calling save().
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
-          edit_url = ws_doc.css("link[@rel='edit']").first['href']
+          edit_url = ws_doc.css("link[@rel='edit']")[0]["href"]
           @session.request(:delete, edit_url)
         end
 
@@ -301,9 +306,10 @@ module GoogleSpreadsheet
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
+          
           warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they will " +
-              "not be available after March 2012.")
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
+              "will not be available after March 2012.")
           default_options = { :header_row => 1, :num_rows => 0, :start_row => 2}
           options = default_options.merge(options)
 
@@ -327,10 +333,17 @@ module GoogleSpreadsheet
 
           result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
           return Table.new(@session, result)
+          
         end
 
+        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
+        # March 2012.
+        #
         # Returns list of tables for the workwheet.
         def tables
+          warn(
+              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
+              "will not be available after March 2012.")
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
         end
 
@@ -341,7 +354,7 @@ module GoogleSpreadsheet
 
           # Gets the URL of list-based feed for the given spreadsheet.
           return entry.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']").first['href']
+            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
         end
         
         # Provides access to cells using column names, assuming the first row contains column
@@ -363,7 +376,7 @@ module GoogleSpreadsheet
         def inspect
           fields = {:worksheet_feed_url => self.worksheet_feed_url}
           fields[:title] = @title if @title
-          return '#<%p %s>' % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
+          return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
 
     end

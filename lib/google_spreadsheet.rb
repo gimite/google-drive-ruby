@@ -44,15 +44,17 @@ module GoogleSpreadsheet
     #
     # OAuth1 code example:
     #
-    # 1) First generate OAuth consumer object with key and secret for your site by registering site with google
+    # 1) First generate OAuth consumer object with key and secret for your site by registering site
+    #    with Google.
     #   @consumer = OAuth::Consumer.new( "key","secret", {:site=>"https://agree2"})
-    # 2) Request token with OAuth
+    # 2) Request token with OAuth.
     #   @request_token = @consumer.get_request_token
     #   session[:request_token] = @request_token
     #   redirect_to @request_token.authorize_url
-    # 3) Create an oauth access token
+    # 3) Create an oauth access token.
     #   @oauth_access_token = @request_token.get_access_token
-    #   @access_token = OAuth::AccessToken.new(@consumer, @oauth_access_token.token, @oauth_access_token.secret)
+    #   @access_token = OAuth::AccessToken.new(
+    #       @consumer, @oauth_access_token.token, @oauth_access_token.secret)
     #
     # See these documents for details:
     #

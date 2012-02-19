@@ -106,7 +106,7 @@ module GoogleSpreadsheet
         def key_to_col(key)
           key = key.to_s()
           col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
-          raise(GoogleSpreadsheet::Error, "colunm doesn't exist: %p" % key) if !col
+          raise(GoogleSpreadsheet::Error, "Colunm doesn't exist: %p" % key) if !col
           return col
         end
         
