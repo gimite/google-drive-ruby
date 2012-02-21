@@ -118,7 +118,10 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_equal("2", ws.list[0]["y"])
       assert_equal("6", ws.list[1]["x"])
       assert_equal("7", ws.list[1]["y"])
-      
+
+      # Making sure we can access cells by name as well as by (row, col) pairs
+      assert_equal(ws[2, 1], ws['A2'])
+
       ss.delete()
       assert_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
@@ -127,5 +130,4 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
         find(){ |s| s.title == ss_copy_title })
       ss.delete(true)
     end
-    
 end

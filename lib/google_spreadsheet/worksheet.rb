@@ -58,8 +58,26 @@ module GoogleSpreadsheet
           return @spreadsheet
         end
 
+        # Returns a [row, col] pair for a cell name string.
+        # For instance, cell 'C2' returns [2, 3].
+        def cell_name_to_row_col(cell_name)
+          raise(GoogleSpreadsheet::Error, "Cell name must be a string, not a #{cell_name.class}") unless cell_name.is_a? String
+          unless cell_name.upcase.strip =~ /([A-Z]+)(\d+)/
+            raise(GoogleSpreadsheet::Error, "Cell name must be only letters followed by digits with no spaces in between, not '#{cell_name}'")
+          end
+          col = 0
+          $1.reverse.each_char.each_with_index do |char, idx|
+            val = char.ord - 'A'.ord + 1
+            val *= (idx * 26) if idx > 0;
+            col += val
+          end
+          row = $2.to_i
+          return row, col
+        end
+
         # Returns content of the cell as String. Top-left cell is [1, 1].
-        def [](row, col)
+        def [](*args)
+          row, col = args[0].is_a?(String) ? cell_name_to_row_col(args[0]) : args
           return self.cells[[row, col]] || ""
         end
 
@@ -70,8 +88,9 @@ module GoogleSpreadsheet
         # e.g.
         #   worksheet[2, 1] = "hoge"
         #   worksheet[1, 3] = "=A1+B1"
-        def []=(row, col, value)
+        def []=(*args)
           reload() if !@cells
+          row, col, value = args[0].is_a?(String) ? [cell_name_to_row_col(args[0]), args[1]].flatten : args
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
           @modified.add([row, col])
@@ -84,8 +103,9 @@ module GoogleSpreadsheet
         # If user input "=A1+B1" to cell [1, 3]:
         #   worksheet[1, 3]              #=> "3" for example
         #   worksheet.input_value(1, 3)  #=> "=RC[-2]+RC[-1]"
-        def input_value(row, col)
+        def input_value(*args)
           reload() if !@cells
+          row, col = args[0].is_a?(String) ? cell_name_to_row_col(args[0]) : args
           return @input_values[[row, col]] || ""
         end
 
