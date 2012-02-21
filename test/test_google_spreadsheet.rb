@@ -119,8 +119,15 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_equal("6", ws.list[1]["x"])
       assert_equal("7", ws.list[1]["y"])
 
-      # Making sure we can access cells by name as well as by (row, col) pairs
+      # Make sure we can access cells by name as well as by (row, col) pairs
       assert_equal(ws[2, 1], ws['A2'])
+      assert_equal(ws.input_value(2, 1), ws.input_value('A2'))
+
+      # Make sure we can write to a cell by name
+      ws[2, 1] = "5"  # set one value
+      ws['A2'] = '555' # set it to another by cell name
+      # Make sure the new value 'took'
+      assert_equal '555', ws[2, 1]
 
       ss.delete()
       assert_nil(session.spreadsheets("title" => ss_title).
