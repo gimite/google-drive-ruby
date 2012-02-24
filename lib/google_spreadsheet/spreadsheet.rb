@@ -20,6 +20,8 @@ module GoogleSpreadsheet
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
+          @acls = []
+          @acl_batch_url = ""
         end
 
         # URL of worksheet-based feed of the spreadsheet.
@@ -33,6 +35,15 @@ module GoogleSpreadsheet
             @title = spreadsheet_feed_entry(params).css("title").text
           end
           return @title
+        end
+
+        def acl_feed_url
+          document_feed_entry.css("[@rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
+        end
+
+        def resource_id
+          acl_feed_url =~ %r{^https?://docs.google.com/feeds/acl/private/full/(.*)\?.*$}
+          return $1
         end
 
         # Key of the spreadsheet.
@@ -146,7 +157,6 @@ module GoogleSpreadsheet
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
         # In format such as "csv", only the worksheet specified with +worksheet_index+ is
-        # exported.
         def export_as_string(format, worksheet_index = nil)
           gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
           url =
@@ -212,6 +222,21 @@ module GoogleSpreadsheet
           return Worksheet.new(@session, self, url, title)
         end
 
+        def acls
+          load_acls if (@acls.empty? || @acl_batch_url.empty?)
+          @acls
+        end
+
+        def add_acl(scope, scope_type, role="reader")
+          load_acls if (@acl_batch_url.empty? || @acls.size == 0)
+          h = { scope: scope, type: scope_type, role: role }
+
+          @acl = Acl.new(@session, self, h)
+          save_acl(@acl)
+
+          @acls.push @acl
+        end
+
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
         #
@@ -228,6 +253,29 @@ module GoogleSpreadsheet
           fields = {:worksheets_feed_url => self.worksheets_feed_url}
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
+        end
+
+        private
+        def load_acls
+          doc = @session.request(:get, acl_feed_url)
+          @acl_batch_url = href_from_rel(doc.root,"http://schemas.google.com/g/2005#batch")
+          @acls = doc.root.xpath("./xmlns:entry").map {|e| Acl.new(@session,self, e)}
+        end
+
+        def save_acl(acl)
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+
+          save_url = "https://docs.google.com/feeds/default/private/full/#{self.resource_id}/acl"
+          xml = <<-EOS
+          <entry xmlns="http://www.w3.org/2005/Atom" xmlns:gAcl='http://schemas.google.com/acl/2007'>
+            <category scheme='http://schemas.google.com/g/2005#kind'
+              term='http://schemas.google.com/acl/2007#accessRule'/>
+            <gAcl:role value='#{acl.role}'/>
+            <gAcl:scope type='#{acl.scope_type}' value='#{acl.scope}'/>
+          </entry>
+          EOS
+
+          @session.request(:post, save_url, data: xml, header: header, auth: :writely, )
         end
 
     end
