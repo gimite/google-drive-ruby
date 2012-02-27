@@ -58,54 +58,46 @@ module GoogleSpreadsheet
           return @spreadsheet
         end
 
-        # Returns a [row, col] pair for a cell name string.
-        # For instance, cell 'C2' returns [2, 3].
-        def cell_name_to_row_col(cell_name)
-          raise(GoogleSpreadsheet::Error, "Cell name must be a string, not a #{cell_name.class}") unless cell_name.is_a? String
-          unless cell_name.upcase.strip =~ /([A-Z]+)(\d+)/
-            raise(GoogleSpreadsheet::Error, "Cell name must be only letters followed by digits with no spaces in between, not '#{cell_name}'")
-          end
-          col = 0
-          $1.reverse.each_char.each_with_index do |char, idx|
-            val = char.ord - 'A'.ord + 1
-            val *= (idx * 26) if idx > 0;
-            col += val
-          end
-          row = $2.to_i
-          return row, col
-        end
-
-        # Returns content of the cell as String. Top-left cell is [1, 1].
+        # Returns content of the cell as String. Arguments must be either
+        # (row number, column number) or cell name. Top-left cell is [1, 1].
+        #
+        # e.g.
+        #   worksheet[2, 1]  #=> "hoge"
+        #   worksheet["A2"]  #=> "hoge"
         def [](*args)
-          row, col = args[0].is_a?(String) ? cell_name_to_row_col(args[0]) : args
+          (row, col) = parse_cell_args(args)
           return self.cells[[row, col]] || ""
         end
 
         # Updates content of the cell.
+        # Arguments in the bracket must be either (row number, column number) or cell name. 
         # Note that update is not sent to the server until you call save().
         # Top-left cell is [1, 1].
         #
         # e.g.
         #   worksheet[2, 1] = "hoge"
+        #   worksheet["A2"] = "hoge"
         #   worksheet[1, 3] = "=A1+B1"
         def []=(*args)
+          (row, col) = parse_cell_args(args[0...-1])
+          value = args[-1]
           reload() if !@cells
-          row, col, value = args[0].is_a?(String) ? [cell_name_to_row_col(args[0]), args[1]].flatten : args
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
         end
-
-        # Returns the value or the formula of the cell. Top-left cell is [1, 1].
+        
+        # Returns the value or the formula of the cell. Arguments must be either
+        # (row number, column number) or cell name. Top-left cell is [1, 1].
         #
         # If user input "=A1+B1" to cell [1, 3]:
         #   worksheet[1, 3]              #=> "3" for example
         #   worksheet.input_value(1, 3)  #=> "=RC[-2]+RC[-1]"
         def input_value(*args)
+          (row, col) = parse_cell_args(args)
           reload() if !@cells
-          row, col = args[0].is_a?(String) ? cell_name_to_row_col(args[0]) : args
           return @input_values[[row, col]] || ""
         end
 
@@ -393,10 +385,43 @@ module GoogleSpreadsheet
           return @list ||= List.new(self)
         end
         
+        # Returns a [row, col] pair for a cell name string.
+        # e.g.
+        #   worksheet.cell_name_to_row_col("C2")  #=> [2, 3]
+        def cell_name_to_row_col(cell_name)
+          if !cell_name.is_a?(String)
+            raise(ArgumentError, "Cell name must be a string: %p" % cell_name)
+          end
+          if !(cell_name.upcase =~ /^([A-Z]+)(\d+)$/)
+            raise(ArgumentError,
+                "Cell name must be only letters followed by digits with no spaces in between: %p" %
+                    cell_name)
+          end
+          col = 0
+          $1.each_char() do |ch|
+            col = col * 26 + (ch.ord - 'A'.ord + 1)
+          end
+          row = $2.to_i()
+          return [row, col]
+        end
+
         def inspect
           fields = {:worksheet_feed_url => self.worksheet_feed_url}
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
+        end
+        
+      private
+
+        def parse_cell_args(args)
+          if args.size == 1 && args[0].is_a?(String)
+            return cell_name_to_row_col(args[0])
+          elsif args.size == 2 && args[0].is_a?(Integer) && args[1].is_a?(Integer)
+            return args
+          else
+            raise(ArgumentError,
+                "Arguments must be either one String or two Integer's, but are %p" % args)
+          end
         end
 
     end
