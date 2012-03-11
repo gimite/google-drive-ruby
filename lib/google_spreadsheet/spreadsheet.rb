@@ -42,7 +42,10 @@ module GoogleSpreadsheet
         end
 
         def resource_id
-          acl_feed_url =~ %r{^https?://docs.google.com/feeds/acl/private/full/(.*)\?.*$}
+          if !(acl_feed_url =~ %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$})
+            raise(GoogleSpreadsheet::Error,
+              "hoge")
+          end
           return $1
         end
 
@@ -257,7 +260,9 @@ module GoogleSpreadsheet
 
         private
         def load_acls
-          doc = @session.request(:get, acl_feed_url)
+          header = {"GData-Version" => "3.0"}
+          url = "https://docs.google.com/feeds/default/private/full/#{self.resource_id}/acl"
+          doc = @session.request(:get, url, :header => header, :auth => :writely)
           @acl_batch_url = href_from_rel(doc.root,"http://schemas.google.com/g/2005#batch")
           @acls = doc.root.xpath("./xmlns:entry").map {|e| Acl.new(@session,self, e)}
         end

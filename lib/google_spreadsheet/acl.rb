@@ -13,22 +13,23 @@ module GoogleSpreadsheet
     end
     
     def update_role(role="reader")
+      header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
       xml = <<-EOS
         <entry xmlns="http://www.w3.org/2005/Atom" xmlns:gAcl='http://schemas.google.com/acl/2007' xmlns:gd='http://schemas.google.com/g/2005'
-            gd:etag="#{@etag}">
+            gd:etag="#{h(@etag)}">
           <category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/acl/2007#accessRule'/>
-          <gAcl:role value="#{role}"/>
-          <gAcl:scope type="#{@scope_type}" value="#{@scope}"/>
+          <gAcl:role value="#{h(role)}"/>
+          <gAcl:scope type="#{h(@scope_type)}" value="#{h(@scope)}"/>
         </entry>
       EOS
       
-      doc = @session.request(:put, @edit_url)
+      doc = @session.request(:put, @edit_url, :data => xml, :header => header, :auth => :writely)
       extract_vals(doc.root)
     end
     
     def delete
-      @session.request(:delete, @edit_url)
-      @document.acl_removed
+      header = {"GData-Version" => "3.0"}
+      @session.request(:delete, @edit_url, :header => header, :auth => :writely)
     end
     
     def new?
