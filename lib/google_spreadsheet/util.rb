@@ -25,6 +25,42 @@ module GoogleSpreadsheet
           return CGI.escapeHTML(str.to_s())
         end
 
+        def as_utf8(str)
+          if str.respond_to?(:force_encoding)
+            str.force_encoding("UTF-8")
+          else
+            str
+          end
+        end
+
+        def text_from_xpath(node,xpath)
+          as_utf8(node.xpath(xpath).text)
+        end
+
+        def value_from_xpath(node,xpath,key)
+          as_utf8(node.xpath(xpath).first[key])
+        end
+        
+        def href_from_rel(node,rel,xp="./xmlns:link")
+          as_utf8(node.xpath("#{xp}[@rel='#{rel}']").first["href"])
+        end
+
+        def batch_xml_open_section(url)
+          <<-EOS
+            <feed xmlns="http://www.w3.org/2005/Atom"
+                  xmlns:batch="http://schemas.google.com/gdata/batch"
+                  xmlns:gAcl="http://schemas.google.com/acl/2007"
+                  xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+              <id>#{h(url)}</id>
+          EOS
+        end
+        
+        def batch_xml_close_section
+          <<-EOS
+            </feed>
+          EOS
+        end
+
     end
     
 end
