@@ -15,8 +15,7 @@ require "google_spreadsheet/authentication_error"
 require "google_spreadsheet/spreadsheet"
 require "google_spreadsheet/worksheet"
 require "google_spreadsheet/collection"
-require "google_spreadsheet/spreadsheet_document"
-require "google_spreadsheet/acl"
+
 
 module GoogleSpreadsheet
 
@@ -202,22 +201,8 @@ module GoogleSpreadsheet
           
         end
 
-        def documents(params = {})
-          query = "?" + encode_query(params) unless params.empty?
-          doc = request(:get,
-            "https://docs.google.com/feeds/default/private/full#{query}",
-            {:auth => :writely})
-          result = []
-          doc.xpath("//xmlns:entry").each do |entry|
-            kind = value_from_xpath(entry,
-              "./xmlns:category[@scheme='http://schemas.google.com/g/2005#kind']","label")
-            result << SpreadsheetDocument.new(self,entry) if kind =~ /spreadsheet/
-          end
-
-          result
-        end
-
         def request(method, url, params = {}) #:nodoc:
+          
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
@@ -286,4 +271,3 @@ module GoogleSpreadsheet
     end
 
 end
-

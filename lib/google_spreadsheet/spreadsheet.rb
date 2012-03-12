@@ -5,6 +5,7 @@ require "google_spreadsheet/util"
 require "google_spreadsheet/error"
 require "google_spreadsheet/worksheet"
 require "google_spreadsheet/table"
+require "google_spreadsheet/acl_list"
 
 
 module GoogleSpreadsheet
@@ -20,8 +21,7 @@ module GoogleSpreadsheet
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
-          @acls = []
-          @acl_batch_url = ""
+          @acls = nil
         end
 
         # URL of worksheet-based feed of the spreadsheet.
@@ -37,24 +37,12 @@ module GoogleSpreadsheet
           return @title
         end
 
-        def acl_feed_url
-          document_feed_entry.css("[@rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
-        end
-
-        def resource_id
-          if !(acl_feed_url =~ %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$})
-            raise(GoogleSpreadsheet::Error,
-              "hoge")
-          end
-          return $1
-        end
-
         # Key of the spreadsheet.
         def key
           if !(@worksheets_feed_url =~
               %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/.*$})
             raise(GoogleSpreadsheet::Error,
-              "worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
+              "Worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
           return $1
         end
@@ -86,6 +74,21 @@ module GoogleSpreadsheet
         # URL of feed used in document list feed API.
         def document_feed_url
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
+        end
+
+        def acls_feed_url
+          orig_acls_feed_url = document_feed_entry.css(
+              "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
+          case orig_acls_feed_url
+            when %r{^https?://docs.google.com/feeds/default/private/full/.*/acl$}
+              return orig_acls_feed_url
+            when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
+              # URL of old API version. Converts to v3 URL.
+              return "https://docs.google.com/feeds/default/private/full/#{$1}/acl"
+            else
+              raise(GoogleSpreadsheet::Error,
+                "ACL feed URL is in unknown format: #{orig_acls_feed_url}")
+          end
         end
 
         # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
@@ -160,6 +163,7 @@ module GoogleSpreadsheet
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
         # In format such as "csv", only the worksheet specified with +worksheet_index+ is
+        # exported.
         def export_as_string(format, worksheet_index = nil)
           gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
           url =
@@ -225,19 +229,11 @@ module GoogleSpreadsheet
           return Worksheet.new(@session, self, url, title)
         end
 
-        def acls
-          load_acls if (@acls.empty? || @acl_batch_url.empty?)
-          @acls
-        end
-
-        def add_acl(scope, scope_type, role="reader")
-          load_acls if (@acl_batch_url.empty? || @acls.size == 0)
-          h = { scope: scope, type: scope_type, role: role }
-
-          @acl = Acl.new(@session, self, h)
-          save_acl(@acl)
-
-          @acls.push @acl
+        def acls(params = {})
+          if !@acls || params[:reload]
+            @acls = AclList.new(@session, self.acls_feed_url)
+          end
+          return @acls
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -257,32 +253,7 @@ module GoogleSpreadsheet
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
-
-        private
-        def load_acls
-          header = {"GData-Version" => "3.0"}
-          url = "https://docs.google.com/feeds/default/private/full/#{self.resource_id}/acl"
-          doc = @session.request(:get, url, :header => header, :auth => :writely)
-          @acl_batch_url = href_from_rel(doc.root,"http://schemas.google.com/g/2005#batch")
-          @acls = doc.root.xpath("./xmlns:entry").map {|e| Acl.new(@session,self, e)}
-        end
-
-        def save_acl(acl)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
-
-          save_url = "https://docs.google.com/feeds/default/private/full/#{self.resource_id}/acl"
-          xml = <<-EOS
-          <entry xmlns="http://www.w3.org/2005/Atom" xmlns:gAcl='http://schemas.google.com/acl/2007'>
-            <category scheme='http://schemas.google.com/g/2005#kind'
-              term='http://schemas.google.com/acl/2007#accessRule'/>
-            <gAcl:role value='#{acl.role}'/>
-            <gAcl:scope type='#{acl.scope_type}' value='#{acl.scope}'/>
-          </entry>
-          EOS
-
-          @session.request(:post, save_url, data: xml, header: header, auth: :writely, )
-        end
-
+        
     end
     
 end
