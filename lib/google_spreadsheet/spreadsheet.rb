@@ -9,7 +9,9 @@ require "google_spreadsheet/acl_list"
 
 
 module GoogleSpreadsheet
-
+    
+    # A spreadsheet.
+    #
     # Use methods in GoogleSpreadsheet::Session to get GoogleSpreadsheet::Spreadsheet object.
     class Spreadsheet
 
@@ -76,6 +78,7 @@ module GoogleSpreadsheet
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
 
+        # ACLs feed URL of the spreadsheet.
         def acls_feed_url
           orig_acls_feed_url = document_feed_entry.css(
               "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
@@ -228,6 +231,31 @@ module GoogleSpreadsheet
             "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, self, url, title)
         end
+
+        # Returns GoogleSpreadsheet::AclList object for the spreadsheet.
+        #
+        # With the object, You can see and modify people who can access the spreadsheet.
+        # Modifications take effect immediately.
+        #
+        # e.g.
+        #   # Dumps people who have access:
+        #   for acl in spreadsheet.acls
+        #     p [acl.scope_type, acl.scope, acl.role]
+        #     # => e.g. ["user", "example1@gmail.com", "owner"]
+        #   end
+        #   
+        #   # Shares the spreadsheet with new people:
+        #   # NOTE: This sends email to the new people.
+        #   spreadsheet.acls.push(
+        #       {:scope_type => "user", :scope => "example2@gmail.com", :role => "reader"})
+        #   spreadsheet.acls.push(
+        #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
+        #   
+        #   # Changes the role of a person:
+        #   spreadsheet.acls[1].role = "writer"
+        #   
+        #   # Deletes an ACL entry:
+        #   spreadsheet.acls.delete(spreadsheet.acls[1])
 
         def acls(params = {})
           if !@acls || params[:reload]

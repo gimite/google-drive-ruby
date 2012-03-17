@@ -8,6 +8,12 @@ require "google_spreadsheet/acl"
 
 module GoogleSpreadsheet
     
+    # ACL (access control list) of a spreadsheet.
+    #
+    # Use GoogleSpreadsheet::Spreadsheet#acl to get GoogleSpreadsheet::Acl object.
+    # See GoogleSpreadsheet::Spreadsheet#acl for usage example.
+    #
+    # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class AclList
         
         include(Util)
