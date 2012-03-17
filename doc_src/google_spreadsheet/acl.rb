@@ -2,12 +2,18 @@ module GoogleSpreadsheet
     
     class Acl
         
-        attr_reader(:scope_type)
-        attr_reader(:scope)
-        attr_reader(:role)
-        attr_reader(:title)
-        attr_reader(:edit_url)
-        attr_reader(:etag)
+        # Returns the number of entries.
+        def size
+        end
+        
+        # Returns GoogleSpreadsheet::AclEntry object at +index+.
+        def [](index)
+        end
+        
+        # Iterates over GoogleSpreadsheet::AclEntry objects.
+        def each(&block)
+          yield(entry)
+        end
         
     end
     

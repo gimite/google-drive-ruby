@@ -5,7 +5,7 @@ require "google_spreadsheet/util"
 require "google_spreadsheet/error"
 require "google_spreadsheet/worksheet"
 require "google_spreadsheet/table"
-require "google_spreadsheet/acl_list"
+require "google_spreadsheet/acl"
 
 
 module GoogleSpreadsheet
@@ -23,7 +23,7 @@ module GoogleSpreadsheet
           @session = session
           @worksheets_feed_url = worksheets_feed_url
           @title = title
-          @acls = nil
+          @acl = nil
         end
 
         # URL of worksheet-based feed of the spreadsheet.
@@ -78,19 +78,19 @@ module GoogleSpreadsheet
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
 
-        # ACLs feed URL of the spreadsheet.
-        def acls_feed_url
-          orig_acls_feed_url = document_feed_entry.css(
+        # ACL feed URL of the spreadsheet.
+        def acl_feed_url
+          orig_acl_feed_url = document_feed_entry.css(
               "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
-          case orig_acls_feed_url
+          case orig_acl_feed_url
             when %r{^https?://docs.google.com/feeds/default/private/full/.*/acl$}
-              return orig_acls_feed_url
+              return orig_acl_feed_url
             when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
               # URL of old API version. Converts to v3 URL.
               return "https://docs.google.com/feeds/default/private/full/#{$1}/acl"
             else
               raise(GoogleSpreadsheet::Error,
-                "ACL feed URL is in unknown format: #{orig_acls_feed_url}")
+                "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
           end
         end
 
@@ -232,36 +232,38 @@ module GoogleSpreadsheet
           return Worksheet.new(@session, self, url, title)
         end
 
-        # Returns GoogleSpreadsheet::AclList object for the spreadsheet.
+        # Returns GoogleSpreadsheet::Acl object for the spreadsheet.
         #
-        # With the object, You can see and modify people who can access the spreadsheet.
+        # With the object, you can see and modify people who can access the spreadsheet.
         # Modifications take effect immediately.
+        #
+        # Set params[:reload] to true to force reloading the title.
         #
         # e.g.
         #   # Dumps people who have access:
-        #   for acl in spreadsheet.acls
-        #     p [acl.scope_type, acl.scope, acl.role]
+        #   for entry in spreadsheet.acl
+        #     p [entry.scope_type, entry.scope, entry.role]
         #     # => e.g. ["user", "example1@gmail.com", "owner"]
         #   end
         #   
         #   # Shares the spreadsheet with new people:
         #   # NOTE: This sends email to the new people.
-        #   spreadsheet.acls.push(
+        #   spreadsheet.acl.push(
         #       {:scope_type => "user", :scope => "example2@gmail.com", :role => "reader"})
-        #   spreadsheet.acls.push(
+        #   spreadsheet.acl.push(
         #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
         #   
         #   # Changes the role of a person:
-        #   spreadsheet.acls[1].role = "writer"
+        #   spreadsheet.acl[1].role = "writer"
         #   
         #   # Deletes an ACL entry:
-        #   spreadsheet.acls.delete(spreadsheet.acls[1])
+        #   spreadsheet.acl.delete(spreadsheet.acl[1])
 
-        def acls(params = {})
-          if !@acls || params[:reload]
-            @acls = AclList.new(@session, self.acls_feed_url)
+        def acl(params = {})
+          if !@acl || params[:reload]
+            @acl = Acl.new(@session, self.acl_feed_url)
           end
-          return @acls
+          return @acl
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after

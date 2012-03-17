@@ -18,6 +18,7 @@ module GoogleSpreadsheet
         include(Util)
 
         def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
+          
           @session = session
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
@@ -27,6 +28,7 @@ module GoogleSpreadsheet
           @input_values = nil
           @modified = Set.new()
           @list = nil
+          
         end
 
         # URL of cell-based feed of the worksheet.
