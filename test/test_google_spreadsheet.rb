@@ -63,6 +63,27 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       end
       
       assert_equal("3\t5\t8", ss.export_as_string("tsv", 0))
+
+      ws2 = ss.add_worksheet('test2')
+      ws2.update_cells([[1, 2], [3, 4]])
+      assert_equal(1, ws2[1, 1])
+      assert_equal(4, ws2[2, 2])
+      ws2.save()
+      ws2.reload()
+      assert_equal("1", ws2[1, 1])
+      assert_equal("4", ws2[2, 2])
+      ws2.update_cells([[10, 20], [30, 40]])
+      assert_equal(10, ws2[1, 1])
+      assert_equal(40, ws2[2, 2])
+      ws2.save()
+      ws2.reload()
+      assert_equal("10", ws2[1, 1])
+      assert_equal("40", ws2[2, 2])
+      ws2.update_cells([[5, 6], [7, 8]], 2, 1)
+      assert_equal("10", ws2[1, 1])
+      assert_equal("20", ws2[1, 2])
+      assert_equal(6, ws2[2, 2])
+      assert_equal(7, ws2[3, 1])
       
       ss2 = session.spreadsheet_by_key(ss.key)
       assert_equal(ss_title, ss2.title)

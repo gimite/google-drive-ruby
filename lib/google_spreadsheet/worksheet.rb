@@ -90,7 +90,21 @@ module GoogleSpreadsheet
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
         end
-        
+
+        # Updates cells by two-dimensional Array
+        #
+        # e.g.
+        #   worksheet.update_cells([[1, 2], [3, 4]])
+        #   worksheet.update_cells([[1, 2], [3, 4]], 2, 3)
+        def update_cells(darray, top = 1, left = 1)
+          darray.each_with_index {|array, row|
+            target_row = row + top
+            array.each_with_index {|val, col|
+              self[target_row, col + left] = val
+            }
+          }
+        end
+
         # Returns the value or the formula of the cell. Arguments must be either
         # (row number, column number) or cell name. Top-left cell is [1, 1].
         #
