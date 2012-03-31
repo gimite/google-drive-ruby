@@ -51,6 +51,11 @@ module GoogleSpreadsheet
         def self.restore_session(auth_tokens, proxy = nil)
           return Session.new(auth_tokens, nil, proxy)
         end
+        
+        # Creates a dummy GoogleSpreadsheet::Session object for testing.
+        def self.new_dummy()
+          return Session.new(nil, Object.new())
+        end
 
         # DEPRECATED: Use GoogleSpreadsheet.restore_session instead.
         def initialize(auth_tokens = nil, fetcher = nil, proxy = nil)
@@ -164,13 +169,24 @@ module GoogleSpreadsheet
         end
 
         # Returns GoogleSpreadsheet::Collection with given +url+.
-        # You must specify URL of collection (folder) feed.
+        # You must specify either of:
+        # - URL of the page you get when you go to https://docs.google.com/ with your browser and
+        #   open a collection
+        # - URL of collection (folder) feed
         #
         # e.g.
+        #   session.collection_by_url(
+        #     "https://docs.google.com/?pli=1&authuser=0#folders/" +
+        #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
         #   session.collection_by_url(
         #     "http://docs.google.com/feeds/default/private/full/folder%3A" +
         #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
         def collection_by_url(url)
+          uri = URI.parse(url)
+          if uri.host == "docs.google.com" && uri.fragment =~ /^folders\/(.+)$/
+            # Looks like a URL of human-readable collection page. Converts to collection feed URL.
+            url = "https://docs.google.com/feeds/default/private/full/folder%3A#{$1}"
+          end
           return Collection.new(self, url)
         end
 

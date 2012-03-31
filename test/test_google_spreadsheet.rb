@@ -149,5 +149,26 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
       ss.delete(true)
+      
     end
+    
+
+    def test_collection()
+      
+      browser_url =
+          "https://docs.google.com/?tab=mo&authuser=0#folders/" +
+          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
+ 	    collection_feed_url =
+          "https://docs.google.com/feeds/default/private/full/folder%3A" +
+          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
+      session = GoogleSpreadsheet::Session.new_dummy()
+      
+      collection = session.collection_by_url(browser_url)
+      assert_equal(collection_feed_url, collection.collection_feed_url)
+      
+      collection = session.collection_by_url(collection_feed_url)
+      assert_equal(collection_feed_url, collection.collection_feed_url)
+      
+    end
+    
 end
