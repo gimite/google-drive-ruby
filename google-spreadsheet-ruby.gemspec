@@ -18,5 +18,6 @@ Gem::Specification.new do |s|
   s.add_dependency("nokogiri", [">= 1.4.4", "< 1.5.1"])
   s.add_dependency("oauth", [">= 0.3.6"])
   s.add_dependency("oauth2", [">= 0.5.0"])
+  s.add_development_dependency("rake", [">= 0.8.0"])
   
 end
