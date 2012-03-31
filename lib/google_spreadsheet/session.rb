@@ -157,6 +157,13 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, url)
         end
 
+        # Returns GoogleSpreadsheet::Spreadsheet with given +title+.
+        # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
+        # one of them.
+        def spreadsheet_by_title(title)
+          return spreadsheets({"title" => title})[0]
+        end
+        
         # Returns GoogleSpreadsheet::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #

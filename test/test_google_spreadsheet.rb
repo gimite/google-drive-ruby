@@ -86,6 +86,10 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       assert_not_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
       
+      ss5 = session.spreadsheet_by_title(ss_title)
+      assert_not_nil(ss5)
+      assert_equal(ss_title, ss5.title)
+      
       ws2 = session.worksheet_by_url(ws.cells_feed_url)
       assert_equal(ws.cells_feed_url, ws2.cells_feed_url)
       assert_equal("hoge", ws2.title)
