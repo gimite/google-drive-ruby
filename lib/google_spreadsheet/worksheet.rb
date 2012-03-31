@@ -91,18 +91,17 @@ module GoogleSpreadsheet
           self.max_cols = col if col > @max_cols
         end
 
-        # Updates cells by two-dimensional Array
+        # Updates cells in a rectangle area by a two-dimensional Array.
+        # +top_row+ and +left_col+ specifies the top-left corner of the area.
         #
         # e.g.
-        #   worksheet.update_cells([[1, 2], [3, 4]])
-        #   worksheet.update_cells([[1, 2], [3, 4]], 2, 3)
-        def update_cells(darray, top = 1, left = 1)
-          darray.each_with_index {|array, row|
-            target_row = row + top
-            array.each_with_index {|val, col|
-              self[target_row, col + left] = val
-            }
-          }
+        #   worksheet.update_cells(2, 3, [["1", "2"], ["3", "4"]])
+        def update_cells(top_row, left_col, darray)
+          darray.each_with_index() do |array, y|
+            array.each_with_index() do |value, x|
+              self[top_row + y, left_col + x] = value
+            end
+          end
         end
 
         # Returns the value or the formula of the cell. Arguments must be either
