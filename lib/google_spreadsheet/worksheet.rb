@@ -84,8 +84,8 @@ module GoogleSpreadsheet
           (row, col) = parse_cell_args(args[0...-1])
           value = args[-1]
           reload() if !@cells
-          @cells[[row, col]] = value
-          @input_values[[row, col]] = value
+          @cells[[row, col]] = value.to_s
+          @input_values[[row, col]] = value.to_s
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols

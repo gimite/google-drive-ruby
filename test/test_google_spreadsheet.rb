@@ -42,27 +42,30 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
       ws[1, 1] = "3"
       ws[1, 2] = "5"
       ws[1, 3] = "=A1+B1"
+      ws[1, 4] = 13
       assert_equal(20, ws.max_rows)
       assert_equal(10, ws.max_cols)
       assert_equal(1, ws.num_rows)
-      assert_equal(3, ws.num_cols)
+      assert_equal(4, ws.num_cols)
       assert_equal("3", ws[1, 1])
       assert_equal("5", ws[1, 2])
+      assert_equal("13", ws[1, 4])
       ws.save()
       
       ws.reload()
       assert_equal(20, ws.max_rows)
       assert_equal(10, ws.max_cols)
       assert_equal(1, ws.num_rows)
-      assert_equal(3, ws.num_cols)
+      assert_equal(4, ws.num_cols)
       assert_equal("3", ws[1, 1])
       assert_equal("5", ws[1, 2])
       assert_equal("8", ws[1, 3])
+      assert_equal("13", ws[1, 4])
       if RUBY_VERSION >= "1.9.0"
         assert_equal(Encoding::UTF_8, ws[1, 1].encoding)
       end
       
-      assert_equal("3\t5\t8", ss.export_as_string("tsv", 0))
+      assert_equal("3\t5\t8\t13", ss.export_as_string("tsv", 0))
 
       ss2 = session.spreadsheet_by_key(ss.key)
       assert_equal(ss_title, ss2.title)
