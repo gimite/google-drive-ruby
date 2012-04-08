@@ -82,10 +82,10 @@ module GoogleSpreadsheet
         #   worksheet[1, 3] = "=A1+B1"
         def []=(*args)
           (row, col) = parse_cell_args(args[0...-1])
-          value = args[-1]
+          value = args[-1].to_s()
           reload() if !@cells
-          @cells[[row, col]] = value.to_s
-          @input_values[[row, col]] = value.to_s
+          @cells[[row, col]] = value
+          @input_values[[row, col]] = value
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
