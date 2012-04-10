@@ -180,6 +180,10 @@ module GoogleSpreadsheet
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
         # If +format+ is nil, it is guessed from the file name.
         # In format such as "csv", only the worksheet specified with +worksheet_index+ is exported.
+        #
+        # e.g.
+        #   spreadsheet.export_as_file("hoge.ods")
+        #   spreadsheet.export_as_file("hoge.csv", nil, 0)
         def export_as_file(local_path, format = nil, worksheet_index = nil)
           if !format
             format = File.extname(local_path).gsub(/^\./, "")
