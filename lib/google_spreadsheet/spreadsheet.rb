@@ -31,7 +31,7 @@ module GoogleSpreadsheet
 
         # Title of the spreadsheet.
         #
-        # Set params[:reload] to true to force reloading the title.
+        # Set <tt>params[:reload]</tt> to true to force reloading the title.
         def title(params = {})
           if !@title || params[:reload]
             @title = spreadsheet_feed_entry(params).css("title").text
@@ -96,7 +96,7 @@ module GoogleSpreadsheet
 
         # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
         #
-        # Set params[:reload] to true to force reloading the feed.
+        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def spreadsheet_feed_entry(params = {})
           if !@spreadsheet_feed_entry || params[:reload]
             @spreadsheet_feed_entry =
@@ -107,7 +107,7 @@ module GoogleSpreadsheet
         
         # <entry> element of document list feed as Nokogiri::XML::Element.
         #
-        # Set params[:reload] to true to force reloading the feed.
+        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def document_feed_entry(params = {})
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
@@ -246,7 +246,7 @@ module GoogleSpreadsheet
         # With the object, you can see and modify people who can access the spreadsheet.
         # Modifications take effect immediately.
         #
-        # Set params[:reload] to true to force reloading the title.
+        # Set <tt>params[:reload]</tt> to true to force reloading the title.
         #
         # e.g.
         #   # Dumps people who have access:
