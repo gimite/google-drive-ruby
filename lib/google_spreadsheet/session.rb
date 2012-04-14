@@ -141,14 +141,15 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.spreadsheet_by_url(
-        #     "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=en")
+        #     "https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg")
         #   session.spreadsheet_by_url(
         #     "https://spreadsheets.google.com/feeds/" +
         #     "worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
         def spreadsheet_by_url(url)
           # Tries to parse it as URL of human-readable spreadsheet.
           uri = URI.parse(url)
-          if uri.host == "spreadsheets.google.com" && uri.path =~ /\/ccc$/
+          if ["spreadsheets.google.com", "docs.google.com"].include?(uri.host) &&
+              uri.path =~ /\/ccc$/
             if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
               return spreadsheet_by_key($1)
             end

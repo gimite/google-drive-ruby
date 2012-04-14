@@ -202,6 +202,11 @@ module GoogleSpreadsheet
         # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
+          if doc.root.name != "feed"
+            raise(GoogleSpreadsheet::Error,
+                "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
+                @worksheets_feed_url)
+          end
           result = []
           doc.css("entry").each() do |entry|
             title = entry.css("title").text
