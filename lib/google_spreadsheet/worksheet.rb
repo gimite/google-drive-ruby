@@ -413,8 +413,9 @@ module GoogleSpreadsheet
                     cell_name)
           end
           col = 0
-          $1.each_char() do |ch|
-            col = col * 26 + (ch.ord - 'A'.ord + 1)
+          $1.each_byte() do |b|
+            # 0x41: "A"
+            col = col * 26 + (b - 0x41 + 1)
           end
           row = $2.to_i()
           return [row, col]
@@ -438,7 +439,7 @@ module GoogleSpreadsheet
                 "Arguments must be either one String or two Integer's, but are %p" % args)
           end
         end
-
+        
     end
     
 end
