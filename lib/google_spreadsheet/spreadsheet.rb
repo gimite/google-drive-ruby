@@ -59,7 +59,7 @@ module GoogleSpreadsheet
         # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
         def human_url
           # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
-          return self.document_feed_entry.css("link[@rel='alternate']")[0]["href"]
+          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -130,7 +130,7 @@ module GoogleSpreadsheet
           doc = @session.request(
               :post, post_url, :data => xml, :header => header, :auth => :writely)
           ss_url = doc.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
+              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(@session, ss_url, new_title)
         end
 
@@ -145,7 +145,7 @@ module GoogleSpreadsheet
         # Renames title of the spreadsheet.
         def rename(title)
           doc = @session.request(:get, self.document_feed_url, :auth => :writely)
-          edit_url = doc.css("link[@rel='edit']").first["href"]
+          edit_url = doc.css("link[rel='edit']").first["href"]
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"
@@ -211,7 +211,7 @@ module GoogleSpreadsheet
           doc.css("entry").each() do |entry|
             title = entry.css("title").text
             url = entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
+              "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
             result.push(Worksheet.new(@session, self, url, title))
           end
           return result.freeze()
@@ -237,7 +237,7 @@ module GoogleSpreadsheet
           EOS
           doc = @session.request(:post, @worksheets_feed_url, :data => xml)
           url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
+            "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, self, url, title)
         end
 

@@ -119,7 +119,7 @@ module GoogleSpreadsheet
           doc.css("feed > entry").each() do |entry|
             title = entry.css("title").text
             url = entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
+              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
             result.push(Spreadsheet.new(self, url, title))
           end
           return result
@@ -220,7 +220,7 @@ module GoogleSpreadsheet
 
           doc = request(:post, feed_url, :data => xml, :auth => :writely)
           ss_url = doc.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
+            "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(self, ss_url, title)
           
         end

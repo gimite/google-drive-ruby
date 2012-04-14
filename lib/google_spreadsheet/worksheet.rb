@@ -218,7 +218,7 @@ module GoogleSpreadsheet
           if @meta_modified
 
             ws_doc = @session.request(:get, self.worksheet_feed_url)
-            edit_url = ws_doc.css("link[@rel='edit']")[0]["href"]
+            edit_url = ws_doc.css("link[rel='edit']")[0]["href"]
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
@@ -267,7 +267,7 @@ module GoogleSpreadsheet
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
                 id = entry.css("id").text
-                edit_url = entry.css("link[@rel='edit']")[0]["href"]
+                edit_url = entry.css("link[rel='edit']")[0]["href"]
                 xml << <<-EOS
                   <entry>
                     <batch:id>#{h(row)},#{h(col)}</batch:id>
@@ -317,7 +317,7 @@ module GoogleSpreadsheet
         # Deletes this worksheet. Deletion takes effect right away without calling save().
         def delete()
           ws_doc = @session.request(:get, self.worksheet_feed_url)
-          edit_url = ws_doc.css("link[@rel='edit']")[0]["href"]
+          edit_url = ws_doc.css("link[rel='edit']")[0]["href"]
           @session.request(:delete, edit_url)
         end
 
@@ -381,7 +381,7 @@ module GoogleSpreadsheet
 
           # Gets the URL of list-based feed for the given spreadsheet.
           return entry.css(
-            "link[@rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
+            "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
         end
         
         # Provides access to cells using column names, assuming the first row contains column

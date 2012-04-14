@@ -21,7 +21,7 @@ module GoogleSpreadsheet
           @columns = {}
           @worksheet_title = entry.css("gs|worksheet")[0]["name"]
           @records_url = entry.css("content")[0]["src"]
-          @edit_url = entry.css("link[@rel='edit']")[0]["href"]
+          @edit_url = entry.css("link[rel='edit']")[0]["href"]
           @session = session
         end
 

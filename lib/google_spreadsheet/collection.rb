@@ -45,7 +45,7 @@ module GoogleSpreadsheet
           for entry in doc.css("feed > entry")
             title = entry.css("title").text
             worksheets_feed_link = entry.css(
-              "link[@rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
+              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
             if worksheets_feed_link
               result.push(GoogleSpreadsheet::Spreadsheet.new(
                   @session, worksheets_feed_link["href"], title))
