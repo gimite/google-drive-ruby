@@ -1,31 +1,54 @@
-This is a Ruby 1.8/1.9 library to read/write Google Spreadsheet.
+This is a Ruby 1.8/1.9 library to read/write files/spreadsheets in Google Drive/Docs.
 
 
 = How to install
 
-  $ sudo gem install google-spreadsheet-ruby
-
-Note that gimite-google-spreadsheet-ruby at gems.github.com is no longer updated, because github stopped hosting it.
+  $ sudo gem install google_drive
 
 
 = How to use
 
-Example:
-  
+Example to read/write files in Google Drive:
+
   require "rubygems"
-  require "google_spreadsheet"
+  require "google_drive"
   
   # Logs in.
   # You can also use OAuth. See document of
-  # GoogleSpreadsheet.login_with_oauth for details.
-  session = GoogleSpreadsheet.login("username@gmail.com", "mypassword")
+  # GoogleDrive.login_with_oauth for details.
+  session = GoogleDrive.login("username@gmail.com", "mypassword")
+  
+  # Gets list of remote files.
+  for file in session.files
+    p file.title
+  end
+  
+  # Uploads a local file.
+  session.upload_from_file("/path/to/hello.txt", "hello.txt", :convert => false)
+  
+  # Downloads to a local file.
+  file = session.file_by_title("hello.txt")
+  file.download_to_file("/path/to/hello.txt")
+  
+  # Updates content of the remote file.
+  file.update_from_file("/path/to/hello.txt")
+
+Example to read/write spreadsheets:
+  
+  require "rubygems"
+  require "google_drive"
+  
+  # Logs in.
+  # You can also use OAuth. See document of
+  # GoogleDrive.login_with_oauth for details.
+  session = GoogleDrive.login("username@gmail.com", "mypassword")
   
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
   ws = session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg").worksheets[0]
   
   # Gets content of A2 cell.
-  p ws[2, 1] #==> "hoge"
+  p ws[2, 1]  #==> "hoge"
   
   # Changes content of cells.
   # Changes are not sent to the server until you call ws.save().
@@ -41,17 +64,17 @@ Example:
   end
   
   # Yet another way to do so.
-  p ws.rows #==> [["fuga", ""], ["foo", "bar]]
+  p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
   
   # Reloads the worksheet to get changes by other clients.
   ws.reload()
 
-API document: http://gimite.net/gimite/rubymess/google-spreadsheet-ruby/
+API document: http://gimite.net/doc/google-drive-ruby/
 
 
 = Source code
 
-http://github.com/gimite/google-spreadsheet-ruby
+http://github.com/gimite/google-drive-ruby
 
 The license of this source is "New BSD Licence"
 

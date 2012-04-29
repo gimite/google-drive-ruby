@@ -58,7 +58,7 @@ module GoogleDrive
         end
 
         # Content types you can specify in methods download_to_file, download_to_string,
-        # download_to_io.
+        # download_to_io .
         def available_content_types
           return self.document_feed_entry.css("content").map(){ |c| c["type"] }
         end

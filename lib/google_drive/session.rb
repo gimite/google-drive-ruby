@@ -252,6 +252,7 @@ module GoogleDrive
         end
         
         # Uploads a file with the given +title+ and +content+.
+        # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
         #   # Uploads and converts to a Google Docs document:
@@ -266,6 +267,7 @@ module GoogleDrive
         end
         
         # Uploads a local file.
+        # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
         #   # Uploads and converts to a Google Docs document:
@@ -285,6 +287,7 @@ module GoogleDrive
         end
         
         # Uploads a file. Reads content from +io+.
+        # Returns a GoogleSpreadsheet::File object.
         def upload_from_io(io, title = "Untitled", params = {})
           doc = request(:get, "https://docs.google.com/feeds/default/private/full?v=3",
               :auth => :writely)
@@ -296,7 +299,10 @@ module GoogleDrive
         def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
           
           params = {:convert => true}.merge(params)
-          total_bytes = io.size - io.pos
+          pos = io.pos
+          io.seek(0, IO::SEEK_END)
+          total_bytes = io.pos - pos
+          io.pos = pos
           content_type = params[:content_type]
           if !content_type && params[:file_name]
             content_type = EXT_TO_CONTENT_TYPE[::File.extname(params[:file_name]).downcase]
