@@ -206,14 +206,15 @@ module GoogleSpreadsheet
         #
         # e.g.
         #   session.collection_by_url(
-        #     "https://docs.google.com/?pli=1&authuser=0#folders/" +
+        #     "https://drive.google.com/#folders/" +
         #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
         #   session.collection_by_url(
         #     "http://docs.google.com/feeds/default/private/full/folder%3A" +
         #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
         def collection_by_url(url)
           uri = URI.parse(url)
-          if uri.host == "docs.google.com" && uri.fragment =~ /^folders\/(.+)$/
+          if ["docs.google.com", "drive.google.com"].include?(uri.host) &&
+              uri.fragment =~ /^folders\/(.+)$/
             # Looks like a URL of human-readable collection page. Converts to collection feed URL.
             url = "https://docs.google.com/feeds/default/private/full/folder%3A#{$1}"
           end

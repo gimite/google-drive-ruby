@@ -20,13 +20,13 @@ module GoogleSpreadsheet
         
         attr_reader(:collection_feed_url)
         
-        # Adds the given GoogleSpreadsheet::Spreadsheet to the collection.
-        def add(spreadsheet)
+        # Adds the given GoogleSpreadsheet::File to the collection.
+        def add(file)
           contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           xml = <<-"EOS"
             <entry xmlns="http://www.w3.org/2005/Atom">
-              <id>#{h(spreadsheet.document_feed_url)}</id>
+              <id>#{h(file.document_feed_url)}</id>
             </entry>
           EOS
           @session.request(
@@ -34,25 +34,17 @@ module GoogleSpreadsheet
           return nil
         end
 
-        # Returns all the spreadsheets in the collection.
-        def spreadsheets
-          
+        # Returns all the files in the collection.
+        def files
           contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
-          
-          result = []
-          for entry in doc.css("feed > entry")
-            title = entry.css("title").text
-            worksheets_feed_link = entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
-            if worksheets_feed_link
-              result.push(GoogleSpreadsheet::Spreadsheet.new(
-                  @session, worksheets_feed_link["href"], title))
-            end
-          end
-          return result
-          
+          return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
+        end
+        
+        # Returns all the spreadsheets in the collection.
+        def spreadsheets
+          return self.files.select(){ |f| f.is_a?(Spreadsheet) }
         end
         
         # TODO Add other operations.
