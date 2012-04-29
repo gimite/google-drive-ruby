@@ -1,13 +1,13 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/session"
+require "google_drive/session"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
-    # Authenticates with given +mail+ and +password+, and returns GoogleSpreadsheet::Session
-    # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
+    # Authenticates with given +mail+ and +password+, and returns GoogleDrive::Session
+    # if succeeds. Raises GoogleDrive::AuthenticationError if fails.
     # Google Apps account is supported.
     #
     # +proxy+ can be nil or return value of Net::HTTP.Proxy. If +proxy+ is specified, all
@@ -33,14 +33,14 @@ module GoogleSpreadsheet
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth_token = client.auth_code.get_token(
     #       authorization_code, :redirect_uri => "http://example.com/")
-    #   session = GoogleSpreadsheet.login_with_oauth(auth_token)
+    #   session = GoogleDrive.login_with_oauth(auth_token)
     #
     # Or, from existing refresh token:
     #
     #   access_token = OAuth2::AccessToken.from_hash(client,
     #       {:refresh_token => refresh_token, :expires_at => expires_at})
     #   access_token = access_token.refresh!
-    #   session = GoogleSpreadsheet.login_with_oauth(access_token)
+    #   session = GoogleDrive.login_with_oauth(access_token)
     #
     # OAuth1 code example:
     #
@@ -68,19 +68,19 @@ module GoogleSpreadsheet
 
     # Restores session using return value of auth_tokens method of previous session.
     #
-    # See GoogleSpreadsheet.login for description of parameter +proxy+.
+    # See GoogleDrive.login for description of parameter +proxy+.
     def self.restore_session(auth_tokens, proxy = nil)
       return Session.restore_session(auth_tokens, proxy)
     end
     
-    # Restores GoogleSpreadsheet::Session from +path+ and returns it.
+    # Restores GoogleDrive::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
     #
     # See login for description of parameter +proxy+.
     #
     # This method requires Highline library: http://rubyforge.org/projects/highline/
-    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token", proxy = nil)
+    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil)
       tokens = {}
       if ::File.exist?(path)
         open(path) do |f|
@@ -96,7 +96,7 @@ module GoogleSpreadsheet
           require "highline"
         rescue LoadError
           raise(LoadError,
-            "GoogleSpreadsheet.saved_session requires Highline library.\n" +
+            "GoogleDrive.saved_session requires Highline library.\n" +
             "Run\n" +
             "  \$ sudo gem install highline\n" +
             "to install it.")

@@ -3,15 +3,15 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/acl_entry"
+require "google_drive/acl_entry"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
     
     # ACL (access control list) of a spreadsheet.
     #
-    # Use GoogleSpreadsheet::Spreadsheet#acl to get GoogleSpreadsheet::Acl object.
-    # See GoogleSpreadsheet::Spreadsheet#acl for usage example.
+    # Use GoogleDrive::Spreadsheet#acl to get GoogleDrive::Acl object.
+    # See GoogleDrive::Spreadsheet#acl for usage example.
     #
     # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class Acl
@@ -29,9 +29,9 @@ module GoogleSpreadsheet
         
         def_delegators(:@acls, :size, :[], :each)
         
-        # Adds a new entry. +entry+ is either a GoogleSpreadsheet::AclEntry or a Hash with keys
-        # :scope_type, :scope and :role. See GoogleSpreadsheet::AclEntry#scope_type and
-        # GoogleSpreadsheet::AclEntry#role for the document of the fields.
+        # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with keys
+        # :scope_type, :scope and :role. See GoogleDrive::AclEntry#scope_type and
+        # GoogleDrive::AclEntry#role for the document of the fields.
         #
         # NOTE: This sends email to the new people.
         #

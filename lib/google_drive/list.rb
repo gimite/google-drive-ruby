@@ -1,19 +1,19 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/error"
-require "google_spreadsheet/list_row"
+require "google_drive/util"
+require "google_drive/error"
+require "google_drive/list_row"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
     # Provides access to cells using column names.
-    # Use GoogleSpreadsheet::Worksheet#list to get GoogleSpreadsheet::List object.
+    # Use GoogleDrive::Worksheet#list to get GoogleDrive::List object.
     #--
-    # This is implemented as wrapper of GoogleSpreadsheet::Worksheet i.e. using cells
+    # This is implemented as wrapper of GoogleDrive::Worksheet i.e. using cells
     # feed, not list feed. In this way, we can easily provide consistent API as
-    # GoogleSpreadsheet::Worksheet using save()/reload().
+    # GoogleDrive::Worksheet using save()/reload().
     class List
         
         include(Enumerable)
@@ -27,12 +27,12 @@ module GoogleSpreadsheet
           return @worksheet.num_rows - 1
         end
         
-        # Returns Hash-like object (GoogleSpreadsheet::ListRow) for the row with the
+        # Returns Hash-like object (GoogleDrive::ListRow) for the row with the
         # index. Keys of the object are colum names (the first row).
         # The second row has index 0.
         #
         # Note that updates to the returned object are not sent to the server until
-        # you call GoogleSpreadsheet::Worksheet#save().
+        # you call GoogleDrive::Worksheet#save().
         def [](index)
           return ListRow.new(self, index)
         end
@@ -42,12 +42,12 @@ module GoogleSpreadsheet
         # The second row has index 0.
         #
         # Note that update is not sent to the server until
-        # you call GoogleSpreadsheet::Worksheet#save().
+        # you call GoogleDrive::Worksheet#save().
         def []=(index, hash)
           self[index].replace(hash)
         end
         
-        # Iterates over Hash-like object (GoogleSpreadsheet::ListRow) for each row
+        # Iterates over Hash-like object (GoogleDrive::ListRow) for each row
         # (except for the first row).
         # Keys of the object are colum names (the first row).
         def each(&block)
@@ -65,7 +65,7 @@ module GoogleSpreadsheet
         # Updates column names i.e. the contents of the first row.
         #
         # Note that update is not sent to the server until
-        # you call GoogleSpreadsheet::Worksheet#save().
+        # you call GoogleDrive::Worksheet#save().
         def keys=(ary)
           for i in 1..ary.size
             @worksheet[1, i] = ary[i - 1]
@@ -77,10 +77,10 @@ module GoogleSpreadsheet
         
         # Adds a new row to the bottom.
         # Keys of +hash+ are colum names (the first row).
-        # Returns GoogleSpreadsheet::ListRow for the new row.
+        # Returns GoogleDrive::ListRow for the new row.
         #
         # Note that update is not sent to the server until
-        # you call GoogleSpreadsheet::Worksheet#save().
+        # you call GoogleDrive::Worksheet#save().
         def push(hash)
           row = self[self.size]
           row.update(hash)
@@ -106,7 +106,7 @@ module GoogleSpreadsheet
         def key_to_col(key)
           key = key.to_s()
           col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
-          raise(GoogleSpreadsheet::Error, "Colunm doesn't exist: %p" % key) if !col
+          raise(GoogleDrive::Error, "Colunm doesn't exist: %p" % key) if !col
           return col
         end
         

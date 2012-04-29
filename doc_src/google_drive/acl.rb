@@ -1,4 +1,4 @@
-module GoogleSpreadsheet
+module GoogleDrive
     
     class Acl
         
@@ -6,11 +6,11 @@ module GoogleSpreadsheet
         def size
         end
         
-        # Returns GoogleSpreadsheet::AclEntry object at +index+.
+        # Returns GoogleDrive::AclEntry object at +index+.
         def [](index)
         end
         
-        # Iterates over GoogleSpreadsheet::AclEntry objects.
+        # Iterates over GoogleDrive::AclEntry objects.
         def each(&block)
           yield(entry)
         end

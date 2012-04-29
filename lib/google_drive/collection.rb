@@ -1,14 +1,14 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/error"
-require "google_spreadsheet/spreadsheet"
+require "google_drive/util"
+require "google_drive/error"
+require "google_drive/spreadsheet"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
-    # Use GoogleSpreadsheet::Session#collection_by_url to get GoogleSpreadsheet::Collection object.
+    # Use GoogleDrive::Session#collection_by_url to get GoogleDrive::Collection object.
     class Collection
 
         include(Util)
@@ -20,7 +20,7 @@ module GoogleSpreadsheet
         
         attr_reader(:collection_feed_url)
         
-        # Adds the given GoogleSpreadsheet::File to the collection.
+        # Adds the given GoogleDrive::File to the collection.
         def add(file)
           contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}

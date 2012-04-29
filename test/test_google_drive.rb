@@ -3,11 +3,11 @@ require "rubygems"
 require "bundler/setup"
 
 require "test/unit"
-require "google_spreadsheet"
+require "google_drive"
 require "highline"
 
 
-class TC_GoogleSpreadsheet < Test::Unit::TestCase
+class TC_GoogleDrive < Test::Unit::TestCase
     
     def test_all()
       
@@ -20,14 +20,14 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
         account = {}
       end
       if account["use_saved_session"]
-        session = GoogleSpreadsheet.saved_session
+        session = GoogleDrive.saved_session
       elsif account["mail"] && account["password"]
-        session = GoogleSpreadsheet.login(account["mail"], account["password"])
+        session = GoogleDrive.login(account["mail"], account["password"])
       else
         highline = HighLine.new()
         mail = highline.ask("Mail: ")
         password = highline.ask("Password: "){ |q| q.echo = false }
-        session = GoogleSpreadsheet.login(mail, password)
+        session = GoogleDrive.login(mail, password)
       end
       
       ss_title = "google-spreadsheet-ruby test " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
@@ -103,7 +103,7 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
       
-      # Access via GoogleSpreadsheet::Worksheet#list.
+      # Access via GoogleDrive::Worksheet#list.
       ws.list.keys = ["x", "y"]
       ws.list.push({"x" => "1", "y" => "2"})
       ws.list.push({"x" => "3", "y" => "4"})
@@ -168,7 +168,7 @@ class TC_GoogleSpreadsheet < Test::Unit::TestCase
  	    collection_feed_url =
           "https://docs.google.com/feeds/default/private/full/folder%3A" +
           "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
-      session = GoogleSpreadsheet::Session.new_dummy()
+      session = GoogleDrive::Session.new_dummy()
       
       collection = session.collection_by_url(browser_url)
       assert_equal(collection_feed_url, collection.collection_feed_url)

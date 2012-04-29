@@ -7,22 +7,22 @@ require "stringio"
 require "rubygems"
 require "nokogiri"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/client_login_fetcher"
-require "google_spreadsheet/oauth1_fetcher"
-require "google_spreadsheet/oauth2_fetcher"
-require "google_spreadsheet/error"
-require "google_spreadsheet/authentication_error"
-require "google_spreadsheet/spreadsheet"
-require "google_spreadsheet/worksheet"
-require "google_spreadsheet/collection"
-require "google_spreadsheet/file"
+require "google_drive/util"
+require "google_drive/client_login_fetcher"
+require "google_drive/oauth1_fetcher"
+require "google_drive/oauth2_fetcher"
+require "google_drive/error"
+require "google_drive/authentication_error"
+require "google_drive/spreadsheet"
+require "google_drive/worksheet"
+require "google_drive/collection"
+require "google_drive/file"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
-    # Use GoogleSpreadsheet.login or GoogleSpreadsheet.saved_session to get
-    # GoogleSpreadsheet::Session object.
+    # Use GoogleDrive.login or GoogleDrive.saved_session to get
+    # GoogleDrive::Session object.
     class Session
 
         include(Util)
@@ -30,14 +30,14 @@ module GoogleSpreadsheet
 
         UPLOAD_CHUNK_SIZE = 512 * 1024
         
-        # The same as GoogleSpreadsheet.login.
+        # The same as GoogleDrive.login.
         def self.login(mail, password, proxy = nil)
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
           session.login(mail, password)
           return session
         end
 
-        # The same as GoogleSpreadsheet.login_with_oauth.
+        # The same as GoogleDrive.login_with_oauth.
         def self.login_with_oauth(oauth_token)
           case oauth_token
             when OAuth::AccessToken
@@ -45,23 +45,23 @@ module GoogleSpreadsheet
             when OAuth2::AccessToken
               fetcher = OAuth2Fetcher.new(oauth_token)
             else
-              raise(GoogleSpreadsheet::Error,
+              raise(GoogleDrive::Error,
                   "oauth_token is neither OAuth::Token nor OAuth2::Token: %p" % oauth_token)
           end
           return Session.new(nil, fetcher)
         end
 
-        # The same as GoogleSpreadsheet.restore_session.
+        # The same as GoogleDrive.restore_session.
         def self.restore_session(auth_tokens, proxy = nil)
           return Session.new(auth_tokens, nil, proxy)
         end
         
-        # Creates a dummy GoogleSpreadsheet::Session object for testing.
+        # Creates a dummy GoogleDrive::Session object for testing.
         def self.new_dummy()
           return Session.new(nil, Object.new())
         end
 
-        # DEPRECATED: Use GoogleSpreadsheet.restore_session instead.
+        # DEPRECATED: Use GoogleDrive.restore_session instead.
         def initialize(auth_tokens = nil, fetcher = nil, proxy = nil)
           if fetcher
             @fetcher = fetcher
@@ -71,11 +71,11 @@ module GoogleSpreadsheet
         end
 
         # Authenticates with given +mail+ and +password+, and updates current session object
-        # if succeeds. Raises GoogleSpreadsheet::AuthenticationError if fails.
+        # if succeeds. Raises GoogleDrive::AuthenticationError if fails.
         # Google Apps account is supported.
         def login(mail, password)
           if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleSpreadsheet::Error,
+            raise(GoogleDrive::Error,
                 "Cannot call login for session created by login_with_oauth.")
           end
           begin
@@ -83,7 +83,7 @@ module GoogleSpreadsheet
               :wise => authenticate(mail, password, :wise),
               :writely => authenticate(mail, password, :writely),
             }
-          rescue GoogleSpreadsheet::Error => ex
+          rescue GoogleDrive::Error => ex
             return true if @on_auth_fail && @on_auth_fail.call()
             raise(AuthenticationError, "Authentication failed for #{mail}: #{ex.message}")
           end
@@ -92,7 +92,7 @@ module GoogleSpreadsheet
         # Authentication tokens.
         def auth_tokens
           if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleSpreadsheet::Error,
+            raise(GoogleDrive::Error,
                 "Cannot call auth_tokens for session created by " +
                 "login_with_oauth.")
           end
@@ -108,7 +108,7 @@ module GoogleSpreadsheet
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
 
-        # Returns list of files for the user as array of GoogleSpreadsheet::File or its subclass.
+        # Returns list of files for the user as array of GoogleDrive::File or its subclass.
         # You can specify query parameters described at
         # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
         #
@@ -122,14 +122,14 @@ module GoogleSpreadsheet
           return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
         end
         
-        # Returns GoogleSpreadsheet::File or its subclass whose title exactly matches +title+.
+        # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
         def file_by_title(title)
           return files("title" => title, "title-exact" => "true")[0]
         end
 
-        # Returns list of spreadsheets for the user as array of GoogleSpreadsheet::Spreadsheet.
+        # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
         # You can specify query parameters described at
         # http://code.google.com/apis/spreadsheets/docs/2.0/reference.html#Parameters
         #
@@ -150,7 +150,7 @@ module GoogleSpreadsheet
           return result
         end
 
-        # Returns GoogleSpreadsheet::Spreadsheet with given +key+.
+        # Returns GoogleDrive::Spreadsheet with given +key+.
         #
         # e.g.
         #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
@@ -160,7 +160,7 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, url)
         end
 
-        # Returns GoogleSpreadsheet::Spreadsheet with given +url+. You must specify either of:
+        # Returns GoogleDrive::Spreadsheet with given +url+. You must specify either of:
         # - URL of the page you open to access the spreadsheet in your browser
         # - URL of worksheet-based feed of the spreadseet
         #
@@ -183,14 +183,14 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, url)
         end
 
-        # Returns GoogleSpreadsheet::Spreadsheet with given +title+.
+        # Returns GoogleDrive::Spreadsheet with given +title+.
         # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
         # one of them.
         def spreadsheet_by_title(title)
           return spreadsheets({"title" => title})[0]
         end
         
-        # Returns GoogleSpreadsheet::Worksheet with given +url+.
+        # Returns GoogleDrive::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
         # e.g.
@@ -201,7 +201,7 @@ module GoogleSpreadsheet
           return Worksheet.new(self, nil, url)
         end
 
-        # Returns GoogleSpreadsheet::Collection with given +url+.
+        # Returns GoogleDrive::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
         #   open a collection
@@ -224,7 +224,7 @@ module GoogleSpreadsheet
           return Collection.new(self, url)
         end
 
-        # Creates new spreadsheet and returns the new GoogleSpreadsheet::Spreadsheet.
+        # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
         #
         # e.g.
         #   session.create_spreadsheet("My new sheet")
@@ -352,7 +352,7 @@ module GoogleSpreadsheet
           if worksheets_feed_link
             return Spreadsheet.new(self, worksheets_feed_link["href"], title)
           else
-            return GoogleSpreadsheet::File.new(self, entry)
+            return GoogleDrive::File.new(self, entry)
           end
         end
 
@@ -378,7 +378,7 @@ module GoogleSpreadsheet
             end
             if !(response.code =~ /^[23]/)
               raise(
-                response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
+                response.code == "401" ? AuthenticationError : GoogleDrive::Error,
                 "Response code #{response.code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
@@ -402,7 +402,7 @@ module GoogleSpreadsheet
             when :response
               return response
             else
-              raise(GoogleSpreadsheet::Error,
+              raise(GoogleDrive::Error,
                   "Unknown params[:response_type]: %s" % response_type)
           end
         end
@@ -413,7 +413,7 @@ module GoogleSpreadsheet
             "Email" => mail,
             "Passwd" => password,
             "service" => auth.to_s(),
-            "source" => "Gimite-RubyGoogleSpreadsheet-1.00",
+            "source" => "Gimite-RubyGoogleDrive-1.00",
           }
           header = {"Content-Type" => "application/x-www-form-urlencoded"}
           response = request(:post,

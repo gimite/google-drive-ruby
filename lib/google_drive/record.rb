@@ -1,16 +1,16 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/error"
+require "google_drive/util"
+require "google_drive/error"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
     # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
     # March 2012.
     #
-    # Use GoogleSpreadsheet::Table#records to get GoogleSpreadsheet::Record objects.
+    # Use GoogleDrive::Table#records to get GoogleDrive::Record objects.
     class Record < Hash
         include(Util)
 

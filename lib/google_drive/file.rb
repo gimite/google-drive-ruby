@@ -3,15 +3,15 @@
 
 require "stringio"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/acl"
+require "google_drive/util"
+require "google_drive/acl"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
     
     # A file in Google Drive, including Google Docs document/spreadsheet/presentation.
     #
-    # Use GoogleSpreadsheet::Session#files or GoogleSpreadsheet::Session#file_by_title to
+    # Use GoogleDrive::Session#files or GoogleDrive::Session#file_by_title to
     # get this object.
     class File
 
@@ -52,7 +52,7 @@ module GoogleSpreadsheet
               # URL of old API version. Converts to v3 URL.
               return "https://docs.google.com/feeds/default/private/full/#{$1}/acl"
             else
-              raise(GoogleSpreadsheet::Error,
+              raise(GoogleDrive::Error,
                 "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
           end
         end
@@ -102,12 +102,12 @@ module GoogleSpreadsheet
             url = contents[0]["src"]
           else
             if contents.empty?
-              raise(GoogleSpreadsheet::Error,
+              raise(GoogleDrive::Error,
                   ("Downloading with content type %p not supported for this file. " +
                    "Specify one of these to content_type: %p") %
                   [params[:content_type], self.available_content_types])
             else
-              raise(GoogleSpreadsheet::Error,
+              raise(GoogleDrive::Error,
                   ("Multiple content types are available for this file. " +
                    "Specify one of these to content_type: %p") %
                   [self.available_content_types])
@@ -175,7 +175,7 @@ module GoogleSpreadsheet
         
         alias title= rename
         
-        # Returns GoogleSpreadsheet::Acl object for the file.
+        # Returns GoogleDrive::Acl object for the file.
         #
         # With the object, you can see and modify people who can access the file.
         # Modifications take effect immediately.

@@ -6,11 +6,11 @@
 # acl.rb, derived from https://github.com/guyboertje/gdata-spreadsheet-ruby/blob/master/lib/document.rb
 # more frankensteining of the original library
 
-module GoogleSpreadsheet
+module GoogleDrive
     
     # An entry of an ACL (access control list) of a spreadsheet.
     #
-    # Use GoogleSpreadsheet::Acl#[] to get GoogleSpreadsheet::AclEntry object.
+    # Use GoogleDrive::Acl#[] to get GoogleDrive::AclEntry object.
     #
     # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class AclEntry

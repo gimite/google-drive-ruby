@@ -6,7 +6,7 @@ require "uri"
 Net::HTTP.version_1_2
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
     class ClientLoginFetcher #:nodoc:
         

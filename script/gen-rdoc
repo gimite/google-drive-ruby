@@ -1,3 +1,4 @@
 #!/bin/sh
 
-rdoc --main=README.rdoc --title="Google Spreadsheet Ruby" --force-update README.rdoc lib/google_spreadsheet.rb lib/google_spreadsheet/*.rb doc_src/google_spreadsheet/*.rb
+rdoc --main=README.rdoc --title="Google Drive Ruby" --force-update README.rdoc \
+  lib/google_drive.rb lib/google_drive/*.rb doc_src/google_drive/*.rb

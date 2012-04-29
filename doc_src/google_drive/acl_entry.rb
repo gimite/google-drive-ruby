@@ -1,4 +1,4 @@
-module GoogleSpreadsheet
+module GoogleDrive
     
     class AclEntry
         

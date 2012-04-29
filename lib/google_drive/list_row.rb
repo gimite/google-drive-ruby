@@ -3,13 +3,13 @@
 
 require "forwardable"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/error"
+require "google_drive/util"
+require "google_drive/error"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
-    # Hash-like object returned by GoogleSpreadsheet::List#[].
+    # Hash-like object returned by GoogleDrive::List#[].
     class ListRow
         
         include(Enumerable)

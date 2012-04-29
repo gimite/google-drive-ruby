@@ -4,7 +4,7 @@
 require "cgi"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
     
     module Util #:nodoc:
         

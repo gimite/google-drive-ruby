@@ -1,20 +1,20 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_spreadsheet/util"
-require "google_spreadsheet/error"
-require "google_spreadsheet/worksheet"
-require "google_spreadsheet/table"
-require "google_spreadsheet/acl"
-require "google_spreadsheet/file"
+require "google_drive/util"
+require "google_drive/error"
+require "google_drive/worksheet"
+require "google_drive/table"
+require "google_drive/acl"
+require "google_drive/file"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
     
     # A spreadsheet.
     #
-    # Use methods in GoogleSpreadsheet::Session to get GoogleSpreadsheet::Spreadsheet object.
-    class Spreadsheet < GoogleSpreadsheet::File
+    # Use methods in GoogleDrive::Session to get GoogleDrive::Spreadsheet object.
+    class Spreadsheet < GoogleDrive::File
 
         include(Util)
         
@@ -43,7 +43,7 @@ module GoogleSpreadsheet
         def key
           if !(@worksheets_feed_url =~
               %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/.*$})
-            raise(GoogleSpreadsheet::Error,
+            raise(GoogleDrive::Error,
               "Worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
           return $1
@@ -155,11 +155,11 @@ module GoogleSpreadsheet
           end
         end
         
-        # Returns worksheets of the spreadsheet as array of GoogleSpreadsheet::Worksheet.
+        # Returns worksheets of the spreadsheet as array of GoogleDrive::Worksheet.
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           if doc.root.name != "feed"
-            raise(GoogleSpreadsheet::Error,
+            raise(GoogleDrive::Error,
                 "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
                 @worksheets_feed_url)
           end
@@ -173,7 +173,7 @@ module GoogleSpreadsheet
           return result.freeze()
         end
         
-        # Returns a GoogleSpreadsheet::Worksheet with the given title in the spreadsheet.
+        # Returns a GoogleDrive::Worksheet with the given title in the spreadsheet.
         #
         # Returns nil if not found. Returns the first one when multiple worksheets with the
         # title are found.
@@ -181,7 +181,7 @@ module GoogleSpreadsheet
           return self.worksheets.find(){ |ws| ws.title == title }
         end
 
-        # Adds a new worksheet to the spreadsheet. Returns added GoogleSpreadsheet::Worksheet.
+        # Adds a new worksheet to the spreadsheet. Returns added GoogleDrive::Worksheet.
         def add_worksheet(title, max_rows = 100, max_cols = 20)
           xml = <<-"EOS"
             <entry xmlns='http://www.w3.org/2005/Atom'

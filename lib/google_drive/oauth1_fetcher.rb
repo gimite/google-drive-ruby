@@ -5,7 +5,7 @@ require "rubygems"
 require "oauth"
 
 
-module GoogleSpreadsheet
+module GoogleDrive
 
     class OAuth1Fetcher #:nodoc:
         
