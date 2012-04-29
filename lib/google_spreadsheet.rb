@@ -82,7 +82,7 @@ module GoogleSpreadsheet
     # This method requires Highline library: http://rubyforge.org/projects/highline/
     def self.saved_session(path = ENV["HOME"] + "/.ruby_google_spreadsheet.token", proxy = nil)
       tokens = {}
-      if File.exist?(path)
+      if ::File.exist?(path)
         open(path) do |f|
           for auth in [:wise, :writely]
             line = f.gets()

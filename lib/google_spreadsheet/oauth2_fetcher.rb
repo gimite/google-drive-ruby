@@ -9,7 +9,25 @@ module GoogleSpreadsheet
 
     class OAuth2Fetcher #:nodoc:
         
-        Response = Struct.new(:code, :body)
+        class Response
+            
+            def initialize(raw_res)
+              @raw_res = raw_res
+            end
+            
+            def code
+              return @raw_res.status.to_s()
+            end
+            
+            def body
+              return @raw_res.body
+            end
+            
+            def [](name)
+              return @raw_res.headers[name]
+            end
+            
+        end
         
         def initialize(oauth2_token)
           @oauth2_token = oauth2_token
@@ -21,7 +39,7 @@ module GoogleSpreadsheet
           else
             raw_res = @oauth2_token.request(method, url, {:header => extra_header, :body => data})
           end
-          return Response.new(raw_res.status.to_s(), raw_res.body)
+          return Response.new(raw_res)
         end
         
     end

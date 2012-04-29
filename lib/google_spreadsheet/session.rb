@@ -2,6 +2,7 @@
 # The license of this source is "New BSD Licence"
 
 require "cgi"
+require "stringio"
 
 require "rubygems"
 require "nokogiri"
@@ -15,6 +16,7 @@ require "google_spreadsheet/authentication_error"
 require "google_spreadsheet/spreadsheet"
 require "google_spreadsheet/worksheet"
 require "google_spreadsheet/collection"
+require "google_spreadsheet/file"
 
 
 module GoogleSpreadsheet
@@ -26,6 +28,8 @@ module GoogleSpreadsheet
         include(Util)
         extend(Util)
 
+        UPLOAD_CHUNK_SIZE = 512 * 1024
+        
         # The same as GoogleSpreadsheet.login.
         def self.login(mail, password, proxy = nil)
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
@@ -103,6 +107,24 @@ module GoogleSpreadsheet
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
+
+        # Returns list of files for the user as array of GoogleSpreadsheet::File.
+        # You can specify query parameters described at
+        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
+        #
+        # e.g.
+        #   session.files
+        #   session.files("title" => "hoge", "title-exact" => "true")
+        def files(params = {})
+          url = concat_url(
+              "https://docs.google.com/feeds/default/private/full?v=3", "?" + encode_query(params))
+          doc = request(:get, url, :auth => :writely)
+          return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
+        end
+        
+        def file_by_title(title)
+          return files("title" => title, "title-exact" => "true")[0]
+        end
 
         # Returns list of spreadsheets for the user as array of GoogleSpreadsheet::Spreadsheet.
         # You can specify query parameters described at
@@ -224,6 +246,89 @@ module GoogleSpreadsheet
           return Spreadsheet.new(self, ss_url, title)
           
         end
+        
+        def upload_from_string(body, title = "Untitled", params = {})
+          return upload_from_io(StringIO.new(body), title, params)
+        end
+        
+        def upload_from_file(path, title = nil, params = {})
+          file_name = ::File.basename(path)
+          params = {:file_name => file_name}.merge(params)
+          open(path, "rb") do |f|
+            return upload_from_io(f, title || file_name, params)
+          end
+        end
+        
+        def upload_from_io(io, title = "Untitled", params = {})
+          doc = request(:get, "https://docs.google.com/feeds/default/private/full?v=3",
+              :auth => :writely)
+          initial_url = doc.css(
+              "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
+          return upload_raw(:post, initial_url, io, title, params)
+        end
+
+        def upload_raw(method, url, io, title = "Untitled", params = {})
+          
+          params = {:convert => true}.merge(params)
+          total_bytes = io.size - io.pos
+          content_type = params[:content_type]
+          if !content_type && params[:file_name]
+            content_type = EXT_TO_CONTENT_TYPE[::File.extname(params[:file_name]).downcase]
+          end
+          if !content_type
+            content_type = "application/octet-stream"
+          end
+          
+          initial_xml = <<-"EOS"
+            <entry xmlns="http://www.w3.org/2005/Atom" 
+                xmlns:docs="http://schemas.google.com/docs/2007">
+              <title>#{h(title)}</title>
+            </entry>
+          EOS
+          
+          default_initial_header = {
+              "Content-Type" => "application/atom+xml",
+              "X-Upload-Content-Type" => content_type,
+              "X-Upload-Content-Length" => total_bytes.to_s(),
+          }
+          initial_full_url = concat_url(url, params[:convert] ? "?convert=true" : "?convert=false")
+          initial_response = request(method, initial_full_url,
+              :header => default_initial_header.merge(params[:header] || {}),
+              :data => initial_xml,
+              :auth => :writely,
+              :response_type => :response)
+          upload_url = initial_response["location"]
+          
+          sent_bytes = 0
+          while data = io.read(UPLOAD_CHUNK_SIZE)
+            content_range = "bytes %d-%d/%d" % [
+                sent_bytes,
+                sent_bytes + data.bytesize - 1,
+                total_bytes,
+            ]
+            upload_header = {
+                "Content-Type" => content_type,
+                "Content-Range" => content_range,
+            }
+            doc = request(
+                :put, upload_url, :header => upload_header, :data => data, :auth => :writely)
+            sent_bytes += data.bytesize
+          end
+          
+          return entry_element_to_file(doc.root)
+          
+        end
+        
+        def entry_element_to_file(entry)
+          title = entry.css("title").text
+          worksheets_feed_link = entry.css(
+            "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
+          if worksheets_feed_link
+            return Spreadsheet.new(self, worksheets_feed_link["href"], title)
+          else
+            return GoogleSpreadsheet::File.new(self, entry)
+          end
+        end
 
         def request(method, url, params = {}) #:nodoc:
           
@@ -245,7 +350,7 @@ module GoogleSpreadsheet
             if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
               next
             end
-            if !(response.code =~ /^2/)
+            if !(response.code =~ /^[23]/)
               raise(
                 response.code == "401" ? AuthenticationError : GoogleSpreadsheet::Error,
                 "Response code #{response.code} for #{method} #{url}: " +
@@ -268,6 +373,8 @@ module GoogleSpreadsheet
               return Nokogiri.XML(response.body)
             when :raw
               return response.body
+            when :response
+              return response
             else
               raise(GoogleSpreadsheet::Error,
                   "Unknown params[:response_type]: %s" % response_type)

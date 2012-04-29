@@ -6,6 +6,7 @@ require "google_spreadsheet/error"
 require "google_spreadsheet/worksheet"
 require "google_spreadsheet/table"
 require "google_spreadsheet/acl"
+require "google_spreadsheet/file"
 
 
 module GoogleSpreadsheet
@@ -13,14 +14,14 @@ module GoogleSpreadsheet
     # A spreadsheet.
     #
     # Use methods in GoogleSpreadsheet::Session to get GoogleSpreadsheet::Spreadsheet object.
-    class Spreadsheet
+    class Spreadsheet < GoogleSpreadsheet::File
 
         include(Util)
         
         SUPPORTED_EXPORT_FORMAT = Set.new(["xls", "csv", "pdf", "ods", "tsv", "html"])
 
         def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
-          @session = session
+          super(session, nil)
           @worksheets_feed_url = worksheets_feed_url
           @title = title
           @acl = nil
@@ -186,7 +187,7 @@ module GoogleSpreadsheet
         #   spreadsheet.export_as_file("hoge.csv", nil, 0)
         def export_as_file(local_path, format = nil, worksheet_index = nil)
           if !format
-            format = File.extname(local_path).gsub(/^\./, "")
+            format = ::File.extname(local_path).gsub(/^\./, "")
             if !SUPPORTED_EXPORT_FORMAT.include?(format)
               raise(ArgumentError,
                   ("Cannot guess format from the file name: %s\n" +
