@@ -1,5 +1,7 @@
 This is a Ruby 1.8/1.9 library to read/write files/spreadsheets in Google Drive/Docs.
 
+NOTE: This is NOT a library to create Google Drive App.
+
 
 = How to install
 
