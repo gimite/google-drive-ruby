@@ -108,7 +108,7 @@ module GoogleSpreadsheet
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
 
-        # Returns list of files for the user as array of GoogleSpreadsheet::File.
+        # Returns list of files for the user as array of GoogleSpreadsheet::File or its subclass.
         # You can specify query parameters described at
         # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
         #
@@ -122,6 +122,9 @@ module GoogleSpreadsheet
           return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
         end
         
+        # Returns GoogleSpreadsheet::File or its subclass whose title exactly matches +title+.
+        # Returns nil if not found. If multiple files with the +title+ are found, returns
+        # one of them.
         def file_by_title(title)
           return files("title" => title, "title-exact" => "true")[0]
         end
@@ -248,10 +251,31 @@ module GoogleSpreadsheet
           
         end
         
-        def upload_from_string(body, title = "Untitled", params = {})
-          return upload_from_io(StringIO.new(body), title, params)
+        # Uploads a file with the given +title+ and +content+.
+        #
+        # e.g.
+        #   # Uploads and converts to a Google Docs document:
+        #   session.upload_from_string(
+        #       "Hello world.", "Hello", :content_type => "text/plain")
+        #   
+        #   # Uploads without conversion:
+        #   session.upload_from_string(
+        #       "Hello world.", "Hello", :content_type => "text/plain", :convert => false)
+        def upload_from_string(content, title = "Untitled", params = {})
+          return upload_from_io(StringIO.new(content), title, params)
         end
         
+        # Uploads a local file.
+        #
+        # e.g.
+        #   # Uploads and converts to a Google Docs document:
+        #   session.upload_from_file("/path/to/hoge.txt")
+        #   
+        #   # Uploads without conversion:
+        #   session.upload_from_file("/path/to/hoge.txt", "Hoge", :convert => false)
+        #   
+        #   # Uploads with explicit content type:
+        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
         def upload_from_file(path, title = nil, params = {})
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)
@@ -260,6 +284,7 @@ module GoogleSpreadsheet
           end
         end
         
+        # Uploads a file. Reads content from +io+.
         def upload_from_io(io, title = "Untitled", params = {})
           doc = request(:get, "https://docs.google.com/feeds/default/private/full?v=3",
               :auth => :writely)
@@ -268,7 +293,7 @@ module GoogleSpreadsheet
           return upload_raw(:post, initial_url, io, title, params)
         end
 
-        def upload_raw(method, url, io, title = "Untitled", params = {})
+        def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
           
           params = {:convert => true}.merge(params)
           total_bytes = io.size - io.pos
@@ -320,7 +345,7 @@ module GoogleSpreadsheet
           
         end
         
-        def entry_element_to_file(entry)
+        def entry_element_to_file(entry) #:nodoc:
           title = entry.css("title").text
           worksheets_feed_link = entry.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]

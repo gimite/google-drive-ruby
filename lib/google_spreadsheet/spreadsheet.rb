@@ -24,7 +24,6 @@ module GoogleSpreadsheet
           super(session, nil)
           @worksheets_feed_url = worksheets_feed_url
           @title = title
-          @acl = nil
         end
 
         # URL of worksheet-based feed of the spreadsheet.
@@ -79,22 +78,6 @@ module GoogleSpreadsheet
           return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
         end
 
-        # ACL feed URL of the spreadsheet.
-        def acl_feed_url
-          orig_acl_feed_url = document_feed_entry.css(
-              "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
-          case orig_acl_feed_url
-            when %r{^https?://docs.google.com/feeds/default/private/full/.*/acl$}
-              return orig_acl_feed_url
-            when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
-              # URL of old API version. Converts to v3 URL.
-              return "https://docs.google.com/feeds/default/private/full/#{$1}/acl"
-            else
-              raise(GoogleSpreadsheet::Error,
-                "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
-          end
-        end
-
         # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
@@ -135,34 +118,6 @@ module GoogleSpreadsheet
           return Spreadsheet.new(@session, ss_url, new_title)
         end
 
-        # If +permanent+ is +false+, moves the spreadsheet to the trash.
-        # If +permanent+ is +true+, deletes the spreadsheet permanently.
-        def delete(permanent = false)
-          @session.request(:delete,
-            self.document_feed_url + (permanent ? "?delete=true" : ""),
-            :auth => :writely, :header => {"If-Match" => "*"})
-        end
-
-        # Renames title of the spreadsheet.
-        def rename(title)
-          doc = @session.request(:get, self.document_feed_url, :auth => :writely)
-          edit_url = doc.css("link[rel='edit']").first["href"]
-          xml = <<-"EOS"
-            <atom:entry
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                xmlns:docs="http://schemas.google.com/docs/2007">
-              <atom:category
-                scheme="http://schemas.google.com/g/2005#kind"
-                term="http://schemas.google.com/docs/2007#spreadsheet" label="spreadsheet"/>
-              <atom:title>#{h(title)}</atom:title>
-            </atom:entry>
-          EOS
-
-          @session.request(:put, edit_url, :data => xml, :auth => :writely)
-        end
-        
-        alias title= rename
-        
         # Exports the spreadsheet in +format+ and returns it as String.
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
@@ -240,40 +195,6 @@ module GoogleSpreadsheet
           url = doc.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, self, url, title)
-        end
-
-        # Returns GoogleSpreadsheet::Acl object for the spreadsheet.
-        #
-        # With the object, you can see and modify people who can access the spreadsheet.
-        # Modifications take effect immediately.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the title.
-        #
-        # e.g.
-        #   # Dumps people who have access:
-        #   for entry in spreadsheet.acl
-        #     p [entry.scope_type, entry.scope, entry.role]
-        #     # => e.g. ["user", "example1@gmail.com", "owner"]
-        #   end
-        #   
-        #   # Shares the spreadsheet with new people:
-        #   # NOTE: This sends email to the new people.
-        #   spreadsheet.acl.push(
-        #       {:scope_type => "user", :scope => "example2@gmail.com", :role => "reader"})
-        #   spreadsheet.acl.push(
-        #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
-        #   
-        #   # Changes the role of a person:
-        #   spreadsheet.acl[1].role = "writer"
-        #   
-        #   # Deletes an ACL entry:
-        #   spreadsheet.acl.delete(spreadsheet.acl[1])
-
-        def acl(params = {})
-          if !@acl || params[:reload]
-            @acl = Acl.new(@session, self.acl_feed_url)
-          end
-          return @acl
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
