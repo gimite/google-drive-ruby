@@ -29,7 +29,10 @@ module GoogleDrive
     #       :authorize_url => "/o/oauth2/auth")
     #   auth_url = client.auth_code.authorize_url(
     #       :redirect_uri => "http://example.com/",
-    #       "scope" => "https://spreadsheets.google.com/feeds https://docs.google.com/feeds/")
+    #       :scope =>
+    #           "https://docs.google.com/feeds/ " +
+    #           "https://docs.googleusercontent.com/ " +
+    #           "https://spreadsheets.google.com/feeds/")
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth_token = client.auth_code.get_token(
     #       authorization_code, :redirect_uri => "http://example.com/")
@@ -41,6 +44,9 @@ module GoogleDrive
     #       {:refresh_token => refresh_token, :expires_at => expires_at})
     #   access_token = access_token.refresh!
     #   session = GoogleDrive.login_with_oauth(access_token)
+    #
+    # If your app is not a Web app, use "urn:ietf:wg:oauth:2.0:oob" as redirect_url. Then
+    # authorization code is shown after authorization.
     #
     # OAuth1 code example:
     #
