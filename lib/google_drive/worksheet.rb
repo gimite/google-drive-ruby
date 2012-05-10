@@ -176,8 +176,9 @@ module GoogleDrive
         end
 
         # An array of spreadsheet rows. Each row contains an array of
-        # columns. Note that resulting array is 0-origin so
-        # worksheet.rows[0][0] == worksheet[1, 1].
+        # columns. Note that resulting array is 0-origin so:
+        #
+        #   worksheet.rows[0][0] == worksheet[1, 1]
         def rows(skip = 0)
           nc = self.num_cols
           result = ((1 + skip)..self.num_rows).map() do |row|
