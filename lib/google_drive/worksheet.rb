@@ -434,10 +434,16 @@ module GoogleDrive
           if args.size == 1 && args[0].is_a?(String)
             return cell_name_to_row_col(args[0])
           elsif args.size == 2 && args[0].is_a?(Integer) && args[1].is_a?(Integer)
+            if args[0] >= 1 && args[1] >= 1
+              return args
+            else
+              raise(ArgumentError,
+                  "Row/col must be >= 1 (1-origin), but are %d/%d" % [args[0], args[1]])
+            end
             return args
           else
             raise(ArgumentError,
-                "Arguments must be either one String or two Integer's, but are %p" % args)
+                "Arguments must be either one String or two Integer's, but are %p" % [args])
           end
         end
         
