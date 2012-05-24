@@ -440,7 +440,6 @@ module GoogleDrive
               raise(ArgumentError,
                   "Row/col must be >= 1 (1-origin), but are %d/%d" % [args[0], args[1]])
             end
-            return args
           else
             raise(ArgumentError,
                 "Arguments must be either one String or two Integer's, but are %p" % [args])
