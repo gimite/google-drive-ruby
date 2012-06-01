@@ -10,10 +10,11 @@ module GoogleDrive
 
     # Use GoogleDrive::Session#collection_by_url to get GoogleDrive::Collection object.
     class Collection
+        ROOT_URL = 'https://docs.google.com/feeds/default/private/full/folder%3Aroot'
 
         include(Util)
-        
-        def initialize(session, collection_feed_url) #:nodoc:
+
+        def initialize(session, collection_feed_url = ROOT_URL) #:nodoc:
           @session = session
           @collection_feed_url = collection_feed_url
         end
@@ -34,21 +35,47 @@ module GoogleDrive
           return nil
         end
 
-        # Returns all the files in the collection.
-        def files
+        # Returns the child resources in the collection (spreadsheets, documents, folders).
+        #
+        # ==== Parameters
+        #
+        # * +params+ is used to filter the returned resources as described at
+        #   https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
+        #
+        # * +type+ can be 'spreadsheet', 'document', 'folder' etc.
+        #   If +type+ parameter is absent or nil the method will return 
+        #   all types of resources including folders.
+        #
+        # ==== Examples:
+        #
+        #   # Gets all resources in collection, *including folders*
+        #   contents 
+        #
+        #   # gets only resources with title "hoge"
+        #   contents "title" => "hoge", "title-exact" => "true" 
+        #
+        #   contents {}, "spreadsheet"  # all speadsheets
+        #   contents {}, "document"     # all text documents
+        #   contents {}, "folder"       # all folders
+        def contents(params = {}, type = nil)
           contents_url = concat_url(@collection_feed_url, "/contents")
+          unless type.nil?
+            contents_url << "/-/#{type}"
+          end
+          contents_url = concat_url contents_url, "?" + encode_query(params)
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
         end
-        
+
+        alias_method :files, :contents
+
         # Returns all the spreadsheets in the collection.
         def spreadsheets
           return self.files.select(){ |f| f.is_a?(Spreadsheet) }
         end
         
         # TODO Add other operations.
-
     end
     
 end

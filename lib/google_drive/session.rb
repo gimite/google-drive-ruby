@@ -224,6 +224,11 @@ module GoogleDrive
           return Collection.new(self, url)
         end
 
+        # Returns the root collection
+        def root_collection
+          Collection.new self
+        end
+
         # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
         #
         # e.g.
@@ -352,13 +357,19 @@ module GoogleDrive
         end
         
         def entry_element_to_file(entry) #:nodoc:
+          type, resourceId = entry.css("gd|resourceId").text.split ':'
           title = entry.css("title").text
-          worksheets_feed_link = entry.css(
-            "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
-          if worksheets_feed_link
-            return Spreadsheet.new(self, worksheets_feed_link["href"], title)
+
+          case type
+          when 'folder'
+            url = "https://docs.google.com/feeds/default/private/full/folder%3A#{resourceId}"
+            Collection.new self, url
+          when 'spreadsheet'
+            worksheets_feed_link = entry.css(
+              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
+            Spreadsheet.new(self, worksheets_feed_link["href"], title)
           else
-            return GoogleDrive::File.new(self, entry)
+            GoogleDrive::File.new(self, entry)
           end
         end
 
