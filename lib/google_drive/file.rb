@@ -17,11 +17,19 @@ module GoogleDrive
 
         include(Util)
         
-        def initialize(session, entry) #:nodoc:
+        def initialize(session, entry_or_url) #:nodoc:
           @session = session
-          @document_feed_entry = entry
-          @document_feed_url = entry ? entry.css("link[rel='self']")[0]["href"] : nil
-          @title = entry ? entry.css("title")[0].text : nil
+          if !entry_or_url
+            # TODO Delete this after editing spreadsheet.rb.
+            @document_feed_entry = nil
+            @document_feed_url = entry_or_url
+          elsif entry_or_url.is_a?(String)
+            @document_feed_entry = nil
+            @document_feed_url = entry_or_url
+          else
+            @document_feed_entry = entry_or_url
+            @document_feed_url = entry_or_url.css("link[rel='self']")[0]["href"]
+          end
           @acl = nil
         end
         
@@ -29,10 +37,22 @@ module GoogleDrive
         attr_reader(:document_feed_url)
         
         # <entry> element of document list feed as Nokogiri::XML::Element.
-        attr_reader(:document_feed_entry)
+        #
+        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
+        def document_feed_entry(params = {})
+          if !@document_feed_entry || params[:reload]
+            @document_feed_entry =
+                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
+          end
+          return @document_feed_entry
+        end
         
         # Title of the file.
-        attr_reader(:title)
+        #
+        # Set <tt>params[:reload]</tt> to true to force reloading the title.
+        def title(params = {})
+          return document_feed_entry(params).css("title").text
+        end
         
         # URL to view/edit the file in a Web browser.
         #
@@ -209,7 +229,9 @@ module GoogleDrive
         end
 
         def inspect
-          return "\#<%p document_feed_url=%p>" % [self.class, self.document_feed_url]
+          fields = {:document_feed_url => self.document_feed_url}
+          fields[:title] = self.title if @document_feed_entry
+          return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
         
     end

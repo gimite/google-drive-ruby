@@ -8,22 +8,31 @@ require "google_drive/spreadsheet"
 
 module GoogleDrive
 
-    # Use GoogleDrive::Session#collection_by_url to get GoogleDrive::Collection object.
-    class Collection
-        ROOT_URL = 'https://docs.google.com/feeds/default/private/full/folder%3Aroot'
+    # Use GoogleDrive::Session#root_collection, GoogleDrive::Collection#subcollections,
+    # or GoogleDrive::Session#collection_by_url to get GoogleDrive::Collection object.
+    class Collection < GoogleDrive::File
 
         include(Util)
-
-        def initialize(session, collection_feed_url = ROOT_URL) #:nodoc:
-          @session = session
-          @collection_feed_url = collection_feed_url
-        end
         
-        attr_reader(:collection_feed_url)
+        #:nodoc:
+        ROOT_URL = "https://docs.google.com/feeds/default/private/full/folder%3Aroot"
+
+        alias collection_feed_url document_feed_url
+        
+        # Title of the collection.
+        #
+        # Set <tt>params[:reload]</tt> to true to force reloading the title.
+        def title(params = {})
+          if self.document_feed_url == ROOT_URL
+            # The root collection doesn't have document feed.
+            return nil
+          else
+            return super
+          end
+        end
         
         # Adds the given GoogleDrive::File to the collection.
         def add(file)
-          contents_url = concat_url(@collection_feed_url, "/contents")
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           xml = <<-"EOS"
             <entry xmlns="http://www.w3.org/2005/Atom">
@@ -31,51 +40,73 @@ module GoogleDrive
             </entry>
           EOS
           @session.request(
-              :post, contents_url, :data => xml, :header => header, :auth => :writely)
+              :post, contents_url(), :data => xml, :header => header, :auth => :writely)
           return nil
         end
 
-        # Returns the child resources in the collection (spreadsheets, documents, folders).
+        # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
         #
-        # ==== Parameters
+        # You can specify query parameters described at
+        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
         #
-        # * +params+ is used to filter the returned resources as described at
-        #   https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
+        # e.g.
         #
-        # * +type+ can be 'spreadsheet', 'document', 'folder' etc.
-        #   If +type+ parameter is absent or nil the method will return 
-        #   all types of resources including folders.
-        #
-        # ==== Examples:
-        #
-        #   # Gets all resources in collection, *including folders*
-        #   contents 
-        #
-        #   # gets only resources with title "hoge"
-        #   contents "title" => "hoge", "title-exact" => "true" 
-        #
-        #   contents {}, "spreadsheet"  # all speadsheets
-        #   contents {}, "document"     # all text documents
-        #   contents {}, "folder"       # all folders
-        def contents(params = {}, type = nil)
-          contents_url = concat_url(@collection_feed_url, "/contents")
-          unless type.nil?
-            contents_url << "/-/#{type}"
-          end
-          contents_url = concat_url contents_url, "?" + encode_query(params)
+        #   # Gets all the files in collection, including subcollections.
+        #   collection.files
+        #   
+        #   # Gets only files with title "hoge".
+        #   collection.files("title" => "hoge", "title-exact" => "true")
+        def files(params = {})
+          return files_with_type(nil, params)
+        end
+
+        alias contents files
+
+        # Returns all the spreadsheets in the collection.
+        def spreadsheets(params = {})
+          return files_with_type("spreadsheet", params)
+        end
+        
+        # Returns all the Google Docs documents in the collection.
+        def documents(params = {})
+          return files_with_type("document", params)
+        end
+        
+        # Returns all its subcollections.
+        def subcollections(params = {})
+          return files_with_type("folder", params)
+        end
+        
+        # Returns its subcollection whose title exactly matches +title+ as GoogleDrive::Collection.
+        # Returns nil if not found. If multiple collections with the +title+ are found, returns
+        # one of them.
+        def subcollection_by_title(title)
+          return subcollections("title" => title, "title-exact" => "true")[0]
+        end
+        
+        # TODO Add other operations.
+        
+      private
+        
+        def files_with_type(type, params = {})
+          contents_url = contents_url()
+          contents_url = concat_url(contents_url, "/-/#{type}") if type
+          contents_url = concat_url(contents_url, "?" + encode_query(params))
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
         end
-
-        alias_method :files, :contents
-
-        # Returns all the spreadsheets in the collection.
-        def spreadsheets
-          return self.files.select(){ |f| f.is_a?(Spreadsheet) }
+        
+        def contents_url
+          if self.document_feed_url == ROOT_URL
+            # The root collection doesn't have document feed.
+            return concat_url(ROOT_URL, "/contents")
+          else
+            return self.document_feed_entry.css(
+                "content[type='application/atom+xml;type=feed']")[0]["src"]
+          end
         end
         
-        # TODO Add other operations.
     end
     
 end

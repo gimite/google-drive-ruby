@@ -112,6 +112,8 @@ module GoogleDrive
         # You can specify query parameters described at
         # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
         #
+        # files doesn't return collections. Use collections method to get collections.
+        #
         # e.g.
         #   session.files
         #   session.files("title" => "hoge", "title-exact" => "true")
@@ -200,7 +202,25 @@ module GoogleDrive
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
-
+        
+        # Returns the root collection.
+        def root_collection
+          return Collection.new(self, Collection::ROOT_URL)
+        end
+        
+        # Returns the top-level collections (direct children of the root collection).
+        def collections
+          return self.root_collection.subcollections
+        end
+        
+        # Returns a top-level collection whose title exactly matches +title+ as
+        # GoogleDrive::Collection.
+        # Returns nil if not found. If multiple collections with the +title+ are found, returns
+        # one of them.
+        def collection_by_title(title)
+          return self.root_collection.subcollection_by_title(title)
+        end
+        
         # Returns GoogleDrive::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
@@ -222,11 +242,6 @@ module GoogleDrive
             url = "https://docs.google.com/feeds/default/private/full/folder%3A#{$1}"
           end
           return Collection.new(self, url)
-        end
-
-        # Returns the root collection
-        def root_collection
-          Collection.new self
         end
 
         # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
@@ -357,19 +372,17 @@ module GoogleDrive
         end
         
         def entry_element_to_file(entry) #:nodoc:
-          type, resourceId = entry.css("gd|resourceId").text.split ':'
+          type, resource_id = entry.css("gd|resourceId").text.split(/:/)
           title = entry.css("title").text
-
           case type
-          when 'folder'
-            url = "https://docs.google.com/feeds/default/private/full/folder%3A#{resourceId}"
-            Collection.new self, url
-          when 'spreadsheet'
-            worksheets_feed_link = entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
-            Spreadsheet.new(self, worksheets_feed_link["href"], title)
-          else
-            GoogleDrive::File.new(self, entry)
+            when "folder"
+              return Collection.new(self, entry)
+            when "spreadsheet"
+              worksheets_feed_link = entry.css(
+                "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
+              return Spreadsheet.new(self, worksheets_feed_link["href"], title)
+            else
+              return GoogleDrive::File.new(self, entry)
           end
         end
 
