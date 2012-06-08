@@ -87,7 +87,7 @@ module GoogleDrive
           reload() if !@cells
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
-          @numeric_values[[row, col]] = value.to_f
+          @numeric_values[[row, col]] = value
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
@@ -133,7 +133,13 @@ module GoogleDrive
         def numeric_value(*args)
           (row, col) = parse_cell_args(args)
           reload() if !@cells
-          return @numeric_values[[row, col]].to_f || nil
+          tentative = @numeric_values[[row, col]]
+          if tentative
+            if ('0'..'9').include?( tentative[0] )
+              return tentative.to_f
+            end
+          end
+          self.cells[[row, col]] || ""
         end
         
         # Row number of the bottom-most non-empty row.
