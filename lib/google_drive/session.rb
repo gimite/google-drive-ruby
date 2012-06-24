@@ -387,6 +387,7 @@ module GoogleDrive
         end
 
         def request(method, url, params = {}) #:nodoc:
+          
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]

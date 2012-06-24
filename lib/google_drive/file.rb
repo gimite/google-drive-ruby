@@ -48,7 +48,7 @@ module GoogleDrive
         end
 
         def resource_id
-          document_feed_entry.css("gd|resourceId").text.split(/:/)[1]
+          return self.document_feed_entry.css("gd|resourceId").text.split(/:/)[1]
         end
 
         # Title of the file.
@@ -173,9 +173,8 @@ module GoogleDrive
         # If +permanent+ is +false+, moves the file to the trash.
         # If +permanent+ is +true+, deletes the file permanently.
         def delete(permanent = false)
-          url = self.document_feed_url
-          url = concat_url url, '?delete=true' if permanent
-          url = detect_url_version url
+          url = to_v3_url(self.document_feed_url)
+          url = concat_url(url, "?delete=true") if permanent
           @session.request(:delete, url,
             :auth => :writely, :header => {"If-Match" => "*"})
         end

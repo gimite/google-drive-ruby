@@ -20,7 +20,7 @@ module GoogleDrive
         alias collection_feed_url document_feed_url
         
         def contents_url
-          if self.document_feed_url == ROOT_URL
+          if self.root?
             # The root collection doesn't have document feed.
             return concat_url(ROOT_URL, "/contents")
           else
@@ -33,7 +33,7 @@ module GoogleDrive
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
         def title(params = {})
-          if self.document_feed_url == ROOT_URL
+          if self.root?
             # The root collection doesn't have document feed.
             return nil
           else
@@ -42,8 +42,7 @@ module GoogleDrive
         end
 
         def resource_id
-          return 'root' if root?
-          super
+          return self.root? ? 'root' : super
         end
         
         # Adds the given GoogleDrive::File to the collection.
@@ -66,25 +65,23 @@ module GoogleDrive
             <entry xmlns="http://www.w3.org/2005/Atom">
               <category scheme="http://schemas.google.com/g/2005#kind"
                 term="http://schemas.google.com/docs/2007#folder"/>
-              <title>#{h title}</title>
+              <title>#{h(title)}</title>
             </entry>
           EOS
           doc = @session.request(
               :post, contents_url, :data => xml, :header => header, :auth => :writely)
-          @session.entry_element_to_file doc
+          return @session.entry_element_to_file(doc)
         end
 
         # Removes the given GoogleDrive::File from the collection.
-        def remove_from_collection(file)
-          url = "#{contents_url}/#{file.resource_id}"
-          url = detect_url_version url
-          @session.request :delete, url, :auth => :writely,
-            :header => {"If-Match" => "*"}
+        def remove(file)
+          url = to_v3_url("#{contents_url}/#{file.resource_id}")
+          @session.request(:delete, url, :auth => :writely, :header => {"If-Match" => "*"})
         end
 
         # Returns true if this is a root collection
         def root?
-          collection_feed_url == ROOT_URL
+          self.document_feed_url == ROOT_URL
         end
 
         # Returns all the files (including spreadsheets, documents, subcollections) in the collection.

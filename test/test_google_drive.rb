@@ -1,5 +1,3 @@
-# encoding: UTF-8
-
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
 require "rubygems"
 require "bundler/setup"
@@ -10,32 +8,15 @@ require "highline"
 
 
 class TC_GoogleDrive < Test::Unit::TestCase
-
-    def get_live_session
-      account_path = File.join(File.dirname(__FILE__), "account.yaml")
-      if File.exist?(account_path)
-        file_content = File.read account_path
-        account = YAML.load ERB.new(file_content).result
-      else
-        account = {}
-      end
-      if account["use_saved_session"]
-        session = GoogleDrive.saved_session
-      elsif account["mail"] && account["password"]
-        session = GoogleDrive.login(account["mail"], account["password"])
-      else
-        highline = HighLine.new()
-        mail = highline.ask("Mail: ")
-        password = highline.ask("Password: "){ |q| q.echo = false }
-        session = GoogleDrive.login(mail, password)
-      end
-      session
-    end
     
-    def test_all()
-      puts("This test will create spreadsheets with your account, read/write them")
-      puts("and finally delete them (if everything goes well).")
-      session = get_live_session
+    # Random string is added to avoid conflict with existing file names.
+    PREFIX = "google-drive-ruby-test-4101301e303c-"
+    
+    @@session = nil
+    
+    def test_spreadsheet_online()
+      
+      session = get_session()
 
       ss_title = "google-spreadsheet-ruby test " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
       ss = session.create_spreadsheet(ss_title)
@@ -166,8 +147,73 @@ class TC_GoogleDrive < Test::Unit::TestCase
       
     end
     
+    # Tests various manipulations with files and collections.
+    def test_collection_and_file_online()
+      
+      session = get_session()
 
-    def test_collection()
+      # Gets root collection.
+      root = session.root_collection
+      assert(root.root?)
+      assert_equal("root", root.resource_id)
+
+      test_collection_name = "#{PREFIX}collection"
+      test_file_name = "#{PREFIX}file.txt"
+
+      # Removes test files/collections in the previous run in case the previous run failed.
+      for file in root.files("title" => test_file_name, "title-exact" => true)
+        delete_test_file(file, true)
+      end
+      for collection in root.subcollections(
+          "title" => test_collection_name, "title-exact" => true)
+        delete_test_file(collection, true)
+      end
+
+      collection = root.subcollection_by_title(test_collection_name)
+      assert_nil(collection)
+
+      # Creates collection.
+      collection = root.create_subcollection(test_collection_name)
+      assert_instance_of(GoogleDrive::Collection, collection)
+      assert_equal(test_collection_name, collection.title)
+      refute(collection.root?)
+      refute_empty(collection.resource_id)
+      refute_nil(root.subcollection_by_title(test_collection_name))
+
+      # Uploads a test file.
+      test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
+      file = session.upload_from_file(test_file_path, test_file_name)
+      assert_instance_of(GoogleDrive::File, file)
+      assert_equal(test_file_name, file.title)
+
+      # Checks if file exists in root.
+      files = root.files("title" => test_file_name, "title-exact" => true)
+      assert_equal(1, files.size)
+      assert_equal(test_file_name, files[0].title)
+
+      # Moves file to collection.
+      collection.add(file)
+      root.remove(file)
+
+      # Checks if file exists in collection.
+      files = root.files("title" => test_file_name, "title-exact" => true)
+      assert_equal(0, files.size)
+      files = collection.files("title" => test_file_name, "title-exact" => true)
+      assert_equal(1, files.size)
+      assert_equal(test_file_name, files[0].title)
+
+      # Deletes file.
+      delete_test_file(file, true)
+      files = collection.files("title" => test_file_name, "title-exact" => true)
+      assert_equal(0, files.size)
+
+      # Deletes collection.
+      delete_test_file(collection, true)
+      assert_nil(root.subcollection_by_title(test_collection_name))
+      
+    end
+    
+    def test_collection_offline()
       
       browser_url =
           "https://docs.google.com/?tab=mo&authuser=0#folders/" +
@@ -185,77 +231,38 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
     end
 
-    # test various manipulations with files and collections
-    def test_collections_and_files()
-      session = get_live_session
-
-      # get root collection
-      root = session.root_collection
-      assert root.root?
-      assert_equal 'root', root.resource_id
-
-      test_subcol_name = 'Google Drive test subcollection one2'
-      test_file_name = 'Google Drive test file un1que.txt'
-
-      # remove test files from root
-      existing_files = root.files 'title' => test_file_name,
-                                  'title-exact' => true
-      # double check the title so we do not accudently delete other non-test files
-      existing_files.select! {|s| s.title == test_file_name }
-      existing_files.each do |s|
-        s.delete true
+    def get_session()
+      if !@@session
+        puts("This test will create files/spreadsheets/collections with your account,")
+        puts("read/write them and finally delete them (if everything succeeds).")
+        account_path = File.join(File.dirname(__FILE__), "account.yaml")
+        if File.exist?(account_path)
+          account = YAML.load_file(account_path)
+        else
+          account = {}
+        end
+        if account["use_saved_session"]
+          @@session = GoogleDrive.saved_session
+        elsif account["mail"] && account["password"]
+          @@session = GoogleDrive.login(account["mail"], account["password"])
+        else
+          highline = HighLine.new()
+          mail = highline.ask("Mail: ")
+          password = highline.ask("Password: "){ |q| q.echo = false }
+          @@session = GoogleDrive.login(mail, password)
+        end
       end
-      
-      # remove test subcollections if exist
-      existing_subcollections = root.subcollections 'title' => test_subcol_name,
-                                                    'title-exact' => true
-      # double check the title so we do not accudently delete other non-test collections
-      existing_subcollections.select! {|s| s.title == test_subcol_name }
-      existing_subcollections.each do |s|
-        s.delete true
-      end
-
-      subcollection = root.subcollection_by_title test_subcol_name
-      assert_nil subcollection
-
-      # create subcollection
-      subcollection = root.create_subcollection test_subcol_name
-      assert_instance_of GoogleDrive::Collection, subcollection
-      assert_equal test_subcol_name, subcollection.title
-      refute subcollection.root?
-      refute_empty subcollection.resource_id
-      refute_nil root.subcollection_by_title test_subcol_name
-
-      # upload a test file
-      test_file_path = File.join File.dirname(__FILE__), 'data', test_file_name
-      file = session.upload_from_file test_file_path
-      assert_instance_of GoogleDrive::File, file
-      assert_equal test_file_name, file.title
-
-      # check if file exists in root
-      files = root.files 'title' => test_file_name, 'title-exact' => true
-      assert_equal 1, files.size
-      file_check = files[0]
-      assert_equal test_file_name, file_check.title
-
-      # move file to subcollection
-      subcollection.add file
-      root.remove_from_collection file
-
-      # check if file exists in subcollection
-      files = root.files 'title' => test_file_name, 'title-exact' => true
-      assert_equal 0, files.size
-      files = subcollection.files 'title' => test_file_name, 'title-exact' => true
-      assert_equal 1, files.size
-      assert_equal test_file_name, file_check.title
-
-      # delete file
-      file.delete true
-      files = subcollection.files 'title' => test_file_name, 'title-exact' => true
-      assert_equal 0, files.size
-
-      # delete subcollection
-      subcollection.delete true
-      assert_nil root.subcollection_by_title test_subcol_name
+      return @@session
     end
+    
+    # Wrapper of GoogleDrive::File#delete which makes sure not to delete non-test files.
+    def delete_test_file(file, permanent = false)
+      esc_prefix = Regexp.escape(PREFIX)
+      if file.title =~ Regexp.new("\\A#{esc_prefix}")
+        file.delete(permanent)
+      else
+        raise("Trying to delete non-test file: %p" % file)
+      end
+    end
+    
 end
