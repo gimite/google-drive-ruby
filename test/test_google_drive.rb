@@ -1,3 +1,5 @@
+# encoding: UTF-8
+
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
 require "rubygems"
 require "bundler/setup"
@@ -8,14 +10,12 @@ require "highline"
 
 
 class TC_GoogleDrive < Test::Unit::TestCase
-    
-    def test_all()
-      
-      puts("This test will create spreadsheets with your account, read/write them")
-      puts("and finally delete them (if everything goes well).")
+
+    def get_live_session
       account_path = File.join(File.dirname(__FILE__), "account.yaml")
       if File.exist?(account_path)
-        account = YAML.load_file(account_path)
+        file_content = File.read account_path
+        account = YAML.load ERB.new(file_content).result
       else
         account = {}
       end
@@ -29,7 +29,14 @@ class TC_GoogleDrive < Test::Unit::TestCase
         password = highline.ask("Password: "){ |q| q.echo = false }
         session = GoogleDrive.login(mail, password)
       end
-      
+      session
+    end
+    
+    def test_all()
+      puts("This test will create spreadsheets with your account, read/write them")
+      puts("and finally delete them (if everything goes well).")
+      session = get_live_session
+
       ss_title = "google-spreadsheet-ruby test " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
       ss = session.create_spreadsheet(ss_title)
       assert_equal(ss_title, ss.title)
@@ -175,7 +182,80 @@ class TC_GoogleDrive < Test::Unit::TestCase
       
       collection = session.collection_by_url(collection_feed_url)
       assert_equal(collection_feed_url, collection.collection_feed_url)
-      
+
     end
-    
+
+    # test various manipulations with files and collections
+    def test_collections_and_files()
+      session = get_live_session
+
+      # get root collection
+      root = session.root_collection
+      assert root.root?
+      assert_equal 'root', root.resource_id
+
+      test_subcol_name = 'Google Drive test subcollection one2'
+      test_file_name = 'Google Drive test file un1que.txt'
+
+      # remove test files from root
+      existing_files = root.files 'title' => test_file_name,
+                                  'title-exact' => true
+      # double check the title so we do not accudently delete other non-test files
+      existing_files.select! {|s| s.title == test_file_name }
+      existing_files.each do |s|
+        s.delete true
+      end
+      
+      # remove test subcollections if exist
+      existing_subcollections = root.subcollections 'title' => test_subcol_name,
+                                                    'title-exact' => true
+      # double check the title so we do not accudently delete other non-test collections
+      existing_subcollections.select! {|s| s.title == test_subcol_name }
+      existing_subcollections.each do |s|
+        s.delete true
+      end
+
+      subcollection = root.subcollection_by_title test_subcol_name
+      assert_nil subcollection
+
+      # create subcollection
+      subcollection = root.create_subcollection test_subcol_name
+      assert_instance_of GoogleDrive::Collection, subcollection
+      assert_equal test_subcol_name, subcollection.title
+      refute subcollection.root?
+      refute_empty subcollection.resource_id
+      refute_nil root.subcollection_by_title test_subcol_name
+
+      # upload a test file
+      test_file_path = File.join File.dirname(__FILE__), 'data', test_file_name
+      file = session.upload_from_file test_file_path
+      assert_instance_of GoogleDrive::File, file
+      assert_equal test_file_name, file.title
+
+      # check if file exists in root
+      files = root.files 'title' => test_file_name, 'title-exact' => true
+      assert_equal 1, files.size
+      file_check = files[0]
+      assert_equal test_file_name, file_check.title
+
+      # move file to subcollection
+      subcollection.add file
+      root.remove_from_collection file
+
+      # check if file exists in subcollection
+      files = root.files 'title' => test_file_name, 'title-exact' => true
+      assert_equal 0, files.size
+      files = subcollection.files 'title' => test_file_name, 'title-exact' => true
+      assert_equal 1, files.size
+      assert_equal test_file_name, file_check.title
+
+      # delete file
+      file.delete true
+      files = subcollection.files 'title' => test_file_name, 'title-exact' => true
+      assert_equal 0, files.size
+
+      # delete subcollection
+      subcollection.delete true
+      assert_nil root.subcollection_by_title test_subcol_name
+    end
 end

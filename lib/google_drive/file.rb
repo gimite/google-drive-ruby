@@ -46,7 +46,11 @@ module GoogleDrive
           end
           return @document_feed_entry
         end
-        
+
+        def resource_id
+          document_feed_entry.css("gd|resourceId").text.split(/:/)[1]
+        end
+
         # Title of the file.
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
@@ -169,8 +173,10 @@ module GoogleDrive
         # If +permanent+ is +false+, moves the file to the trash.
         # If +permanent+ is +true+, deletes the file permanently.
         def delete(permanent = false)
-          @session.request(:delete,
-            self.document_feed_url + (permanent ? "?delete=true" : ""),
+          url = self.document_feed_url
+          url = concat_url url, '?delete=true' if permanent
+          url = detect_url_version url
+          @session.request(:delete, url,
             :auth => :writely, :header => {"If-Match" => "*"})
         end
 

@@ -40,6 +40,11 @@ module GoogleDrive
             return super
           end
         end
+
+        def resource_id
+          return 'root' if root?
+          super
+        end
         
         # Adds the given GoogleDrive::File to the collection.
         def add(file)
@@ -52,6 +57,34 @@ module GoogleDrive
           @session.request(
               :post, self.contents_url, :data => xml, :header => header, :auth => :writely)
           return nil
+        end
+
+        # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
+        def create_subcollection(title)
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          xml = <<-EOS
+            <entry xmlns="http://www.w3.org/2005/Atom">
+              <category scheme="http://schemas.google.com/g/2005#kind"
+                term="http://schemas.google.com/docs/2007#folder"/>
+              <title>#{h title}</title>
+            </entry>
+          EOS
+          doc = @session.request(
+              :post, contents_url, :data => xml, :header => header, :auth => :writely)
+          @session.entry_element_to_file doc
+        end
+
+        # Removes the given GoogleDrive::File from the collection.
+        def remove_from_collection(file)
+          url = "#{contents_url}/#{file.resource_id}"
+          url = detect_url_version url
+          @session.request :delete, url, :auth => :writely,
+            :header => {"If-Match" => "*"}
+        end
+
+        # Returns true if this is a root collection
+        def root?
+          collection_feed_url == ROOT_URL
         end
 
         # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
@@ -97,7 +130,7 @@ module GoogleDrive
         # TODO Add other operations.
         
       private
-        
+
         def files_with_type(type, params = {})
           contents_url = self.contents_url
           contents_url = concat_url(contents_url, "/-/#{type}") if type

@@ -45,7 +45,15 @@ module GoogleDrive
               (piece_base || "") +
               (result_query.empty? ? "" : "?#{result_query}")
         end
-        
+
+        # Return an url with added version parameter ('?v=3') if needed
+        def detect_url_version(url)
+          if url =~ %r{docs.google.com/feeds/default/private/}
+            url = concat_url url, '?v=3' unless url =~ /[?&]v=3/
+          end
+          url
+        end
+
         def h(str)
           return CGI.escapeHTML(str.to_s())
         end
