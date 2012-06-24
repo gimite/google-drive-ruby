@@ -191,9 +191,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Uploads a test file.
       test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
-      file = session.upload_from_file(test_file_path, test_file_name)
+      file = session.upload_from_file(test_file_path, test_file_name, :convert => false)
       assert_instance_of(GoogleDrive::File, file)
       assert_equal(test_file_name, file.title)
+      assert_equal(File.read(test_file_path), file.download_to_string())
 
       # Checks if file exists in root.
       files = root.files("title" => test_file_name, "title-exact" => true)
