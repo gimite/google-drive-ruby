@@ -60,10 +60,10 @@ module GoogleDrive
           end
         end
         
-        def to_hash()
+        def to_hash( numeric = false )
           result = {}
           for key in @list.keys
-            result[key] = self[key]
+            result[key] = @list.get(@index, key, numeric)
           end
           return result
         end
