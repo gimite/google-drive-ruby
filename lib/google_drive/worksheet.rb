@@ -87,7 +87,7 @@ module GoogleDrive
           reload() if !@cells
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
-          @numeric_values[[row, col]] = value
+          @numeric_values[[row, col]] = nil
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
@@ -121,25 +121,20 @@ module GoogleDrive
         # Returns the numeric value of the cell. Arguments must be either
         # (row number, column number) or cell name. Top-left cell is [1, 1].
         #
-        # Returns nil if there is no numeric value
-        #
-        # Example:
+        # e.g.
         #   worksheet[1, 3]                #=> "3,0" # it depends on locale, currency...
-        #   worksheet.numeric_value(1, 3)  #=> 3.0   # 3.0:Float
+        #   worksheet.numeric_value(1, 3)  #=> 3.0
         #
-        # More (official reference):
-        #  https://developers.google.com/google-apps/spreadsheets/#working_with_cell-based_feeds
+        # Returns nil if the cell is empty or contains non-number.
         #
+        # If you modify the cell, its numeric_value is nil until you call save() and reload().
+        #
+        # For details, see:
+        # https://developers.google.com/google-apps/spreadsheets/#working_with_cell-based_feeds
         def numeric_value(*args)
           (row, col) = parse_cell_args(args)
           reload() if !@cells
-          tentative = @numeric_values[[row, col]]
-          if tentative
-            if ('0'..'9').include?( tentative[0] )
-              return tentative.to_f
-            end
-          end
-          self.cells[[row, col]] || ""
+          return @numeric_values[[row, col]]
         end
         
         # Row number of the bottom-most non-empty row.
@@ -231,7 +226,8 @@ module GoogleDrive
             col = cell["col"].to_i()
             @cells[[row, col]] = cell.inner_text
             @input_values[[row, col]] = cell["inputValue"]
-            @numeric_values[[row, col]] = cell["numericValue"]
+            numeric_value = cell["numericValue"]
+            @numeric_values[[row, col]] = numeric_value ? numeric_value.to_f() : nil
           end
           @modified.clear()
           @meta_modified = false

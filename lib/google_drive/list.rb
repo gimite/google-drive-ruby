@@ -93,9 +93,12 @@ module GoogleDrive
           return self.map(){ |r| r.to_hash() }
         end
         
-        def get(index, key, numeric = false ) #:nodoc:
-          ( numeric && @worksheet.numeric_value( index + 2, key_to_col(key) ) ) ||
-          @worksheet                           [ index + 2, key_to_col(key) ]
+        def get(index, key) #:nodoc:
+          return @worksheet[index + 2, key_to_col(key)]
+        end
+        
+        def numeric_value(index, key) #:nodoc:
+          return @worksheet.numeric_value(index + 2, key_to_col(key))
         end
         
         def set(index, key, value) #:nodoc:

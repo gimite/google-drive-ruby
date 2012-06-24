@@ -29,6 +29,10 @@ module GoogleDrive
           return @list.get(@index, key)
         end
         
+        def numeric_value(key)
+          return @list.numeric_value(@index, key)
+        end
+        
         def []=(key, value)
           @list.set(@index, key, value)
         end
@@ -60,10 +64,10 @@ module GoogleDrive
           end
         end
         
-        def to_hash( numeric = false )
+        def to_hash()
           result = {}
           for key in @list.keys
-            result[key] = @list.get(@index, key, numeric)
+            result[key] = self[key]
           end
           return result
         end
