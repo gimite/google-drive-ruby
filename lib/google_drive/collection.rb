@@ -19,6 +19,16 @@ module GoogleDrive
 
         alias collection_feed_url document_feed_url
         
+        def contents_url
+          if self.document_feed_url == ROOT_URL
+            # The root collection doesn't have document feed.
+            return concat_url(ROOT_URL, "/contents")
+          else
+            return self.document_feed_entry.css(
+                "content[type='application/atom+xml;type=feed']")[0]["src"]
+          end
+        end
+        
         # Title of the collection.
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
@@ -40,7 +50,7 @@ module GoogleDrive
             </entry>
           EOS
           @session.request(
-              :post, contents_url(), :data => xml, :header => header, :auth => :writely)
+              :post, self.contents_url, :data => xml, :header => header, :auth => :writely)
           return nil
         end
 
@@ -89,22 +99,12 @@ module GoogleDrive
       private
         
         def files_with_type(type, params = {})
-          contents_url = contents_url()
+          contents_url = self.contents_url
           contents_url = concat_url(contents_url, "/-/#{type}") if type
           contents_url = concat_url(contents_url, "?" + encode_query(params))
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
-        end
-        
-        def contents_url
-          if self.document_feed_url == ROOT_URL
-            # The root collection doesn't have document feed.
-            return concat_url(ROOT_URL, "/contents")
-          else
-            return self.document_feed_entry.css(
-                "content[type='application/atom+xml;type=feed']")[0]["src"]
-          end
         end
         
     end
