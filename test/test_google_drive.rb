@@ -9,7 +9,7 @@ require "highline"
 
 class TC_GoogleDrive < Test::Unit::TestCase
     
-    # Random string is added to avoid conflict with existing file names.
+    # Random string is added to avoid conflict with existing file titles.
     PREFIX = "google-drive-ruby-test-4101301e303c-"
     
     @@session = nil
@@ -17,8 +17,18 @@ class TC_GoogleDrive < Test::Unit::TestCase
     def test_spreadsheet_online()
       
       session = get_session()
-
-      ss_title = "google-spreadsheet-ruby test " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
+      
+      ss_title = "#{PREFIX}spreadsheet"
+      ss_copy_title = "#{PREFIX}spreadsheet-copy"
+      
+      # Removes test spreadsheets in the previous run in case the previous run failed.
+      for ss in session.files("title" => ss_title, "title-exact" => true)
+        delete_test_file(ss, true)
+      end
+      for ss in session.files("title" => ss_copy_title, "title-exact" => true)
+        delete_test_file(ss, true)
+      end
+      
       ss = session.create_spreadsheet(ss_title)
       assert_equal(ss_title, ss.title)
       
@@ -85,7 +95,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal(ws.cells_feed_url, ws2.cells_feed_url)
       assert_equal("hoge", ws2.title)
       
-      ss_copy_title = "google-spreadsheet-ruby test copy " + Time.now.strftime("%Y-%m-%d-%H-%M-%S")
       ss_copy = ss.duplicate(ss_copy_title)
       assert_not_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
@@ -137,13 +146,13 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("6", ws[2, 2])
       assert_equal("7", ws[3, 1])
       
-      ss.delete()
+      delete_test_file(ss)
       assert_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
-      ss_copy.delete(true)
+      delete_test_file(ss_copy, true)
       assert_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
-      ss.delete(true)
+      delete_test_file(ss, true)
       
     end
     
