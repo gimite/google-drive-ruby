@@ -124,8 +124,6 @@ module GoogleDrive
           return subcollections("title" => title, "title-exact" => "true")[0]
         end
         
-        # TODO Add other operations.
-        
       private
 
         def files_with_type(type, params = {})
