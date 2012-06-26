@@ -119,7 +119,7 @@ module GoogleDrive
         #   session.files("title" => "hoge", "title-exact" => "true")
         def files(params = {})
           url = concat_url(
-              "https://docs.google.com/feeds/default/private/full?v=3", "?" + encode_query(params))
+              "#{API_URL}?v=3", "?" + encode_query(params))
           doc = request(:get, url, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
         end
@@ -239,7 +239,7 @@ module GoogleDrive
           if ["docs.google.com", "drive.google.com"].include?(uri.host) &&
               uri.fragment =~ /^folders\/(.+)$/
             # Looks like a URL of human-readable collection page. Converts to collection feed URL.
-            url = "https://docs.google.com/feeds/default/private/full/folder%3A#{$1}"
+            url = "#{API_URL}folder%3A#{$1}"
           end
           return Collection.new(self, url)
         end
@@ -309,7 +309,7 @@ module GoogleDrive
         # Uploads a file. Reads content from +io+.
         # Returns a GoogleSpreadsheet::File object.
         def upload_from_io(io, title = "Untitled", params = {})
-          doc = request(:get, "https://docs.google.com/feeds/default/private/full?v=3",
+          doc = request(:get, "#{API_URL}?v=3",
               :auth => :writely)
           initial_url = doc.css(
               "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]

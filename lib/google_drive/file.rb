@@ -28,7 +28,7 @@ module GoogleDrive
             @document_feed_url = entry_or_url
           else
             @document_feed_entry = entry_or_url
-            @document_feed_url = entry_or_url.css("link[rel='self']")[0]["href"]
+            @document_feed_url = "#{API_URL}#{resource_type}%3A#{resource_id}"
           end
           @acl = nil
         end
@@ -49,6 +49,11 @@ module GoogleDrive
 
         def resource_id
           return self.document_feed_entry.css("gd|resourceId").text.split(/:/)[1]
+        end
+
+        # Get the type of resourse: document, spreadsheet, folder etc.
+        def resource_type
+          return self.document_feed_entry.css("gd|resourceId").text.split(/:/)[0]
         end
 
         # Title of the file.
@@ -74,7 +79,7 @@ module GoogleDrive
               return orig_acl_feed_url
             when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
               # URL of old API version. Converts to v3 URL.
-              return "https://docs.google.com/feeds/default/private/full/#{$1}/acl"
+              return "#{API_URL}#{$1}/acl"
             else
               raise(GoogleDrive::Error,
                 "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
