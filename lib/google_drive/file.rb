@@ -205,7 +205,7 @@ module GoogleDrive
         # With the object, you can see and modify people who can access the file.
         # Modifications take effect immediately.
         #
-        # Set <tt>params[:reload]</tt> to true to force reloading the title.
+        # Set <tt>params[:reload]</tt> to true to force reloading the data.
         #
         # e.g.
         #   # Dumps people who have access:
