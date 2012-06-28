@@ -15,7 +15,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
     @@session = nil
     
     def test_spreadsheet_online()
-      
       session = get_session()
       
       ss_title = "#{PREFIX}spreadsheet"
@@ -214,13 +213,18 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Deletes file.
       delete_test_file(file, true)
+      # Ensure the files is removed from collection.
       files = collection.files("title" => test_file_name, "title-exact" => true)
       assert_equal(0, files.size)
+      # Ensure the file is removed from Google Drive.
+      refute(session.files().any?{|a| a.title == test_collection_name})
 
       # Deletes collection.
       delete_test_file(collection, true)
+      # Ensure the collection is removed from root.
       assert_nil(root.subcollection_by_title(test_collection_name))
-      
+      # Ensure the collection is removed from Google Drive.
+      refute(session.files(showfolders: true).any?{|a| a.title == test_collection_name})
     end
     
     def test_collection_offline()

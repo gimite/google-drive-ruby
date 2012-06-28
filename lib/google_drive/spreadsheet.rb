@@ -103,7 +103,6 @@ module GoogleDrive
         # Creates copy of this spreadsheet with the given title.
         def duplicate(new_title = nil)
           new_title ||= (self.title ? "Copy of " + self.title : "Untitled")
-          post_url = "https://docs.google.com/feeds/default/private/full/"
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           xml = <<-"EOS"
             <entry xmlns='http://www.w3.org/2005/Atom'>
@@ -112,7 +111,7 @@ module GoogleDrive
             </entry>
           EOS
           doc = @session.request(
-              :post, post_url, :data => xml, :header => header, :auth => :writely)
+              :post, API_URL, :data => xml, :header => header, :auth => :writely)
           ss_url = doc.css(
               "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(@session, ss_url, new_title)
