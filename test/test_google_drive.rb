@@ -182,9 +182,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
       collection = root.create_subcollection(test_collection_title)
       assert_instance_of(GoogleDrive::Collection, collection)
       assert_equal(test_collection_title, collection.title)
-      refute(collection.root?)
-      refute_empty(collection.resource_id)
-      refute_nil(root.subcollection_by_title(test_collection_title))
+      assert(!collection.root?)
+      assert_not_nil(collection.resource_id)
+      assert_not_nil(root.subcollection_by_title(test_collection_title))
 
       # Uploads a test file.
       test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
