@@ -1,6 +1,7 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
+require "cgi"
 require "stringio"
 
 require "google_drive/util"
@@ -28,7 +29,12 @@ module GoogleDrive
             @document_feed_url = entry_or_url
           else
             @document_feed_entry = entry_or_url
-            @document_feed_url = "#{API_URL}#{resource_type}%3A#{resource_id}"
+            # This is usually equal to the URL in <link rel="self">. But the URL in
+            # <link rel="self"> in collection feed is e.g.
+            # https://docs.google.com/feeds/default/private/full/folder%3Aroot/contents/folder%3Axxx
+            # and deletion of the URL doesn't delete the file itself.
+            # So we construct the URL here using resource ID instead.
+            @document_feed_url = "%s/%s" % [DOCS_BASE_URL, CGI.escape(self.resource_id)]
           end
           @acl = nil
         end
@@ -47,13 +53,14 @@ module GoogleDrive
           return @document_feed_entry
         end
 
+        # Resource ID.
         def resource_id
-          return self.document_feed_entry.css("gd|resourceId").text.split(/:/)[1]
+          return self.document_feed_entry.css("gd|resourceId").text
         end
 
-        # Get the type of resourse: document, spreadsheet, folder etc.
+        # The type of resourse. e.g. "document", "spreadsheet", "folder"
         def resource_type
-          return self.document_feed_entry.css("gd|resourceId").text.split(/:/)[0]
+          return self.resource_id.split(/:/)[0]
         end
 
         # Title of the file.
@@ -79,7 +86,7 @@ module GoogleDrive
               return orig_acl_feed_url
             when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
               # URL of old API version. Converts to v3 URL.
-              return "#{API_URL}#{$1}/acl"
+              return "#{DOCS_BASE_URL}/#{$1}/acl"
             else
               raise(GoogleDrive::Error,
                 "ACL feed URL is in unknown format: #{orig_acl_feed_url}")

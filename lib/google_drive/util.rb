@@ -8,8 +8,8 @@ module GoogleDrive
     
     module Util #:nodoc:
 
-        # The beginning of API URL that is used in all requests (version 3)
-        API_URL = 'https://docs.google.com/feeds/default/private/full/'
+        # The beginning of Doc List API URL that is used in all requests (version 3).
+        DOCS_BASE_URL = "https://docs.google.com/feeds/default/private/full"
         
         EXT_TO_CONTENT_TYPE = {
             ".csv" =>"text/csv",

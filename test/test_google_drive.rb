@@ -15,6 +15,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
     @@session = nil
     
     def test_spreadsheet_online()
+      
       session = get_session()
       
       ss_title = "#{PREFIX}spreadsheet"
@@ -163,68 +164,64 @@ class TC_GoogleDrive < Test::Unit::TestCase
       # Gets root collection.
       root = session.root_collection
       assert(root.root?)
-      assert_equal("root", root.resource_id)
 
-      test_collection_name = "#{PREFIX}collection"
-      test_file_name = "#{PREFIX}file.txt"
+      test_collection_title = "#{PREFIX}collection"
+      test_file_title = "#{PREFIX}file.txt"
 
       # Removes test files/collections in the previous run in case the previous run failed.
-      for file in root.files("title" => test_file_name, "title-exact" => true)
-        delete_test_file(file, true)
-      end
-      for collection in root.subcollections(
-          "title" => test_collection_name, "title-exact" => true)
-        delete_test_file(collection, true)
+      for title in [test_file_title, test_collection_title]
+        for file in root.files("title" => title, "title-exact" => true, "showfolders" => true)
+          delete_test_file(file, true)
+        end
       end
 
-      collection = root.subcollection_by_title(test_collection_name)
+      collection = root.subcollection_by_title(test_collection_title)
       assert_nil(collection)
 
       # Creates collection.
-      collection = root.create_subcollection(test_collection_name)
+      collection = root.create_subcollection(test_collection_title)
       assert_instance_of(GoogleDrive::Collection, collection)
-      assert_equal(test_collection_name, collection.title)
+      assert_equal(test_collection_title, collection.title)
       refute(collection.root?)
       refute_empty(collection.resource_id)
-      refute_nil(root.subcollection_by_title(test_collection_name))
+      refute_nil(root.subcollection_by_title(test_collection_title))
 
       # Uploads a test file.
       test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
-      file = session.upload_from_file(test_file_path, test_file_name, :convert => false)
+      file = session.upload_from_file(test_file_path, test_file_title, :convert => false)
       assert_instance_of(GoogleDrive::File, file)
-      assert_equal(test_file_name, file.title)
+      assert_equal(test_file_title, file.title)
       assert_equal(File.read(test_file_path), file.download_to_string())
 
       # Checks if file exists in root.
-      files = root.files("title" => test_file_name, "title-exact" => true)
+      files = root.files("title" => test_file_title, "title-exact" => true)
       assert_equal(1, files.size)
-      assert_equal(test_file_name, files[0].title)
+      assert_equal(test_file_title, files[0].title)
 
       # Moves file to collection.
       collection.add(file)
       root.remove(file)
 
       # Checks if file exists in collection.
-      files = root.files("title" => test_file_name, "title-exact" => true)
-      assert_equal(0, files.size)
-      files = collection.files("title" => test_file_name, "title-exact" => true)
+      assert(root.files("title" => test_file_title, "title-exact" => true).empty?)
+      files = collection.files("title" => test_file_title, "title-exact" => true)
       assert_equal(1, files.size)
-      assert_equal(test_file_name, files[0].title)
+      assert_equal(test_file_title, files[0].title)
 
       # Deletes file.
       delete_test_file(file, true)
-      # Ensure the files is removed from collection.
-      files = collection.files("title" => test_file_name, "title-exact" => true)
-      assert_equal(0, files.size)
+      # Ensure the file is removed from collection.
+      assert(collection.files("title" => test_file_title, "title-exact" => true).empty?)
       # Ensure the file is removed from Google Drive.
-      refute(session.files().any?{|a| a.title == test_collection_name})
+      assert(session.files("title" => test_file_title, "title-exact" => true).empty?)
 
       # Deletes collection.
       delete_test_file(collection, true)
-      # Ensure the collection is removed from root.
-      assert_nil(root.subcollection_by_title(test_collection_name))
+      # Ensure the collection is removed from the root collection.
+      assert(root.subcollections("title" => test_collection_title, "title-exact" => true).empty?)
       # Ensure the collection is removed from Google Drive.
-      refute(session.files(showfolders: true).any?{|a| a.title == test_collection_name})
+      assert(session.files(
+          "title" => test_collection_title, "title-exact" => true, "showfolders" => true).empty?)
     end
     
     def test_collection_offline()

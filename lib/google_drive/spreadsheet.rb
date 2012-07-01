@@ -111,7 +111,7 @@ module GoogleDrive
             </entry>
           EOS
           doc = @session.request(
-              :post, API_URL, :data => xml, :header => header, :auth => :writely)
+              :post, DOCS_BASE_URL, :data => xml, :header => header, :auth => :writely)
           ss_url = doc.css(
               "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(@session, ss_url, new_title)

@@ -15,7 +15,7 @@ module GoogleDrive
         include(Util)
         
         #:nodoc:
-        ROOT_URL = "#{API_URL}folder%3Aroot"
+        ROOT_URL = "#{DOCS_BASE_URL}/folder%3Aroot"
 
         alias collection_feed_url document_feed_url
         
@@ -42,7 +42,7 @@ module GoogleDrive
         end
 
         def resource_id
-          return self.root? ? 'root' : super
+          return self.root? ? nil : super
         end
         
         # Adds the given GoogleDrive::File to the collection.
