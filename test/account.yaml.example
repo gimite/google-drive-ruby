@@ -3,9 +3,19 @@
 # test_google_spreadsheet.rb asks you for your Google account each time by default.
 # If you want to automate it, copy this file to account.yaml and set some proper values.
 
-# Set this to true to store session to $HOME/.ruby_google_spreadsheet.token and reuse it.
-use_saved_session: false
+# Stores session to $HOME/.ruby_google_spreadsheet.token and reuse it.
+auth_type: "saved_session"
 
-# Or you can write your Google account information here directly.
-mail: "example@gmail.com"
-password: "password"
+# Or, you can use either of the sections below instead.
+
+# Writes your Google account information here directly.
+#
+# auth_type: "client_login"
+# mail: "example@gmail.com"
+# password: "YOUR PASSWORD"
+
+# Use OAuth2.
+#
+# auth_type: "oauth2"
+# oauth2_client_id: "YOUR_CLIENT_ID"
+# oauth2_client_secret: "YOUR_CLIENT_SECRET"

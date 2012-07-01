@@ -250,17 +250,37 @@ class TC_GoogleDrive < Test::Unit::TestCase
         if File.exist?(account_path)
           account = YAML.load_file(account_path)
         else
-          account = {}
+          account = {"auth_method" => "prompt"}
         end
-        if account["use_saved_session"]
-          @@session = GoogleDrive.saved_session
-        elsif account["mail"] && account["password"]
-          @@session = GoogleDrive.login(account["mail"], account["password"])
-        else
-          highline = HighLine.new()
-          mail = highline.ask("Mail: ")
-          password = highline.ask("Password: "){ |q| q.echo = false }
-          @@session = GoogleDrive.login(mail, password)
+        case account["auth_method"]
+          when "prompt"
+            highline = HighLine.new()
+            mail = highline.ask("Mail: ")
+            password = highline.ask("Password: "){ |q| q.echo = false }
+            @@session = GoogleDrive.login(mail, password)
+          when "saved_session"
+            @@session = GoogleDrive.saved_session
+          when "client_login"
+            @@session = GoogleDrive.login(account["mail"], account["password"])
+          when "oauth2"
+            client = OAuth2::Client.new(
+                account["oauth2_client_id"], account["oauth2_client_secret"],
+                :site => "https://accounts.google.com",
+                :token_url => "/o/oauth2/token",
+                :authorize_url => "/o/oauth2/auth")
+            redirect_url = "urn:ietf:wg:oauth:2.0:oob"
+            url = client.auth_code.authorize_url(
+                :redirect_uri => redirect_url,
+                :scope =>
+                    "https://docs.google.com/feeds/ " +
+                    "https://docs.googleusercontent.com/ " +
+                    "https://spreadsheets.google.com/feeds/")
+            print("Open this URL in Web browser:\n  %s\nPaste authorization code here: " % url)
+            code = gets().chomp()
+            token = client.auth_code.get_token(code, :redirect_uri => redirect_url)
+            @@session = GoogleDrive.login_with_oauth(token)
+          else
+            raise("auth_method field is missing in %s" % account_path)
         end
       end
       return @@session
