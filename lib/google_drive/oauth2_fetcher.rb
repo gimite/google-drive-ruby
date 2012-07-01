@@ -35,9 +35,9 @@ module GoogleDrive
         
         def request_raw(method, url, data, extra_header, auth)
           if method == :delete || method == :get
-            raw_res = @oauth2_token.request(method, url, {:header => extra_header})
+            raw_res = @oauth2_token.request(method, url, {:headers => extra_header})
           else
-            raw_res = @oauth2_token.request(method, url, {:header => extra_header, :body => data})
+            raw_res = @oauth2_token.request(method, url, {:headers => extra_header, :body => data})
           end
           return Response.new(raw_res)
         end
