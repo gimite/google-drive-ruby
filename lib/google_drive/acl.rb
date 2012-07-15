@@ -41,30 +41,19 @@ module GoogleDrive
         #   spreadsheet.acl.push(
         #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
         def push(entry)
-          
+
           entry = AclEntry.new(entry) if entry.is_a?(Hash)
-          
+
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
-          value_attr = entry.scope ? "value='#{h(entry.scope)}'" : ""
-          xml = <<-EOS
-            <entry
-                xmlns='http://www.w3.org/2005/Atom'
-                xmlns:gAcl='http://schemas.google.com/acl/2007'>
-              <category scheme='http://schemas.google.com/g/2005#kind'
-                  term='http://schemas.google.com/acl/2007#accessRule'/>
-              <gAcl:role value='#{h(entry.role)}'/>
-              <gAcl:scope type='#{h(entry.scope_type)}' #{value_attr}/>
-            </entry>
-          EOS
           doc = @session.request(
-              :post, @acls_feed_url, :data => xml, :header => header, :auth => :writely)
-          
+              :post, @acls_feed_url, :data => entry.to_xml, :header => header, :auth => :writely)
+
           entry.params = entry_to_params(doc.root)
           @acls.push(entry)
           return entry
-          
+
         end
-        
+
         # Deletes an ACL entry.
         #
         # e.g.
@@ -74,36 +63,22 @@ module GoogleDrive
           @session.request(:delete, entry.edit_url, :header => header, :auth => :writely)
           @acls.delete(entry)
         end
-        
+
         def update_role(entry, role) #:nodoc:
-          
+
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
-          value_attr = entry.scope ? "value='#{h(entry.scope)}'" : ""
-          xml = <<-EOS
-            <entry
-                xmlns='http://www.w3.org/2005/Atom'
-                xmlns:gAcl='http://schemas.google.com/acl/2007'
-                xmlns:gd='http://schemas.google.com/g/2005'
-                gd:etag='#{h(entry.etag)}'>
-              <category
-                  scheme='http://schemas.google.com/g/2005#kind'
-                  term='http://schemas.google.com/acl/2007#accessRule'/>
-              <gAcl:role value='#{h(role)}'/>
-              <gAcl:scope type='#{h(entry.scope_type)}' #{value_attr}/>
-            </entry>
-          EOS
           doc = @session.request(
-              :put, entry.edit_url, :data => xml, :header => header, :auth => :writely)
-          
+              :put, entry.edit_url, :data => entry.to_xml, :header => header, :auth => :writely)
+
           entry.params = entry_to_params(doc.root)
           return entry
-          
+
         end
-        
+
         def inspect
           return "\#<%p %p>" % [self.class, @acls]
         end
-        
+
       private
         
         def entry_to_params(entry)

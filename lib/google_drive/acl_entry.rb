@@ -30,15 +30,15 @@ module GoogleDrive
             @params[name] = value
           end
         end
-        
+
         attr_accessor(:params)  #:nodoc:
-        
+
         PARAM_NAMES.each() do |name|
           define_method(name) do
             return @params[name]
           end
         end
-        
+
         # Changes the role of the scope.
         #
         # e.g.
@@ -46,13 +46,53 @@ module GoogleDrive
         def role=(role)
           @params[:acl].update_role(self, role)
         end
-        
+
         def inspect
           return "\#<%p scope_type=%p, scope=%p, role=%p>" %
               [self.class, @params[:scope_type], @params[:scope], @params[:role]]
         end
-        
+
+        def xml_open_tag
+          if etag
+            %{
+              <entry
+                xmlns='http://www.w3.org/2005/Atom'
+                xmlns:gAcl='http://schemas.google.com/acl/2007'
+                xmlns:gd='http://schemas.google.com/g/2005'
+                gd:etag='#{h(entry.etag)}'>
+            }
+          else
+            %{
+              <entry
+                  xmlns='http://www.w3.org/2005/Atom'
+                  xmlns:gAcl='http://schemas.google.com/acl/2007'>
+            }
+          end
+
+        end
+
+        def to_xml
+          value_attr = scope ? "value='#{h(scope)}'" : ""
+          xml = <<-EOS
+            #{xml_open_tag}
+              <category scheme='http://schemas.google.com/g/2005#kind'
+                  term='http://schemas.google.com/acl/2007#accessRule'/>
+              <gAcl:role value='#{h(role)}'/>
+              <gAcl:scope type='#{h(scope_type)}' #{value_attr}/>
+            </entry>
+          EOS
+        end
+
+      class << self
+        def load(params)
+          if params[:with_key]
+            AclEntryWithKey.new(params)
+          else
+            AclEntry.new(params)
+          end
+        end
+      end
     end
-    
+
 end
 
