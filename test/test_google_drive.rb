@@ -9,19 +9,20 @@ require "debugger"
 
 
 class TC_GoogleDrive < Test::Unit::TestCase
-    
+
     # Random string is added to avoid conflict with existing file titles.
     PREFIX = "google-drive-ruby-test-4101301e303c-"
-    
+
     @@session = nil
-    
+
+
     def test_spreadsheet_online()
-      
+
       session = get_session()
-      
+
       ss_title = "#{PREFIX}spreadsheet"
       ss_copy_title = "#{PREFIX}spreadsheet-copy"
-      
+
       # Removes test spreadsheets in the previous run in case the previous run failed.
       for ss in session.files("title" => ss_title, "title-exact" => true)
         delete_test_file(ss, true)
@@ -29,10 +30,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
       for ss in session.files("title" => ss_copy_title, "title-exact" => true)
         delete_test_file(ss, true)
       end
-      
+
       ss = session.create_spreadsheet(ss_title)
       assert_equal(ss_title, ss.title)
-      
+
       ws = ss.worksheets[0]
       assert_equal(ss.worksheets_feed_url, ws.spreadsheet.worksheets_feed_url)
       ws.title = "hoge"
@@ -50,7 +51,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("5", ws[1, 2])
       assert_equal("13", ws[1, 4])
       ws.save()
-      
+
       ws.reload()
       assert_equal(20, ws.max_rows)
       assert_equal(10, ws.max_cols)
@@ -63,7 +64,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       if RUBY_VERSION >= "1.9.0"
         assert_equal(Encoding::UTF_8, ws[1, 1].encoding)
       end
-      
+
       assert_equal("3\t5\t8\t13", ss.export_as_string("tsv", 0))
 
       ss2 = session.spreadsheet_by_key(ss.key)
@@ -78,29 +79,29 @@ class TC_GoogleDrive < Test::Unit::TestCase
         assert_equal(Encoding::UTF_8, ss2.title.encoding)
         assert_equal(Encoding::UTF_8, ss2.worksheets[0].title.encoding)
       end
-      
+
       ss3 = session.spreadsheet_by_url("http://spreadsheets.google.com/ccc?key=#{ss.key}&hl=en")
       assert_equal(ss.worksheets_feed_url, ss3.worksheets_feed_url)
       ss4 = session.spreadsheet_by_url(ss.worksheets_feed_url)
       assert_equal(ss.worksheets_feed_url, ss4.worksheets_feed_url)
-      
+
       assert_not_nil(session.spreadsheets.find(){ |s| s.title == ss_title })
       assert_not_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
-      
+
       ss5 = session.spreadsheet_by_title(ss_title)
       assert_not_nil(ss5)
       assert_equal(ss_title, ss5.title)
-      
+
       ws2 = session.worksheet_by_url(ws.cells_feed_url)
       assert_equal(ws.cells_feed_url, ws2.cells_feed_url)
       assert_equal("hoge", ws2.title)
-      
+
       ss_copy = ss.duplicate(ss_copy_title)
       assert_not_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
-      
+
       # Access via GoogleDrive::Worksheet#list.
       ws.list.keys = ["x", "y"]
       ws.list.push({"x" => "1", "y" => "2"})
@@ -123,12 +124,12 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("2", ws.list[0]["y"])
       assert_equal("6", ws.list[1]["x"])
       assert_equal("7", ws.list[1]["y"])
-      
+
       assert_equal([2, 1], ws.cell_name_to_row_col("A2"))
       assert_equal([2, 26], ws.cell_name_to_row_col("Z2"))
       assert_equal([2, 27], ws.cell_name_to_row_col("AA2"))
       assert_equal([2, 28], ws.cell_name_to_row_col("AB2"))
-      
+
       # Makes sure we can access cells by name as well as by (row, col) pairs.
       assert_equal(ws[2, 1], ws["A2"])
       assert_equal(ws.input_value(2, 1), ws.input_value("A2"))
@@ -146,7 +147,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("1", ws[1, 1])
       assert_equal("6", ws[2, 2])
       assert_equal("7", ws[3, 1])
-      
+
       delete_test_file(ss)
       assert_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
@@ -154,12 +155,38 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
       delete_test_file(ss, true)
-      
+
     end
-    
+
+
+    # TODO: Convert these to more descriptive rspec
+    def test_setting_acl_on_a_spreadsheet()
+
+      session = get_session()
+
+      test_file_title = "#{PREFIX}test-file"
+
+      session.files("title" => test_file_title, "title-exact" => true).each do |file|
+        delete_test_file(file, true)
+      end
+
+      test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
+      file = session.upload_from_file(test_file_path, test_file_title, :convert => false)
+
+      file.acl.push(GoogleDrive::AclEntryWithKey.new(:role => 'reader'))
+      # reload ss
+      file = session.file_by_title(test_file_title)
+      assert_equal(2, file.acl.size)
+      assert_equal(GoogleDrive::AclEntryWithKey, file.acl[1].class)
+      assert_equal('reader', file.acl[1].role)
+
+      delete_test_file(file)
+      assert_nil session.file_by_title(test_file_title)
+    end
+
     # Tests various manipulations with files and collections.
     def test_collection_and_file_online()
-      
+
       session = get_session()
 
       # Gets root collection.
@@ -224,9 +251,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert(session.files(
           "title" => test_collection_title, "title-exact" => true, "showfolders" => true).empty?)
     end
-    
+
     def test_collection_offline()
-      
+
       browser_url =
           "https://docs.google.com/?tab=mo&authuser=0#folders/" +
           "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
@@ -234,10 +261,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
           "https://docs.google.com/feeds/default/private/full/folder%3A" +
           "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
       session = GoogleDrive::Session.new_dummy()
-      
+
       collection = session.collection_by_url(browser_url)
       assert_equal(collection_feed_url, collection.collection_feed_url)
-      
+
       collection = session.collection_by_url(collection_feed_url)
       assert_equal(collection_feed_url, collection.collection_feed_url)
 
@@ -286,7 +313,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       end
       return @@session
     end
-    
+
     # Wrapper of GoogleDrive::File#delete which makes sure not to delete non-test files.
     def delete_test_file(file, permanent = false)
       esc_prefix = Regexp.escape(PREFIX)
@@ -296,5 +323,5 @@ class TC_GoogleDrive < Test::Unit::TestCase
         raise("Trying to delete non-test file: %p" % file)
       end
     end
-    
+
 end

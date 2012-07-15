@@ -7,18 +7,18 @@
 # more frankensteining of the original library
 
 module GoogleDrive
-    
+
     # An entry of an ACL (access control list) of a spreadsheet.
     #
     # Use GoogleDrive::Acl#[] to get GoogleDrive::AclEntry object.
     #
     # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class AclEntry
-        
+
         include(Util)
-        
-        PARAM_NAMES = [:acl, :scope_type, :scope, :role, :title, :edit_url, :etag]  #:nodoc:
-        
+
+        PARAM_NAMES = [:acl, :scope_type, :scope, :with_key, :role, :title, :edit_url, :etag]  #:nodoc:
+
         # +params+ is a Hash object with keys +:scope_type+, +:scope+ and +:role+.
         # See scope_type and role for the document of the fields.
         def initialize(params)

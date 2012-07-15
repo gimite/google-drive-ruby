@@ -4,10 +4,10 @@
 # The license of this source is "New BSD Licence"
 
 require "google_drive/acl_entry"
-
+require "google_drive/acl_entry_with_key"
 
 module GoogleDrive
-    
+
     # ACL (access control list) of a spreadsheet.
     #
     # Use GoogleDrive::Spreadsheet#acl to get GoogleDrive::Acl object.
@@ -15,20 +15,20 @@ module GoogleDrive
     #
     # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class Acl
-        
+
         include(Util)
         extend(Forwardable)
-        
+
         def initialize(session, acls_feed_url) #:nodoc:
           @session = session
           @acls_feed_url = acls_feed_url
           header = {"GData-Version" => "3.0"}
           doc = @session.request(:get, @acls_feed_url, :header => header, :auth => :writely)
-          @acls = doc.css("entry").map(){ |e| AclEntry.new(entry_to_params(e)) }
+          @acls = doc.css("entry").map { |e| AclEntry.load(entry_to_params(e)) }
         end
-        
+
         def_delegators(:@acls, :size, :[], :each)
-        
+
         # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with keys
         # :scope_type, :scope and :role. See GoogleDrive::AclEntry#scope_type and
         # GoogleDrive::AclEntry#role for the document of the fields.
@@ -80,20 +80,29 @@ module GoogleDrive
         end
 
       private
-        
+
         def entry_to_params(entry)
           # TODO Support with-link roles.
-          return {
+          if (entry.css("gAcl|withKey").size > 0)
+            with_key = entry.css("gAcl|withKey")[0]["key"]
+            role = entry.css("gAcl|withKey gAcl|role")[0]["value"]
+          else
+            with_key = nil
+            role = entry.css("gAcl|role")[0]["value"]
+          end
+
+          {
             :acl => self,
             :scope_type => entry.css("gAcl|scope")[0]["type"],
             :scope => entry.css("gAcl|scope")[0]["value"],
-            :role => entry.css("gAcl|role")[0]["value"],
+            :with_key => with_key,
+            :role => role,
             :title => entry.css("title").text,
             :edit_url => entry.css("link[rel='edit']")[0]["href"],
-            :etag => entry["etag"],
+            :etag => entry["etag"]
           }
         end
-        
+
     end
-    
+
 end
