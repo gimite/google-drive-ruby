@@ -42,7 +42,7 @@ module GoogleDrive
         #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
         def push(entry)
 
-          entry = AclEntry.new(entry) if entry.is_a?(Hash)
+          entry = AclEntry.load(entry) if entry.is_a?(Hash)
 
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(
