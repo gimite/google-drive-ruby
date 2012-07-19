@@ -282,6 +282,10 @@ module GoogleDrive
         #   # Uploads without conversion:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain", :convert => false)
+        #   
+        #   # Uploads and converts to a Google Spreadsheet:
+        #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
+        #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
         def upload_from_string(content, title = "Untitled", params = {})
           return upload_from_io(StringIO.new(content), title, params)
         end
@@ -290,7 +294,7 @@ module GoogleDrive
         # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
-        #   # Uploads and converts to a Google Docs document:
+        #   # Uploads a text file and converts to a Google Docs document:
         #   session.upload_from_file("/path/to/hoge.txt")
         #   
         #   # Uploads without conversion:
@@ -298,6 +302,12 @@ module GoogleDrive
         #   
         #   # Uploads with explicit content type:
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
+        #   
+        #   # Uploads a text file and converts to a Google Spreadsheet:
+        #   session.upload_from_file("/path/to/hoge.tsv", "Hoge")
+        #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
+        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
+        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tsv")
         def upload_from_file(path, title = nil, params = {})
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)
