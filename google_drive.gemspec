@@ -1,5 +1,5 @@
 Gem::Specification.new do |s|
-  
+
   s.name = "google_drive"
   s.version = "0.3.1"
   s.authors = ["Hiroshi Ichikawa"]
@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.description = "A library to read/write files/spreadsheets in Google Drive/Docs."
   s.homepage = "https://github.com/gimite/google-drive-ruby"
   s.rubygems_version = "1.2.0"
-  
+
   s.files = ["README.rdoc"] + Dir["lib/**/*"]
   s.require_paths = ["lib"]
   s.has_rdoc = true
@@ -19,5 +19,6 @@ Gem::Specification.new do |s|
   s.add_dependency("oauth", [">= 0.3.6"])
   s.add_dependency("oauth2", [">= 0.5.0"])
   s.add_development_dependency("rake", [">= 0.8.0"])
-  
+  s.add_development_dependency("debugger")
+
 end
