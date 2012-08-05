@@ -158,32 +158,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
     end
 
-
-    # TODO: Convert these to more descriptive rspec
-    def test_setting_acl_on_a_spreadsheet()
-
-      session = get_session()
-
-      test_file_title = "#{PREFIX}test-file"
-
-      session.files("title" => test_file_title, "title-exact" => true).each do |file|
-        delete_test_file(file, true)
-      end
-
-      test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
-      file = session.upload_from_file(test_file_path, test_file_title, :convert => false)
-
-      file.acl.push(GoogleDrive::AclEntryWithKey.new(:role => 'reader'))
-      # reload ss
-      file = session.file_by_title(test_file_title)
-      assert_equal(2, file.acl.size)
-      assert_equal(GoogleDrive::AclEntryWithKey, file.acl[1].class)
-      assert_equal('reader', file.acl[1].role)
-
-      delete_test_file(file)
-      assert_nil session.file_by_title(test_file_title)
-    end
-
     # Tests various manipulations with files and collections.
     def test_collection_and_file_online()
 
@@ -268,6 +242,29 @@ class TC_GoogleDrive < Test::Unit::TestCase
       collection = session.collection_by_url(collection_feed_url)
       assert_equal(collection_feed_url, collection.collection_feed_url)
 
+    end
+
+    def test_acl_online()
+
+      session = get_session()
+
+      test_file_title = "#{PREFIX}acl-test-file"
+
+      # Removes test files/collections in the previous run in case the previous run failed.
+      for file in session.files("title" => test_file_title, "title-exact" => true)
+        delete_test_file(file, true)
+      end
+
+      file = session.upload_from_string("hoge", test_file_title, :content_type => "text/plain", :convert => false)
+      file.acl.push({:scope_type => "default", :with_key => true, :role => "reader"})
+      acl = file.acl(:reload => true)
+      assert_equal(2, acl.size)
+      assert_equal("default", acl[1].scope_type)
+      assert(acl[1].with_key)
+      assert_equal("reader", acl[1].role)
+
+      delete_test_file(file, true)
+      
     end
 
     def get_session()

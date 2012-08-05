@@ -1,10 +1,8 @@
 # Author: Guy Boertje <https://github.com/guyboertje>
 # Author: David R. Albrecht <https://github.com/eldavido>
 # Author: Hiroshi Ichikawa <http://gimite.net/>
+# Author: Phuogn Nguyen <https://github.com/phuongnd08>
 # The license of this source is "New BSD Licence"
-
-# acl.rb, derived from https://github.com/guyboertje/gdata-spreadsheet-ruby/blob/master/lib/document.rb
-# more frankensteining of the original library
 
 module GoogleDrive
 
@@ -24,7 +22,9 @@ module GoogleDrive
         def initialize(params)
           @params = {:role => "reader"}
           for name, value in params
-            if !PARAM_NAMES.include?(name)
+            if !name.is_a?(Symbol)
+              raise(ArgumentError, "Key must be Symbol, but is %p" % name)
+            elsif !PARAM_NAMES.include?(name)
               raise(ArgumentError, "Invalid key: %p" % name)
             end
             @params[name] = value
@@ -48,50 +48,41 @@ module GoogleDrive
         end
 
         def inspect
-          return "\#<%p scope_type=%p, scope=%p, role=%p>" %
-              [self.class, @params[:scope_type], @params[:scope], @params[:role]]
+          return "\#<%p scope_type=%p, scope=%p, with_key=%p, role=%p>" %
+              [self.class, @params[:scope_type], @params[:scope], @params[:with_key], @params[:role]]
         end
 
-        def xml_open_tag
-          if etag
-            %{
-              <entry
+        def to_xml()  #:nodoc:
+          
+          etag_attr = self.etag ? "gd:etag='#{h(self.etag)}'" : ""
+          value_attr = self.scope ? "value='#{h(self.scope)}'" : ""
+          if self.with_key
+            role_tag = <<-EOS
+                <gAcl:withKey key='[ACL KEY]'>
+                  <gAcl:role value='#{h(self.role)}'/>
+                </gAcl:withKey>
+            EOS
+          else
+            role_tag = <<-EOS
+              <gAcl:role value='#{h(self.role)}'/>
+            EOS
+          end
+          
+          return <<-EOS
+            <entry
                 xmlns='http://www.w3.org/2005/Atom'
                 xmlns:gAcl='http://schemas.google.com/acl/2007'
                 xmlns:gd='http://schemas.google.com/g/2005'
-                gd:etag='#{h(entry.etag)}'>
-            }
-          else
-            %{
-              <entry
-                  xmlns='http://www.w3.org/2005/Atom'
-                  xmlns:gAcl='http://schemas.google.com/acl/2007'>
-            }
-          end
-
-        end
-
-        def to_xml
-          value_attr = scope ? "value='#{h(scope)}'" : ""
-          xml = <<-EOS
-            #{xml_open_tag}
+                #{etag_attr}>
               <category scheme='http://schemas.google.com/g/2005#kind'
                   term='http://schemas.google.com/acl/2007#accessRule'/>
-              <gAcl:role value='#{h(role)}'/>
-              <gAcl:scope type='#{h(scope_type)}' #{value_attr}/>
+              #{role_tag}
+              <gAcl:scope type='#{h(self.scope_type)}' #{value_attr}/>
             </entry>
           EOS
+          
         end
 
-      class << self
-        def load(params)
-          if params[:with_key]
-            AclEntryWithKey.new(params)
-          else
-            AclEntry.new(params)
-          end
-        end
-      end
     end
 
 end

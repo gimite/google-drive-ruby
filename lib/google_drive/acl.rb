@@ -4,7 +4,6 @@
 # The license of this source is "New BSD Licence"
 
 require "google_drive/acl_entry"
-require "google_drive/acl_entry_with_key"
 
 module GoogleDrive
 
@@ -24,7 +23,7 @@ module GoogleDrive
           @acls_feed_url = acls_feed_url
           header = {"GData-Version" => "3.0"}
           doc = @session.request(:get, @acls_feed_url, :header => header, :auth => :writely)
-          @acls = doc.css("entry").map { |e| AclEntry.load(entry_to_params(e)) }
+          @acls = doc.css("entry").map(){ |e| AclEntry.new(entry_to_params(e)) }
         end
 
         def_delegators(:@acls, :size, :[], :each)
@@ -36,17 +35,24 @@ module GoogleDrive
         # NOTE: This sends email to the new people.
         #
         # e.g.
+        #   # A specific user can read or write.
         #   spreadsheet.acl.push(
         #       {:scope_type => "user", :scope => "example2@gmail.com", :role => "reader"})
         #   spreadsheet.acl.push(
         #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
+        #   # Publish on the Web.
+        #   spreadsheet.acl.push(
+        #       {:scope_type => "default", :role => "reader"})
+        #   # Anyone who knows the link can read.
+        #   spreadsheet.acl.push(
+        #       {:scope_type => "default", :with_key => true, :role => "reader"})
         def push(entry)
 
-          entry = AclEntry.load(entry) if entry.is_a?(Hash)
+          entry = AclEntry.new(entry) if entry.is_a?(Hash)
 
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(
-              :post, @acls_feed_url, :data => entry.to_xml, :header => header, :auth => :writely)
+              :post, @acls_feed_url, :data => entry.to_xml(), :header => header, :auth => :writely)
 
           entry.params = entry_to_params(doc.root)
           @acls.push(entry)
@@ -68,7 +74,7 @@ module GoogleDrive
 
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(
-              :put, entry.edit_url, :data => entry.to_xml, :header => header, :auth => :writely)
+              :put, entry.edit_url, :data => entry.to_xml(), :header => header, :auth => :writely)
 
           entry.params = entry_to_params(doc.root)
           return entry
@@ -82,16 +88,16 @@ module GoogleDrive
       private
 
         def entry_to_params(entry)
-          # TODO Support with-link roles.
-          if (entry.css("gAcl|withKey").size > 0)
-            with_key = entry.css("gAcl|withKey")[0]["key"]
+          
+          if !entry.css("gAcl|withKey").empty?
+            with_key = true
             role = entry.css("gAcl|withKey gAcl|role")[0]["value"]
           else
-            with_key = nil
+            with_key = false
             role = entry.css("gAcl|role")[0]["value"]
           end
 
-          {
+          return {
             :acl => self,
             :scope_type => entry.css("gAcl|scope")[0]["type"],
             :scope => entry.css("gAcl|scope")[0]["value"],
@@ -99,8 +105,9 @@ module GoogleDrive
             :role => role,
             :title => entry.css("title").text,
             :edit_url => entry.css("link[rel='edit']")[0]["href"],
-            :etag => entry["etag"]
+            :etag => entry["etag"],
           }
+          
         end
 
     end
