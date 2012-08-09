@@ -59,7 +59,8 @@ module GoogleDrive
         end
 
         def h(str)
-          return CGI.escapeHTML(str.to_s())
+          # Should also escape "\n" to keep it in cell contents.
+          return CGI.escapeHTML(str.to_s()).gsub(/\n/, '&#x0a;')
         end
         
     end
