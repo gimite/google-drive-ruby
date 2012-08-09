@@ -300,7 +300,7 @@ module GoogleDrive
                     <id>#{h(id)}</id>
                     <link rel="edit" type="application/atom+xml"
                       href="#{h(edit_url)}"/>
-                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value).gsub("\n", '&#xA;')}"/>
                   </entry>
                 EOS
               end
