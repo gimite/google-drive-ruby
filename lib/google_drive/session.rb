@@ -132,12 +132,12 @@ module GoogleDrive
         end
 
         # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
-        # You can specify query parameters described at
-        # http://code.google.com/apis/spreadsheets/docs/2.0/reference.html#Parameters
+        # You can specify query parameters e.g. "title", "title-exact".
         #
         # e.g.
         #   session.spreadsheets
         #   session.spreadsheets("title" => "hoge")
+        #   session.spreadsheets("title" => "hoge", "title-exact" => "true")
         def spreadsheets(params = {})
           query = encode_query(params)
           doc = request(
@@ -189,7 +189,7 @@ module GoogleDrive
         # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
         # one of them.
         def spreadsheet_by_title(title)
-          return spreadsheets({"title" => title})[0]
+          return spreadsheets({"title" => title, "title-exact" => "true"})[0]
         end
         
         # Returns GoogleDrive::Worksheet with given +url+.

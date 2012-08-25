@@ -89,10 +89,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_not_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
 
-      ss5 = session.spreadsheet_by_title(ss_title)
-      assert_not_nil(ss5)
-      assert_equal(ss_title, ss5.title)
-
       ws2 = session.worksheet_by_url(ws.cells_feed_url)
       assert_equal(ws.cells_feed_url, ws2.cells_feed_url)
       assert_equal("hoge", ws2.title)
@@ -101,6 +97,11 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_not_nil(session.spreadsheets("title" => ss_copy_title).
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
+
+      ss5 = session.spreadsheet_by_title(ss_title)
+      assert_not_nil(ss5)
+      # This should be the one with title exact match, not ss_copy.
+      assert_equal(ss_title, ss5.title)
 
       # Access via GoogleDrive::Worksheet#list.
       ws.list.keys = ["x", "y"]
