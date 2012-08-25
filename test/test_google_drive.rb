@@ -170,6 +170,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       test_collection_title = "#{PREFIX}collection"
       test_file_title = "#{PREFIX}file.txt"
+      test_file2_title = "#{PREFIX}file2.txt"
 
       # Removes test files/collections in the previous run in case the previous run failed.
       for title in [test_file_title, test_collection_title]
@@ -196,6 +197,12 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal(test_file_title, file.title)
       assert_equal(File.read(test_file_path), file.download_to_string())
 
+      # Uploads an empty file.
+      file2 = session.upload_from_string("", test_file2_title, :content_type => "text/plain", :convert => false)
+      assert_instance_of(GoogleDrive::File, file2)
+      assert_equal(test_file2_title, file2.title)
+      assert_equal("", file2.download_to_string())
+
       # Checks if file exists in root.
       files = root.files("title" => test_file_title, "title-exact" => true)
       assert_equal(1, files.size)
@@ -211,8 +218,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal(1, files.size)
       assert_equal(test_file_title, files[0].title)
 
-      # Deletes file.
+      # Deletes files.
       delete_test_file(file, true)
+      delete_test_file(file2, true)
       # Ensure the file is removed from collection.
       assert(collection.files("title" => test_file_title, "title-exact" => true).empty?)
       # Ensure the file is removed from Google Drive.

@@ -361,20 +361,28 @@ module GoogleDrive
               :response_type => :response)
           upload_url = initial_response["location"]
           
-          sent_bytes = 0
-          while data = io.read(UPLOAD_CHUNK_SIZE)
-            content_range = "bytes %d-%d/%d" % [
-                sent_bytes,
-                sent_bytes + data.bytesize - 1,
-                total_bytes,
-            ]
+          if total_bytes > 0
+            sent_bytes = 0
+            while data = io.read(UPLOAD_CHUNK_SIZE)
+              content_range = "bytes %d-%d/%d" % [
+                  sent_bytes,
+                  sent_bytes + data.bytesize - 1,
+                  total_bytes,
+              ]
+              upload_header = {
+                  "Content-Type" => content_type,
+                  "Content-Range" => content_range,
+              }
+              doc = request(
+                  :put, upload_url, :header => upload_header, :data => data, :auth => :writely)
+              sent_bytes += data.bytesize
+            end
+          else
             upload_header = {
                 "Content-Type" => content_type,
-                "Content-Range" => content_range,
             }
             doc = request(
-                :put, upload_url, :header => upload_header, :data => data, :auth => :writely)
-            sent_bytes += data.bytesize
+                :put, upload_url, :header => upload_header, :data => "", :auth => :writely)
           end
           
           return entry_element_to_file(doc.root)
