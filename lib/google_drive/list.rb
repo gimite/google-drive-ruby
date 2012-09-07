@@ -110,7 +110,7 @@ module GoogleDrive
         def key_to_col(key)
           key = key.to_s()
           col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
-          raise(GoogleDrive::Error, "Colunm doesn't exist: %p" % key) if !col
+          raise(GoogleDrive::Error, "Column doesn't exist: %p" % key) if !col
           return col
         end
         
