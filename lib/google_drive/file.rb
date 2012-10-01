@@ -34,7 +34,7 @@ module GoogleDrive
             # https://docs.google.com/feeds/default/private/full/folder%3Aroot/contents/folder%3Axxx
             # and deletion of the URL doesn't delete the file itself.
             # So we construct the URL here using resource ID instead.
-            @document_feed_url = "%s/%s" % [DOCS_BASE_URL, CGI.escape(self.resource_id)]
+            @document_feed_url = "%s/%s?v=3" % [DOCS_BASE_URL, CGI.escape(self.resource_id)]
           end
           @acl = nil
         end
@@ -193,9 +193,7 @@ module GoogleDrive
 
         # Renames title of the file.
         def rename(title)
-          
-          doc = @session.request(:get, self.document_feed_url, :auth => :writely)
-          edit_url = doc.css("link[rel='edit']").first["href"]
+          edit_url = self.document_feed_entry.css("link[rel='edit']").first["href"]
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"
@@ -203,11 +201,8 @@ module GoogleDrive
               <atom:title>#{h(title)}</atom:title>
             </atom:entry>
           EOS
-          
-          @session.request(
-              :put, edit_url, :data => xml, :auth => :writely,
-              :header => {"Content-Type" => "application/atom+xml", "If-Match" => "*"})
-          
+          header = {"Content-Type" => "application/atom+xml", "If-Match" => "*"}
+          @session.request(:put, edit_url, :data => xml, :auth => :writely, :header => header)
         end
         
         alias title= rename
