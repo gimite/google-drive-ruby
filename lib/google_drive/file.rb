@@ -149,6 +149,14 @@ module GoogleDrive
                   [self.available_content_types])
             end
           end
+
+	  if params[:export_format]
+            if AVAILABLE_EXPORT_FORMATS.include? params[:export_format]
+              url ="https://docs.google.com/feeds/download/documents/Export?id=" + resource_id.split(":")[1] + "&exportFormat=" + params[:export_format] + "&format=" + params[:export_format]
+            else
+              raise "You can export document only in theese formats: " + AVAILABLE_EXPORT_FORMATS.join(",")
+            end
+          end
           # TODO Use streaming if possible.
           body = @session.request(:get, url, :response_type => :raw, :auth => :writely)
           io.write(body)
