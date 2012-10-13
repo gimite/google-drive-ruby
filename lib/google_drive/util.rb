@@ -33,6 +33,8 @@ module GoogleDrive
             ".zip" =>"application/zip",
             ".swf" =>"application/x-shockwave-flash",
         }
+
+	AVAILABLE_EXPORT_FORMATS = ["docx","doc","pdf","html","txt","rtf","odt","zip","png","jpeg"]
         
       module_function
         
