@@ -307,7 +307,7 @@ module GoogleDrive
         #   session.upload_from_file("/path/to/hoge.tsv", "Hoge")
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
-        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tsv")
+        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
         def upload_from_file(path, title = nil, params = {})
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)

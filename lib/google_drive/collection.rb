@@ -14,8 +14,7 @@ module GoogleDrive
 
         include(Util)
         
-        #:nodoc:
-        ROOT_URL = "#{DOCS_BASE_URL}/folder%3Aroot"
+        ROOT_URL = "#{DOCS_BASE_URL}/folder%3Aroot"  #:nodoc:
 
         alias collection_feed_url document_feed_url
         
