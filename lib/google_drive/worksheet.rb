@@ -310,15 +310,15 @@ module GoogleDrive
 
               batch_url = concat_url(@cells_feed_url, "/batch")
               result = @session.request(:post, batch_url, :data => xml)
-              result.css("atom|entry").each() do |entry|
-                interrupted = entry.css("batch|interrupted")[0]
+              result.css("atom|entry").each() do |xml_entry|
+                interrupted = xml_entry.css("batch|interrupted")[0]
                 if interrupted
                   raise(GoogleDrive::Error, "Update has failed: %s" %
                     interrupted["reason"])
                 end
-                if !(entry.css("batch|status").first["code"] =~ /^2/)
+                if !(xml_entry.css("batch|status").first["code"] =~ /^2/)
                   raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
-                    [entry.css("atom|id").text, entry.css("batch|status")[0]["reason"]])
+                    [xml_entry.css("atom|id").text, xml_entry.css("batch|status")[0]["reason"]])
                 end
               end
 
