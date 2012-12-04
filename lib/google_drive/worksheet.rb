@@ -272,7 +272,7 @@ module GoogleDrive
                 "&min-col=#{cols.min}&max-col=#{cols.max}")
             doc = @session.request(:get, url)
 
-            doc.css("entry").each() do |entry|
+            for entry in doc.css("entry")
               row = entry.css("gs|cell")[0]["row"].to_i()
               col = entry.css("gs|cell")[0]["col"].to_i()
               cell_entries[[row, col]] = entry
@@ -310,7 +310,7 @@ module GoogleDrive
 
               batch_url = concat_url(@cells_feed_url, "/batch")
               result = @session.request(:post, batch_url, :data => xml)
-              result.css("atom|entry").each() do |entry|
+              for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
                   raise(GoogleDrive::Error, "Update has failed: %s" %
