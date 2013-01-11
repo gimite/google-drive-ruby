@@ -2,12 +2,12 @@
 # The license of this source is "New BSD Licence"
 
 require "set"
+require "rexml/document"
 
 require "google_drive/util"
 require "google_drive/error"
 require "google_drive/table"
 require "google_drive/list"
-
 
 module GoogleDrive
 
@@ -18,7 +18,7 @@ module GoogleDrive
         include(Util)
 
         def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
-          
+
           @session = session
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
@@ -29,11 +29,17 @@ module GoogleDrive
           @numeric_values = nil
           @modified = Set.new()
           @list = nil
-          
+
+          @save_batch_size = 250
+
         end
 
         # URL of cell-based feed of the worksheet.
         attr_reader(:cells_feed_url)
+
+        # Batch size for saving changes
+        # Lower this value when experiencing issues with timeout errors as per issue #38.
+        attr_writer(:save_batch_size)
 
         # URL of worksheet feed URL of the worksheet.
         def worksheet_feed_url
@@ -73,7 +79,7 @@ module GoogleDrive
         end
 
         # Updates content of the cell.
-        # Arguments in the bracket must be either (row number, column number) or cell name. 
+        # Arguments in the bracket must be either (row number, column number) or cell name.
         # Note that update is not sent to the server until you call save().
         # Top-left cell is [1, 1].
         #
@@ -136,7 +142,7 @@ module GoogleDrive
           reload() if !@cells
           return @numeric_values[[row, col]]
         end
-        
+
         # Row number of the bottom-most non-empty row.
         def num_rows
           reload() if !@cells
@@ -211,7 +217,7 @@ module GoogleDrive
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= etc. is discarded if you haven't called save().
         def reload()
-          
+
           doc = @session.request(:get, @cells_feed_url)
           @max_rows = doc.css("gs|rowCount").text.to_i()
           @max_cols = doc.css("gs|colCount").text.to_i()
@@ -232,28 +238,27 @@ module GoogleDrive
           @modified.clear()
           @meta_modified = false
           return true
-          
+
         end
 
         # Saves your changes made by []=, etc. to the server.
         def save()
-          
+
           sent = false
 
           if @meta_modified
 
             ws_doc = @session.request(:get, self.worksheet_feed_url)
             edit_url = ws_doc.css("link[rel='edit']")[0]["href"]
-            xml = <<-"EOS"
-              <entry xmlns='http://www.w3.org/2005/Atom'
-                     xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
-                <title>#{h(self.title)}</title>
-                <gs:rowCount>#{h(self.max_rows)}</gs:rowCount>
-                <gs:colCount>#{h(self.max_cols)}</gs:colCount>
-              </entry>
-            EOS
+            xml = REXML::Document.new
+            entry = xml.add_element("entry")
+            entry.add_namespace('http://www.w3.org/2005/Atom')
+            entry.add_namespace('gs', 'http://schemas.google.com/spreadsheets/2006')
+            entry.add_element('title').add_text(self.title)
+            entry.add_element('gs:rowCount').add_text(self.max_rows.to_s)
+            entry.add_element('gs:colCount').add_text(self.max_cols.to_s)
 
-            @session.request(:put, edit_url, :data => xml)
+            @session.request(:put, edit_url, :data => xml.to_s)
 
             @meta_modified = false
             sent = true
@@ -280,36 +285,29 @@ module GoogleDrive
 
             # Updates cell values using batch operation.
             # If the data is large, we split it into multiple operations, otherwise batch may fail.
-            @modified.each_slice(250) do |chunk|
+            @modified.each_slice(@save_batch_size) do |chunk|
 
-              xml = <<-EOS
-                <feed xmlns="http://www.w3.org/2005/Atom"
-                      xmlns:batch="http://schemas.google.com/gdata/batch"
-                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                  <id>#{h(@cells_feed_url)}</id>
-              EOS
+              xml = REXML::Document.new
+              feed = xml.add_element("feed")
+              feed.add_namespace('http://www.w3.org/2005/Atom')
+              feed.add_namespace('batch', 'http://schemas.google.com/gdata/batch')
+              feed.add_namespace('gs', 'http://schemas.google.com/spreadsheets/2006')
+              feed.add_element('id').add_text(@cells_feed_url)
               for row, col in chunk
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
                 id = entry.css("id").text
                 edit_url = entry.css("link[rel='edit']")[0]["href"]
-                xml << <<-EOS
-                  <entry>
-                    <batch:id>#{h(row)},#{h(col)}</batch:id>
-                    <batch:operation type="update"/>
-                    <id>#{h(id)}</id>
-                    <link rel="edit" type="application/atom+xml"
-                      href="#{h(edit_url)}"/>
-                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                  </entry>
-                EOS
+                new_entry = feed.add_element('entry')
+                new_entry.add_element('batch:id').add_text([row, col].join(','))
+                new_entry.add_element('batch:operation', {'type' => 'update'})
+                new_entry.add_element('id').add_text(id)
+                new_entry.add_element('link', {'rel' => 'edit', 'type' => 'application/atom+xml', 'href' => edit_url})
+                new_entry.add_element('gs:cell', {'row' => row, 'col' => col, 'inputValue' => value})
               end
-              xml << <<-"EOS"
-                </feed>
-              EOS
 
               batch_url = concat_url(@cells_feed_url, "/batch")
-              result = @session.request(:post, batch_url, :data => xml)
+              result = @session.request(:post, batch_url, :data => xml.to_s)
               for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
@@ -328,9 +326,9 @@ module GoogleDrive
             sent = true
 
           end
-          
+
           return sent
-          
+
         end
 
         # Calls save() and reload().
@@ -358,7 +356,7 @@ module GoogleDrive
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
-          
+
           warn(
               "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
               "will not be available after March 2012.")
@@ -385,7 +383,7 @@ module GoogleDrive
 
           result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
           return Table.new(@session, result)
-          
+
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -408,7 +406,7 @@ module GoogleDrive
           return entry.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
         end
-        
+
         # Provides access to cells using column names, assuming the first row contains column
         # names. Returned object is GoogleDrive::List which you can use mostly as
         # Array of Hash.
@@ -424,7 +422,7 @@ module GoogleDrive
         def list
           return @list ||= List.new(self)
         end
-        
+
         # Returns a [row, col] pair for a cell name string.
         # e.g.
         #   worksheet.cell_name_to_row_col("C2")  #=> [2, 3]
@@ -451,7 +449,7 @@ module GoogleDrive
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
-        
+
       private
 
         def parse_cell_args(args)
@@ -469,7 +467,7 @@ module GoogleDrive
                 "Arguments must be either one String or two Integer's, but are %p" % [args])
           end
         end
-        
+
     end
-    
+
 end
