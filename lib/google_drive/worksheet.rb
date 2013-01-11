@@ -2,12 +2,12 @@
 # The license of this source is "New BSD Licence"
 
 require "set"
+require "rexml/document"
 
 require "google_drive/util"
 require "google_drive/error"
 require "google_drive/table"
 require "google_drive/list"
-
 
 module GoogleDrive
 
@@ -250,16 +250,15 @@ module GoogleDrive
 
             ws_doc = @session.request(:get, self.worksheet_feed_url)
             edit_url = ws_doc.css("link[rel='edit']")[0]["href"]
-            xml = <<-"EOS"
-              <entry xmlns='http://www.w3.org/2005/Atom'
-                     xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
-                <title>#{h(self.title)}</title>
-                <gs:rowCount>#{h(self.max_rows)}</gs:rowCount>
-                <gs:colCount>#{h(self.max_cols)}</gs:colCount>
-              </entry>
-            EOS
+            xml = REXML::Document.new
+            entry = xml.add_element("entry")
+            entry.add_namespace('http://www.w3.org/2005/Atom')
+            entry.add_namespace('gs', 'http://schemas.google.com/spreadsheets/2006')
+            entry.add_element('title').add_text(self.title)
+            entry.add_element('gs:rowCount').add_text(self.max_rows.to_s)
+            entry.add_element('gs:colCount').add_text(self.max_cols.to_s)
 
-            @session.request(:put, edit_url, :data => xml)
+            @session.request(:put, edit_url, :data => xml.to_s)
 
             @meta_modified = false
             sent = true
@@ -288,34 +287,27 @@ module GoogleDrive
             # If the data is large, we split it into multiple operations, otherwise batch may fail.
             @modified.each_slice(@save_batch_size) do |chunk|
 
-              xml = <<-EOS
-                <feed xmlns="http://www.w3.org/2005/Atom"
-                      xmlns:batch="http://schemas.google.com/gdata/batch"
-                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                  <id>#{h(@cells_feed_url)}</id>
-              EOS
+              xml = REXML::Document.new
+              feed = xml.add_element("feed")
+              feed.add_namespace('http://www.w3.org/2005/Atom')
+              feed.add_namespace('batch', 'http://schemas.google.com/gdata/batch')
+              feed.add_namespace('gs', 'http://schemas.google.com/spreadsheets/2006')
+              feed.add_element('id').add_text(@cells_feed_url)
               for row, col in chunk
                 value = @cells[[row, col]]
                 entry = cell_entries[[row, col]]
                 id = entry.css("id").text
                 edit_url = entry.css("link[rel='edit']")[0]["href"]
-                xml << <<-EOS
-                  <entry>
-                    <batch:id>#{h(row)},#{h(col)}</batch:id>
-                    <batch:operation type="update"/>
-                    <id>#{h(id)}</id>
-                    <link rel="edit" type="application/atom+xml"
-                      href="#{h(edit_url)}"/>
-                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                  </entry>
-                EOS
+                new_entry = feed.add_element('entry')
+                new_entry.add_element('batch:id').add_text([row, col].join(','))
+                new_entry.add_element('batch:operation', {'type' => 'update'})
+                new_entry.add_element('id').add_text(id)
+                new_entry.add_element('link', {'rel' => 'edit', 'type' => 'application/atom+xml', 'href' => edit_url})
+                new_entry.add_element('gs:cell', {'row' => row, 'col' => col, 'inputValue' => value})
               end
-              xml << <<-"EOS"
-                </feed>
-              EOS
 
               batch_url = concat_url(@cells_feed_url, "/batch")
-              result = @session.request(:post, batch_url, :data => xml)
+              result = @session.request(:post, batch_url, :data => xml.to_s)
               for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
