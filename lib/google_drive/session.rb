@@ -6,6 +6,8 @@ require "stringio"
 
 require "rubygems"
 require "nokogiri"
+require "oauth"
+require "oauth2"
 
 require "google_drive/util"
 require "google_drive/client_login_fetcher"
@@ -38,15 +40,18 @@ module GoogleDrive
         end
 
         # The same as GoogleDrive.login_with_oauth.
-        def self.login_with_oauth(oauth_token)
-          case oauth_token
+        def self.login_with_oauth(access_token, proxy = nil)
+          case access_token
             when OAuth::AccessToken
-              fetcher = OAuth1Fetcher.new(oauth_token)
+              raise(GoogleDrive::Error, "proxy is not supported with OAuth1.") if proxy
+              fetcher = OAuth1Fetcher.new(access_token)
             when OAuth2::AccessToken
-              fetcher = OAuth2Fetcher.new(oauth_token)
+              fetcher = OAuth2Fetcher.new(access_token.token, proxy)
+            when String
+              fetcher = OAuth2Fetcher.new(access_token, proxy)
             else
               raise(GoogleDrive::Error,
-                  "oauth_token is neither OAuth::Token nor OAuth2::Token: %p" % oauth_token)
+                  "access_token is neither String, OAuth2::Token nor OAuth::Token: %p" % access_token)
           end
           return Session.new(nil, fetcher)
         end

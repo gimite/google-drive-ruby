@@ -20,6 +20,13 @@ module GoogleDrive
 
     # Authenticates with given OAuth1 or OAuth2 token.
     #
+    # +access_token+ can be either OAuth2 access_token string, OAuth2::AccessToken or OAuth::AccessToken.
+    #
+    # +proxy+ can be nil or return value of Net::HTTP.Proxy. If +proxy+ is specified, all
+    # HTTP access in the session uses the proxy. If +proxy+ is nil, it uses the proxy
+    # specified by http_proxy environment variable if available. Otherwise it performs direct
+    # access.
+    #
     # OAuth2 code example:
     #
     #   client = OAuth2::Client.new(
@@ -36,14 +43,14 @@ module GoogleDrive
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth_token = client.auth_code.get_token(
     #       authorization_code, :redirect_uri => "http://example.com/")
-    #   session = GoogleDrive.login_with_oauth(auth_token)
+    #   session = GoogleDrive.login_with_oauth(auth_token.token)
     #
     # Or, from existing refresh token:
     #
-    #   access_token = OAuth2::AccessToken.from_hash(client,
+    #   auth_token = OAuth2::AccessToken.from_hash(client,
     #       {:refresh_token => refresh_token, :expires_at => expires_at})
-    #   access_token = access_token.refresh!
-    #   session = GoogleDrive.login_with_oauth(access_token)
+    #   auth_token = auth_token.refresh!
+    #   session = GoogleDrive.login_with_oauth(auth_token.token)
     #
     # If your app is not a Web app, use "urn:ietf:wg:oauth:2.0:oob" as redirect_url. Then
     # authorization code is shown after authorization.
@@ -68,8 +75,8 @@ module GoogleDrive
     # - http://code.google.com/apis/accounts/docs/OAuth2.html
     # - http://oauth.rubyforge.org/
     # - http://code.google.com/apis/accounts/docs/OAuth.html
-    def self.login_with_oauth(oauth_token)
-      return Session.login_with_oauth(oauth_token)
+    def self.login_with_oauth(access_token, proxy = nil)
+      return Session.login_with_oauth(access_token, proxy)
     end
 
     # Restores session using return value of auth_tokens method of previous session.
