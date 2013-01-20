@@ -241,7 +241,7 @@ module GoogleDrive
             # Looks like a URL of human-readable collection page. Converts to collection feed URL.
             url = "#{DOCS_BASE_URL}/folder%3A#{$1}"
           end
-          return Collection.new(self, url)
+          return Collection.new(self, to_v3_url(url))
         end
 
         # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.

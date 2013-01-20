@@ -189,6 +189,11 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert(!collection.root?)
       assert_not_nil(collection.resource_id)
       assert_not_nil(root.subcollection_by_title(test_collection_title))
+      collection2 = session.collection_by_url(collection.document_feed_url)
+      assert(collection2.files.empty?)
+      collection3 = session.collection_by_url(
+          "https://drive.google.com/#folders/%s" % collection.resource_id.split(/:/)[1])
+      assert(collection3.files.empty?)
 
       # Uploads a test file.
       test_file_path = File.join(File.dirname(__FILE__), "test_file.txt")
@@ -242,7 +247,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
           "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
  	    collection_feed_url =
           "https://docs.google.com/feeds/default/private/full/folder%3A" +
-          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
+          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc?v=3"
       session = GoogleDrive::Session.new_dummy()
 
       collection = session.collection_by_url(browser_url)
