@@ -5,7 +5,6 @@ require "bundler/setup"
 require "test/unit"
 require "google_drive"
 require "highline"
-require "debugger"
 
 
 class TC_GoogleDrive < Test::Unit::TestCase
