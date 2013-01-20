@@ -8,6 +8,7 @@ Gem::Specification.new do |s|
   s.description = "A library to read/write files/spreadsheets in Google Drive/Docs."
   s.homepage = "https://github.com/gimite/google-drive-ruby"
   s.rubygems_version = "1.2.0"
+  s.license = "New BSD"
 
   s.files = ["README.rdoc"] + Dir["lib/**/*"]
   s.require_paths = ["lib"]
