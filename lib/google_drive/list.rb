@@ -18,18 +18,19 @@ module GoogleDrive
         
         include(Enumerable)
         
-        def initialize(worksheet) #:nodoc:
+        def initialize(worksheet, header_rows = 1) #:nodoc:
           @worksheet = worksheet
+          @header_rows = header_rows
         end
         
         # Number of non-empty rows in the worksheet excluding the first row.
         def size
-          return @worksheet.num_rows - 1
+          return @worksheet.num_rows - @header_rows
         end
         
         # Returns Hash-like object (GoogleDrive::ListRow) for the row with the
         # index. Keys of the object are colum names (the first row).
-        # The second row has index 0.
+        # The first data row has index 0.
         #
         # Note that updates to the returned object are not sent to the server until
         # you call GoogleDrive::Worksheet#save().
@@ -94,15 +95,15 @@ module GoogleDrive
         end
         
         def get(index, key) #:nodoc:
-          return @worksheet[index + 2, key_to_col(key)]
+          return @worksheet[index + @header_rows + 1, key_to_col(key)]
         end
         
         def numeric_value(index, key) #:nodoc:
-          return @worksheet.numeric_value(index + 2, key_to_col(key))
+          return @worksheet.numeric_value(index + @header_rows + 1, key_to_col(key))
         end
         
         def set(index, key, value) #:nodoc:
-          @worksheet[index + 2, key_to_col(key)] = value
+          @worksheet[index + @header_rows + 1, key_to_col(key)] = value
         end
         
       private
