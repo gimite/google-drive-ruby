@@ -28,7 +28,6 @@ module GoogleDrive
           @input_values = nil
           @numeric_values = nil
           @modified = Set.new()
-          @list = nil
           
         end
 
@@ -421,8 +420,8 @@ module GoogleDrive
         #   worksheet.list.push({"x" => "5", "y" => "6"})
         #
         # Note that update is not sent to the server until you call save().
-        def list
-          return @list ||= List.new(self)
+        def list(header_rows = 1)
+          return List.new(self, header_rows)
         end
         
         # Returns a [row, col] pair for a cell name string.
