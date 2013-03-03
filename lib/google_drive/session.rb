@@ -138,9 +138,17 @@ module GoogleDrive
         def file_by_title(title)
           if title.respond_to? :pop
             path = title
-            basetitle = path.pop
-            collection = root_collection.subcollection_by_title path
-            return collection.files("title" => basetitle, "title-exact" => "true")[0]
+            if path.any?
+              if path.size > 1
+                basetitle = path.pop
+                collection = root_collection.subcollection_by_title path
+                return collection.files("title" => basetitle, "title-exact" => "true")[0]
+              else
+                return file_by_title path[0]
+              end
+            else
+              return nil
+            end
           else
             return files("title" => title, "title-exact" => "true")[0]
           end
