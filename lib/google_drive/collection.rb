@@ -119,8 +119,21 @@ module GoogleDrive
         # Returns its subcollection whose title exactly matches +title+ as GoogleDrive::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
         # one of them.
+        #
+        # If given an Array does a recursive subfolder traversal.
         def subcollection_by_title(title)
-          return subcollections("title" => title, "title-exact" => "true")[0]
+          if title.respond_to? :shift
+            relpath = title
+            if relpath.length == 1
+              return subcollection_by_title relpath[0]
+            else
+              subcollection_title = relpath.shift
+              subcollection = subcollection_by_title subcollection_title
+              return subcollection.subcollection_by_title relpath
+            end
+          else
+            return subcollections("title" => title, "title-exact" => "true")[0]
+          end
         end
         
       private

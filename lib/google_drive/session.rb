@@ -132,8 +132,18 @@ module GoogleDrive
         # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
+        #
+        # If given an Array, traverse folders by title:
+        #   session.file_by_title ['myfolder', 'mysubfolder/even/w/slash', 'myfile' ]
         def file_by_title(title)
-          return files("title" => title, "title-exact" => "true")[0]
+          if title.respond_to? :pop
+            path = title
+            basetitle = path.pop
+            collection = root_collection.subcollection_by_title path
+            return collection.files("title" => basetitle, "title-exact" => "true")[0]
+          else
+            return files("title" => title, "title-exact" => "true")[0]
+          end
         end
 
         # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
