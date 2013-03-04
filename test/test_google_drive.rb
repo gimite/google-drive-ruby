@@ -1,10 +1,12 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
+require "yaml"
+require "test/unit"
+
 require "rubygems"
 require "bundler/setup"
-
-require "test/unit"
-require "google_drive"
 require "highline"
+
+require "google_drive"
 
 
 class TC_GoogleDrive < Test::Unit::TestCase
@@ -282,7 +284,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
     def get_session()
       if !@@session
-        puts("This test will create files/spreadsheets/collections with your account,")
+        puts("\nThis test will create files/spreadsheets/collections with your account,")
         puts("read/write them and finally delete them (if everything succeeds).")
         account_path = File.join(File.dirname(__FILE__), "account.yaml")
         if File.exist?(account_path)

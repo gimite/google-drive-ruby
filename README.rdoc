@@ -1,4 +1,4 @@
-This is a Ruby 1.8/1.9 library to read/write files/spreadsheets in Google Drive/Docs.
+This is a Ruby 1.8/1.9/2.0 library to read/write files/spreadsheets in Google Drive/Docs.
 
 NOTE: This is NOT a library to create Google Drive App.
 
@@ -83,7 +83,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.8.x and Ruby 1.9.x. Checked with Ruby 1.8.7 and Ruby 1.9.3.
+Ruby 1.8.x, 1.9.x and 2.0.x. Checked with Ruby 1.8.7, 1.9.3 and 2.0.0.
 
 
 = Author
