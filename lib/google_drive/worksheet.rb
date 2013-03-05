@@ -17,12 +17,13 @@ module GoogleDrive
 
         include(Util)
 
-        def initialize(session, spreadsheet, cells_feed_url, title = nil) #:nodoc:
+        def initialize(session, spreadsheet, cells_feed_url, title = nil, updated = nil) #:nodoc:
           
           @session = session
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
+          @updated = updated
 
           @cells = nil
           @input_values = nil
@@ -181,6 +182,12 @@ module GoogleDrive
         def title
           reload() if !@title
           return @title
+        end
+
+         # Date updated of the worksheet (shown as tab label in Web interface).
+        def updated
+          reload() if !@updated
+          return @updated
         end
 
         # Updates title of the worksheet.

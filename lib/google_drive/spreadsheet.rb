@@ -173,9 +173,10 @@ module GoogleDrive
           result = []
           doc.css("entry").each() do |entry|
             title = entry.css("title").text
+            updated = entry.css("updated").text
             url = entry.css(
               "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, self, url, title))
+            result.push(Worksheet.new(@session, self, url, title, updated))
           end
           return result.freeze()
         end
