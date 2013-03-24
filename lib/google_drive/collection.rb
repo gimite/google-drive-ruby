@@ -116,23 +116,38 @@ module GoogleDrive
           return files_with_type("folder", params)
         end
         
+        # Returns a file (can be a spreadsheet, document, subcollection or other files) in the
+        # collection which exactly matches +title+ as GoogleDrive::File.
+        # Returns nil if not found. If multiple collections with the +title+ are found, returns
+        # one of them.
+        #
+        # If given an Array, does a recursive subcollection traversal.
+        def file_by_title(title)
+          return file_by_title_with_type(title, nil)
+        end
+        
         # Returns its subcollection whose title exactly matches +title+ as GoogleDrive::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
         # one of them.
         #
-        # If given an Array does a recursive subfolder traversal.
+        # If given an Array, does a recursive subcollection traversal.
         def subcollection_by_title(title)
-          if title.respond_to? :shift
-            relpath = title
-            if relpath.length == 1
-              return subcollection_by_title relpath[0]
+          return file_by_title_with_type(title, "folder")
+        end
+        
+      protected
+
+        def file_by_title_with_type(title, type)
+          if title.is_a?(Array)
+            rel_path = title
+            if rel_path.empty?
+              return self
             else
-              subcollection_title = relpath.shift
-              subcollection = subcollection_by_title subcollection_title
-              return subcollection.subcollection_by_title relpath
+              parent = subcollection_by_title(rel_path[0...-1])
+              return parent && parent.file_by_title_with_type(rel_path[-1], type)
             end
           else
-            return subcollections("title" => title, "title-exact" => "true")[0]
+            return files_with_type(type, "title" => title, "title-exact" => "true")[0]
           end
         end
         

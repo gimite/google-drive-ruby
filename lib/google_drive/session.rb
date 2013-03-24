@@ -133,22 +133,11 @@ module GoogleDrive
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
         #
-        # If given an Array, traverse folders by title:
-        #   session.file_by_title ['myfolder', 'mysubfolder/even/w/slash', 'myfile' ]
+        # If given an Array, traverses collections by title. e.g.
+        #   session.file_by_title(["myfolder", "mysubfolder/even/w/slash", "myfile"])
         def file_by_title(title)
-          if title.respond_to? :pop
-            path = title
-            if path.any?
-              if path.size > 1
-                basetitle = path.pop
-                collection = root_collection.subcollection_by_title path
-                return collection.files("title" => basetitle, "title-exact" => "true")[0]
-              else
-                return file_by_title path[0]
-              end
-            else
-              return nil
-            end
+          if title.is_a?(Array)
+            return self.root_collection.file_by_title(title)
           else
             return files("title" => title, "title-exact" => "true")[0]
           end

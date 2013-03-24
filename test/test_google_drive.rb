@@ -16,7 +16,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
     @@session = nil
 
-
     def test_spreadsheet_online()
 
       session = get_session()
@@ -210,9 +209,18 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("", file2.download_to_string())
 
       # Checks if file exists in root.
-      files = root.files("title" => test_file_title, "title-exact" => true)
-      assert_equal(1, files.size)
-      assert_equal(test_file_title, files[0].title)
+      tfile = session.file_by_title(test_file_title)
+      assert_not_nil(tfile)
+      assert_equal(test_file_title, tfile.title)
+      tfile = root.file_by_title(test_file_title)
+      assert_not_nil(tfile)
+      assert_equal(test_file_title, tfile.title)
+      tfiles = root.files("title" => test_file_title, "title-exact" => true)
+      assert_equal(1, tfiles.size)
+      assert_equal(test_file_title, tfiles[0].title)
+      tfile = session.file_by_title([test_file_title])
+      assert_not_nil(tfile)
+      assert_equal(test_file_title, tfile.title)
 
       # Moves file to collection.
       collection.add(file)
@@ -220,9 +228,15 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Checks if file exists in collection.
       assert(root.files("title" => test_file_title, "title-exact" => true).empty?)
-      files = collection.files("title" => test_file_title, "title-exact" => true)
-      assert_equal(1, files.size)
-      assert_equal(test_file_title, files[0].title)
+      tfile = collection.file_by_title(test_file_title)
+      assert_not_nil(tfile)
+      assert_equal(test_file_title, tfile.title)
+      tfiles = collection.files("title" => test_file_title, "title-exact" => true)
+      assert_equal(1, tfiles.size)
+      assert_equal(test_file_title, tfiles[0].title)
+      tfile = session.file_by_title([test_collection_title, test_file_title])
+      assert_not_nil(tfile)
+      assert_equal(test_file_title, tfile.title)
 
       # Deletes files.
       delete_test_file(file, true)
