@@ -1,6 +1,8 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
+require "time"
+
 require "google_drive/util"
 require "google_drive/error"
 require "google_drive/worksheet"
@@ -173,9 +175,10 @@ module GoogleDrive
           result = []
           doc.css("entry").each() do |entry|
             title = entry.css("title").text
+            updated = Time.parse(entry.css("updated").text)
             url = entry.css(
               "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, self, url, title))
+            result.push(Worksheet.new(@session, self, url, title, updated))
           end
           return result.freeze()
         end
