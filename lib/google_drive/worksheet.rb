@@ -92,6 +92,13 @@ module GoogleDrive
           @modified.add([row, col])
           self.max_rows = row if row > @max_rows
           self.max_cols = col if col > @max_cols
+          if value.empty?
+            @num_rows = nil
+            @num_cols = nil
+          else
+            @num_rows = row if row > num_rows
+            @num_cols = col if col > num_cols
+          end
         end
 
         # Updates cells in a rectangle area by a two-dimensional Array.
@@ -141,13 +148,13 @@ module GoogleDrive
         # Row number of the bottom-most non-empty row.
         def num_rows
           reload() if !@cells
-          return @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| r }.max || 0
+          @num_rows ||= @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| r }.max || 0
         end
 
         # Column number of the right-most non-empty column.
         def num_cols
           reload() if !@cells
-          return @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| c }.max || 0
+          @num_cols ||= @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| c }.max || 0
         end
 
         # Number of rows including empty rows.
@@ -223,6 +230,9 @@ module GoogleDrive
           @max_rows = doc.css("gs|rowCount").text.to_i()
           @max_cols = doc.css("gs|colCount").text.to_i()
           @title = doc.css("feed > title")[0].text
+
+          @num_cols = nil
+          @num_rows = nil
 
           @cells = {}
           @input_values = {}
