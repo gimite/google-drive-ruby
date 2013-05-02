@@ -159,9 +159,22 @@ module GoogleDrive
           contents_url = concat_url(contents_url, "?" + encode_query(params))
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
-          return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
+          return get_all_entries(doc, type, header, params)
         end
-        
+
+        def get_all_entries(doc, type, header, params = {})
+          entry_elements = []
+          entry_elements.concat doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
+          next_links = doc.css('link[rel="next"]')
+          if next_links.count < 1
+            return entry_elements
+          else
+            next_url = next_links.first.attributes['href'].value
+            next_doc = @session.request(:get, next_url, :header => header, :auth => :writely)
+            entry_elements.concat get_all_entries(next_doc, type, header, params)
+            return entry_elements
+          end
+        end 
     end
     
 end
