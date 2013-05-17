@@ -296,6 +296,27 @@ class TC_GoogleDrive < Test::Unit::TestCase
       
     end
 
+    def test_acl_update
+      session = get_session()
+
+      test_file_title = "#{PREFIX}acl-update-test-file"
+      # Removes test files/collections in the previous run in case the previous run failed.
+      for file in session.files("title" => test_file_title, "title-exact" => true)
+        delete_test_file(file, true)
+      end
+
+      file = session.upload_from_string("hoge", test_file_title, :content_type => "text/plain", :convert => false)
+      file.acl.push({:scope_type => "default", :with_key => true, :role => "writer"})
+      acl = file.acl(:reload => true)
+      assert_equal("writer", acl[1].role)
+
+      # now change the role
+      acl[1].role = 'reader'
+      assert_equal("reader", acl[1].role)
+
+      delete_test_file(file, true)
+    end
+
     def get_session()
       if !@@session
         puts("\nThis test will create files/spreadsheets/collections with your account,")

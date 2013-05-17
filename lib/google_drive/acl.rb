@@ -70,7 +70,7 @@ module GoogleDrive
           @acls.delete(entry)
         end
 
-        def update_role(entry, role) #:nodoc:
+        def update_role(entry) #:nodoc:
 
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
           doc = @session.request(
