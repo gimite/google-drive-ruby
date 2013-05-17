@@ -44,7 +44,8 @@ module GoogleDrive
         # e.g.
         #   spreadsheet.acl[1].role = "writer"
         def role=(role)
-          @params[:acl].update_role(self, role)
+          @params[:role] = role
+          @params[:acl].update_role(self)
         end
 
         def inspect
