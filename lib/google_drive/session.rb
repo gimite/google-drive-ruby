@@ -335,7 +335,8 @@ module GoogleDrive
               :auth => :writely)
           initial_url = doc.css(
               "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
-          return upload_raw(:post, initial_url, io, title, params)
+          entry = upload_raw(:post, initial_url, io, title, params)
+          return entry_element_to_file(entry)
         end
 
         def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
@@ -397,7 +398,7 @@ module GoogleDrive
                 :put, upload_url, :header => upload_header, :data => "", :auth => :writely)
           end
           
-          return entry_element_to_file(doc.root)
+          return doc.root
           
         end
         
