@@ -200,7 +200,19 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_nil(session.spreadsheets("title" => ss_title).
         find(){ |s| s.title == ss_title })
       delete_test_file(ss, true)
+    
+    end
 
+    def test_range_calculation()
+      w = GoogleDrive::Worksheet.new(nil,nil,nil)
+      {
+        "A1:D1" => ["A1", "B1", "C1", "D1"],
+        "A1:B2" => ["A1", "B1", "A2", "B2"],
+        "Y1:AB1" => ["Y1", "Z1", "AA1", "AB1"],
+        "ZY1:AAB1" => ["ZY1", "ZZ1", "AAA1", "AAB1"]
+      }.each_pair do |range, array|
+        assert_equal array, w.send(:parse_range, range)
+      end
     end
 
     # Tests various manipulations with files and collections.

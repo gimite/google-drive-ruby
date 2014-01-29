@@ -73,7 +73,7 @@ module GoogleDrive
         #   worksheet["A2:A3"]  #=> ["hoge", "doge"]
         def [](*args)
           if args[0] =~ /^[A-Z]+[0-9]+:[A-Z]+[0-9]+$/
-            parse_range(args).map{ |cell| send(:[], cell) }
+            parse_range(*args).map{ |cell| send(:[], cell) }
           else
             (row, col) = parse_cell_args(args)
             return self.cells[[row, col]] || ""
@@ -498,14 +498,19 @@ module GoogleDrive
           end
         end
         
-        def parse_range(args)
-          
+        def parse_range(*args)
           return [] unless args.size == 1 && args[0].is_a?(String)
           
           if parts = args[0].match(/^([A-Z]+)([0-9]+):([A-Z]+)([0-9]+)$/)
             cell_refs = []
-            (parts[2]..parts[4]).each do |row|
-              (parts[1]..parts[3]).each do |col|
+            row_range = parts[2]..parts[4]
+            row_range.each do |row|
+              if parts[1].length == parts[3].length
+                col_range = parts[1]..parts[3]
+              else
+                col_range = (parts[1]..("Z"*parts[1].length)).to_a + (("A"*parts[3].length)..parts[3]).to_a
+              end
+              col_range.each do |col|
                 cell_refs << "#{col}#{row}"
               end
             end
