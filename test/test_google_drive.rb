@@ -159,6 +159,50 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
     end
 
+    def test_spreadsheet_ranges()
+
+      session = get_session()
+
+      ss_title = "#{PREFIX}spreadsheet"
+      ss_copy_title = "#{PREFIX}spreadsheet-copy"
+
+      # Removes test spreadsheets in the previous run in case the previous run failed.
+      for ss in session.files("title" => ss_title, "title-exact" => true)
+        delete_test_file(ss, true)
+      end
+      for ss in session.files("title" => ss_copy_title, "title-exact" => true)
+        delete_test_file(ss, true)
+      end
+
+      ss = session.create_spreadsheet(ss_title)
+      assert_equal(ss_title, ss.title)
+
+      ws = ss.worksheets[0]
+      ws[1, 1] = "1"
+      ws[1, 2] = "2"
+      ws[1, 3] = "3"
+      ws[1, 4] = "4"
+      ws[2, 1] = "5"
+      ws[2, 2] = "6"
+      ws[2, 3] = "7"
+      ws[2, 4] = "8"
+      ws.save()
+
+      ws.reload()
+      cells = ws["B1:C2"]
+      assert_equal(4, cells.length)
+      assert_equal("2", cells[0])
+      assert_equal("3", cells[1])
+      assert_equal("6", cells[2])
+      assert_equal("7", cells[3])
+
+      delete_test_file(ss)
+      assert_nil(session.spreadsheets("title" => ss_title).
+        find(){ |s| s.title == ss_title })
+      delete_test_file(ss, true)
+
+    end
+
     # Tests various manipulations with files and collections.
     def test_collection_and_file_online()
 
