@@ -487,7 +487,7 @@ module GoogleDrive
             end
           else
             raise(ArgumentError,
-                "Arguments must be either one String or two Integer's, but are %p" % [args])
+                "Arguments must be either one String or two Integers, but are %p" % [args])
           end
         end
         
