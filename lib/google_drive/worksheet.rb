@@ -372,6 +372,18 @@ module GoogleDrive
           return !@modified.empty?
         end
 
+        def clear_row(row_num)
+          for cell in 1..self.num_cols
+            self[row_num, cell] = ""
+          end
+        end
+
+        def clear_col(col_num)
+          for cell in 1..self.num_rows
+            self[cell, col_num] = ""
+          end
+        end
+
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
         #
