@@ -151,17 +151,14 @@ module GoogleDrive
         #   session.spreadsheets("title" => "hoge")
         #   session.spreadsheets("title" => "hoge", "title-exact" => "true")
         def spreadsheets(params = {})
-          query = encode_query(params)
-          doc = request(
-              :get, "https://spreadsheets.google.com/feeds/spreadsheets/private/full?#{query}")
-          result = []
-          doc.css("feed > entry").each() do |entry|
-            title = entry.css("title").text
-            url = entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
-            result.push(Spreadsheet.new(self, url, title))
-          end
-          return result
+          url = concat_url(
+              "#{DOCS_BASE_URL}/-/spreadsheet?v=3", "?" + encode_query(params))
+          doc = request(:get, url, :auth => :writely)
+          # The API may return non-spreadsheets too when title-exact is specified.
+          # Probably a bug. For workaround, only returns Spreadsheet instances.
+          return doc.css("feed > entry").
+              map(){ |e| entry_element_to_file(e) }.
+              select(){ |f| f.is_a?(Spreadsheet) }
         end
 
         # Returns GoogleDrive::Spreadsheet with given +key+.

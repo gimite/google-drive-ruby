@@ -24,10 +24,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
       ss_copy_title = "#{PREFIX}spreadsheet-copy"
 
       # Removes test spreadsheets in the previous run in case the previous run failed.
-      for ss in session.files("title" => ss_title, "title-exact" => true)
+      for ss in session.files("title" => ss_title, "title-exact" => "true")
         delete_test_file(ss, true)
       end
-      for ss in session.files("title" => ss_copy_title, "title-exact" => true)
+      for ss in session.files("title" => ss_copy_title, "title-exact" => "true")
         delete_test_file(ss, true)
       end
 
@@ -86,7 +86,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal(ss.worksheets_feed_url, ss4.worksheets_feed_url)
 
       assert_not_nil(session.spreadsheets.find(){ |s| s.title == ss_title })
-      assert_not_nil(session.spreadsheets("title" => ss_title).
+      assert_not_nil(session.spreadsheets("title" => ss_title, "title-exact" => "true").
         find(){ |s| s.title == ss_title })
 
       ws2 = session.worksheet_by_url(ws.cells_feed_url)
@@ -94,7 +94,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("hoge", ws2.title)
 
       ss_copy = ss.duplicate(ss_copy_title)
-      assert_not_nil(session.spreadsheets("title" => ss_copy_title).
+      assert_not_nil(session.spreadsheets("title" => ss_copy_title, "title-exact" => "true").
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
 
@@ -150,10 +150,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("7", ws[3, 1])
 
       delete_test_file(ss)
-      assert_nil(session.spreadsheets("title" => ss_title).
+      assert_nil(session.spreadsheets("title" => ss_title, "title-exact" => "true").
         find(){ |s| s.title == ss_title })
       delete_test_file(ss_copy, true)
-      assert_nil(session.spreadsheets("title" => ss_copy_title).
+      assert_nil(session.spreadsheets("title" => ss_copy_title, "title-exact" => "true").
         find(){ |s| s.title == ss_copy_title })
       delete_test_file(ss, true)
 
@@ -174,7 +174,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Removes test files/collections in the previous run in case the previous run failed.
       for title in [test_file_title, test_collection_title]
-        for file in root.files("title" => title, "title-exact" => true, "showfolders" => true)
+        for file in root.files("title" => title, "title-exact" => "true", "showfolders" => "true")
           delete_test_file(file, true)
         end
       end
@@ -220,7 +220,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       tfile = root.file_by_title(test_file_title)
       assert_not_nil(tfile)
       assert_equal(test_file_title, tfile.title)
-      tfiles = root.files("title" => test_file_title, "title-exact" => true)
+      tfiles = root.files("title" => test_file_title, "title-exact" => "true")
       assert_equal(1, tfiles.size)
       assert_equal(test_file_title, tfiles[0].title)
       tfile = session.file_by_title([test_file_title])
@@ -232,11 +232,11 @@ class TC_GoogleDrive < Test::Unit::TestCase
       root.remove(file)
 
       # Checks if file exists in collection.
-      assert(root.files("title" => test_file_title, "title-exact" => true).empty?)
+      assert(root.files("title" => test_file_title, "title-exact" => "true").empty?)
       tfile = collection.file_by_title(test_file_title)
       assert_not_nil(tfile)
       assert_equal(test_file_title, tfile.title)
-      tfiles = collection.files("title" => test_file_title, "title-exact" => true)
+      tfiles = collection.files("title" => test_file_title, "title-exact" => "true")
       assert_equal(1, tfiles.size)
       assert_equal(test_file_title, tfiles[0].title)
       tfile = session.file_by_title([test_collection_title, test_file_title])
@@ -247,17 +247,17 @@ class TC_GoogleDrive < Test::Unit::TestCase
       delete_test_file(file, true)
       delete_test_file(file2, true)
       # Ensure the file is removed from collection.
-      assert(collection.files("title" => test_file_title, "title-exact" => true).empty?)
+      assert(collection.files("title" => test_file_title, "title-exact" => "true").empty?)
       # Ensure the file is removed from Google Drive.
-      assert(session.files("title" => test_file_title, "title-exact" => true).empty?)
+      assert(session.files("title" => test_file_title, "title-exact" => "true").empty?)
 
       # Deletes collection.
       delete_test_file(collection, true)
       # Ensure the collection is removed from the root collection.
-      assert(root.subcollections("title" => test_collection_title, "title-exact" => true).empty?)
+      assert(root.subcollections("title" => test_collection_title, "title-exact" => "true").empty?)
       # Ensure the collection is removed from Google Drive.
       assert(session.files(
-          "title" => test_collection_title, "title-exact" => true, "showfolders" => true).empty?)
+          "title" => test_collection_title, "title-exact" => "true", "showfolders" => "true").empty?)
     end
 
     def test_collection_offline()
@@ -285,7 +285,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       test_file_title = "#{PREFIX}acl-test-file"
 
       # Removes test files/collections in the previous run in case the previous run failed.
-      for file in session.files("title" => test_file_title, "title-exact" => true)
+      for file in session.files("title" => test_file_title, "title-exact" => "true")
         delete_test_file(file, true)
       end
 
