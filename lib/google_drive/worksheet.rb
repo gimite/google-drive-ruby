@@ -64,13 +64,20 @@ module GoogleDrive
 
         # Returns content of the cell as String. Arguments must be either
         # (row number, column number) or cell name. Top-left cell is [1, 1].
+        # You can also specify a range in the format "A1:D5". Cells are returned
+        # as a single array, row by row.
         #
         # e.g.
         #   worksheet[2, 1]  #=> "hoge"
         #   worksheet["A2"]  #=> "hoge"
+        #   worksheet["A2:A3"]  #=> ["hoge", "doge"]
         def [](*args)
-          (row, col) = parse_cell_args(args)
-          return self.cells[[row, col]] || ""
+          if args[0] =~ /^[A-Z]+[0-9]+:[A-Z]+[0-9]+$/
+            parse_range(*args).map{ |cell| send(:[], cell) }
+          else
+            (row, col) = parse_cell_args(args)
+            return self.cells[[row, col]] || ""
+          end
         end
 
         # Updates content of the cell.
@@ -487,8 +494,31 @@ module GoogleDrive
             end
           else
             raise(ArgumentError,
-                "Arguments must be either one String or two Integer's, but are %p" % [args])
+                "Arguments must be either one String or two Integers, but are %p" % [args])
           end
+        end
+        
+        def parse_range(*args)
+          return [] unless args.size == 1 && args[0].is_a?(String)
+          
+          if parts = args[0].match(/^([A-Z]+)([0-9]+):([A-Z]+)([0-9]+)$/)
+            cell_refs = []
+            row_range = parts[2]..parts[4]
+            row_range.each do |row|
+              if parts[1].length == parts[3].length
+                col_range = parts[1]..parts[3]
+              else
+                col_range = (parts[1]..("Z"*parts[1].length)).to_a + (("A"*parts[3].length)..parts[3]).to_a
+              end
+              col_range.each do |col|
+                cell_refs << "#{col}#{row}"
+              end
+            end
+            cell_refs
+          else
+            []
+          end
+          
         end
         
     end
