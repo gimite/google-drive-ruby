@@ -184,10 +184,14 @@ module GoogleDrive
         def spreadsheet_by_url(url)
           # Tries to parse it as URL of human-readable spreadsheet.
           uri = URI.parse(url)
-          if ["spreadsheets.google.com", "docs.google.com"].include?(uri.host) &&
-              uri.path =~ /\/ccc$/
-            if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
-              return spreadsheet_by_key($1)
+          if ["spreadsheets.google.com", "docs.google.com"].include?(uri.host)
+            case uri.path
+              when /\/d\/([^\/]+)/
+                return spreadsheet_by_key($1)
+              when /\/ccc$/
+                if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
+                  return spreadsheet_by_key($1)
+                end
             end
           end
           # Assumes the URL is worksheets feed URL.

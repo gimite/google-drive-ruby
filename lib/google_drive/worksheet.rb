@@ -274,7 +274,9 @@ module GoogleDrive
               </entry>
             EOS
 
-            @session.request(:put, edit_url, :data => xml)
+            @session.request(
+                :put, edit_url, :data => xml,
+                :header => {"Content-Type" => "application/atom+xml", "If-Match" => "*"})
 
             @meta_modified = false
             sent = true
@@ -330,7 +332,7 @@ module GoogleDrive
               EOS
 
               batch_url = concat_url(@cells_feed_url, "/batch")
-              result = @session.request(:post, batch_url, :data => xml)
+              result = @session.request(:post, batch_url, :data => xml, :header => {"If-Match" => "*"})
               for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
