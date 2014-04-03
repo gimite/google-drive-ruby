@@ -246,7 +246,7 @@ module GoogleDrive
             row = cell["row"].to_i()
             col = cell["col"].to_i()
             @cells[[row, col]] = cell.inner_text
-            @input_values[[row, col]] = cell["inputValue"]
+            @input_values[[row, col]] = cell["inputValue"] || cell.inner_text
             numeric_value = cell["numericValue"]
             @numeric_values[[row, col]] = numeric_value ? numeric_value.to_f() : nil
           end
