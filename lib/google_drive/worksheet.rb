@@ -276,7 +276,7 @@ module GoogleDrive
 
             @session.request(
                 :put, edit_url, :data => xml,
-                :header => {"Content-Type" => "application/atom+xml", "If-Match" => "*"})
+                :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
 
             @meta_modified = false
             sent = true

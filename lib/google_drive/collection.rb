@@ -46,7 +46,7 @@ module GoogleDrive
         
         # Adds the given GoogleDrive::File to the collection.
         def add(file)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           xml = <<-"EOS"
             <entry xmlns="http://www.w3.org/2005/Atom">
               <id>#{h(file.document_feed_url)}</id>
@@ -59,7 +59,7 @@ module GoogleDrive
 
         # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
         def create_subcollection(title)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           xml = <<-EOS
             <entry xmlns="http://www.w3.org/2005/Atom">
               <category scheme="http://schemas.google.com/g/2005#kind"
@@ -157,7 +157,7 @@ module GoogleDrive
           contents_url = self.contents_url
           contents_url = concat_url(contents_url, "/-/#{type}") if type
           contents_url = concat_url(contents_url, "?" + encode_query(params))
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
         end

@@ -201,7 +201,7 @@ module GoogleDrive
               <atom:title>#{h(title)}</atom:title>
             </atom:entry>
           EOS
-          header = {"Content-Type" => "application/atom+xml", "If-Match" => "*"}
+          header = {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"}
           @session.request(:put, edit_url, :data => xml, :auth => :writely, :header => header)
         end
         

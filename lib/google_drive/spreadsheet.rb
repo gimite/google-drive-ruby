@@ -105,7 +105,7 @@ module GoogleDrive
         # Creates copy of this spreadsheet with the given title.
         def duplicate(new_title = nil)
           new_title ||= (self.title ? "Copy of " + self.title : "Untitled")
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml"}
+          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           xml = <<-"EOS"
             <entry xmlns='http://www.w3.org/2005/Atom'>
               <id>#{h(self.document_feed_url)}</id>

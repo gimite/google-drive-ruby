@@ -363,7 +363,7 @@ module GoogleDrive
           EOS
           
           default_initial_header = {
-              "Content-Type" => "application/atom+xml",
+              "Content-Type" => "application/atom+xml;charset=utf-8",
               "X-Upload-Content-Type" => content_type,
               "X-Upload-Content-Length" => total_bytes.to_s(),
           }
@@ -427,7 +427,7 @@ module GoogleDrive
           if params[:header]
             extra_header = params[:header]
           elsif data
-            extra_header = {"Content-Type" => "application/atom+xml"}
+            extra_header = {"Content-Type" => "application/atom+xml;charset=utf-8"}
           else
             extra_header = {}
           end
