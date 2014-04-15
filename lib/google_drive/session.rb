@@ -331,13 +331,23 @@ module GoogleDrive
         
         # Uploads a file. Reads content from +io+.
         # Returns a GoogleSpreadsheet::File object.
-        def upload_from_io(io, title = "Untitled", params = {})
+        def upload_from_io(io,  title = "Untitled", params = {})
           doc = request(:get, "#{DOCS_BASE_URL}?v=3",
               :auth => :writely)
           initial_url = doc.css(
               "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
           entry = upload_raw(:post, initial_url, io, title, params)
           return entry_element_to_file(entry)
+        end
+
+        # Uploads a file into a specific folder. Reads content from +io+.
+        # Returns a GoogleSpreadsheet::File object.
+        def upload_from_io_to_folder(io, folder_id, title, params = {})
+          doc = request(:get, "#{DOCS_BASE_URL}/folder%3A#{folder_id}?v=3",
+              :auth => :writely)
+          initial_url = doc.css(
+              "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
+          return upload_raw(:post, initial_url, io, title, params)
         end
 
         def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
