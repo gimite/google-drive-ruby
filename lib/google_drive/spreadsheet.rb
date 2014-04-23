@@ -77,7 +77,7 @@ module GoogleDrive
 
         # URL of feed used in document list feed API.
         def document_feed_url
-          return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
+          return "https://spreadsheets.google.com/feeds/worksheets/#{self.key}/private/full"
         end
 
         # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
@@ -85,8 +85,9 @@ module GoogleDrive
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def spreadsheet_feed_entry(params = {})
           if !@spreadsheet_feed_entry || params[:reload]
+            params = {"GData-Version" => "3.0"}
             @spreadsheet_feed_entry =
-                @session.request(:get, self.spreadsheet_feed_url).css("entry")[0]
+                @session.request(:get, self.spreadsheet_feed_url, params).css("entry")[0]
           end
           return @spreadsheet_feed_entry
         end
