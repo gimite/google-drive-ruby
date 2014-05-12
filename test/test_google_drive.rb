@@ -323,7 +323,8 @@ class TC_GoogleDrive < Test::Unit::TestCase
             password = highline.ask("Password: "){ |q| q.echo = false }
             @@session = GoogleDrive.login(mail, password)
           when "saved_session"
-            @@session = GoogleDrive.saved_session
+            @@session = GoogleDrive.saved_session(
+                account["oauth2_client_id"], account["oauth2_client_secret"])
           when "client_login"
             @@session = GoogleDrive.login(account["mail"], account["password"])
           when "oauth2"

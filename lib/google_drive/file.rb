@@ -2,6 +2,7 @@
 # The license of this source is "New BSD Licence"
 
 require "cgi"
+require "forwardable"
 require "stringio"
 
 require "google_drive/util"
@@ -17,99 +18,63 @@ module GoogleDrive
     class File
 
         include(Util)
+        extend(Forwardable)
         
-        def initialize(session, entry_or_url) #:nodoc:
+        def initialize(session, api_file) #:nodoc:
           @session = session
-          if !entry_or_url
-            # TODO Delete this after editing spreadsheet.rb.
-            @document_feed_entry = nil
-            @document_feed_url = entry_or_url
-          elsif entry_or_url.is_a?(String)
-            @document_feed_entry = nil
-            @document_feed_url = entry_or_url
-          else
-            @document_feed_entry = entry_or_url
-            # This is usually equal to the URL in <link rel="self">. But the URL in
-            # <link rel="self"> in collection feed is e.g.
-            # https://docs.google.com/feeds/default/private/full/folder%3Aroot/contents/folder%3Axxx
-            # and deletion of the URL doesn't delete the file itself.
-            # So we construct the URL here using resource ID instead.
-            @document_feed_url = "%s/%s?v=3" % [DOCS_BASE_URL, CGI.escape(self.resource_id)]
-          end
-          @acl = nil
+          @api_file = api_file
+          delegate_api_methods(self, @api_file, ["title"])
         end
         
-        # URL of feed used in document list feed API.
-        attr_reader(:document_feed_url)
-        
-        # <entry> element of document list feed as Nokogiri::XML::Element.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
-        def document_feed_entry(params = {})
-          if !@document_feed_entry || params[:reload]
-            @document_feed_entry =
-                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
+        def api_file(params = {})
+          if params[:reload]
+            api_result = @session.execute!(
+              :api_method => @session.drive.files.get,
+              :parameters => { "fileId" => self.id })
+            @api_file = api_result.data
           end
-          return @document_feed_entry
+          return @api_file
         end
-
+        
         # Resource ID.
         def resource_id
-          return self.document_feed_entry.css("gd|resourceId").text
+          return "%s:%s" % [self.resource_type, self.id]
         end
 
         # The type of resourse. e.g. "document", "spreadsheet", "folder"
         def resource_type
-          return self.resource_id.split(/:/)[0]
+          return self.mime_type.slice(/^application\/vnd.google-apps.(.+)$/, 1) || "file"
         end
 
         # Title of the file.
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
         def title(params = {})
-          return document_feed_entry(params).css("title").text
+          return api_file(params).title
         end
         
         # URL to view/edit the file in a Web browser.
         #
         # e.g. "https://docs.google.com/file/d/xxxx/edit"
         def human_url
-          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
+          return self.alternate_link
         end
         
-        # ACL feed URL of the file.
-        def acl_feed_url
-          orig_acl_feed_url = self.document_feed_entry.css(
-              "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
-          case orig_acl_feed_url
-            when %r{^https?://docs.google.com/feeds/default/private/full/.*/acl(\?.*)?$}
-              return orig_acl_feed_url
-            when %r{^https?://docs.google.com/feeds/acl/private/full/([^\?]*)(\?.*)?$}
-              # URL of old API version. Converts to v3 URL.
-              return "#{DOCS_BASE_URL}/#{$1}/acl"
-            else
-              raise(GoogleDrive::Error,
-                "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
-          end
-        end
-
         # Content types you can specify in methods download_to_file, download_to_string,
         # download_to_io .
         def available_content_types
-          return self.document_feed_entry.css("content").map(){ |c| c["type"] }
+          if self.api_file.download_url
+            return [self.api_file.mime_type]
+          else
+            return []
+          end
         end
         
         # Downloads the file to a local file.
         #
         # e.g.
         #   file.download_to_file("/path/to/hoge.txt")
-        #   file.download_to_file("/path/to/hoge", :content_type => "text/plain")
         def download_to_file(path, params = {})
-          params = params.dup()
-          if !params[:content_type]
-            params[:content_type] = EXT_TO_CONTENT_TYPE[::File.extname(path).downcase]
-            params[:content_type_is_hint] = true
-          end
           open(path, "wb") do |f|
             download_to_io(f, params)
           end
@@ -119,7 +84,6 @@ module GoogleDrive
         #
         # e.g.
         #   file.download_to_string()                               #=> "Hello world."
-        #   file.download_to_string(:content_type => "text/plain")  #=> "Hello world."
         def download_to_string(params = {})
           sio = StringIO.new()
           download_to_io(sio, params)
@@ -128,41 +92,38 @@ module GoogleDrive
         
         # Downloads the file and writes it to +io+.
         def download_to_io(io, params = {})
-          all_contents = self.document_feed_entry.css("content")
-          if params[:content_type] && (!params[:content_type_is_hint] || all_contents.size > 1)
-            contents = all_contents.select(){ |c| c["type"] == params[:content_type] }
-          else
-            contents = all_contents
-          end
-          if contents.size == 1
-            url = contents[0]["src"]
-          else
-            if contents.empty?
-              raise(GoogleDrive::Error,
-                  ("Downloading with content type %p not supported for this file. " +
-                   "Specify one of these to content_type: %p") %
-                  [params[:content_type], self.available_content_types])
-            else
-              raise(GoogleDrive::Error,
-                  ("Multiple content types are available for this file. " +
-                   "Specify one of these to content_type: %p") %
-                  [self.available_content_types])
-            end
+          if !self.api_file.download_url
+            raise(GoogleDrive::Error, "Downloading is not supported for this file.")
           end
           # TODO Use streaming if possible.
-          body = @session.request(:get, url, :response_type => :raw, :auth => :writely)
-          io.write(body)
+          api_result = @session.execute!(:uri => self.api_file.download_url)
+          io.write(api_result.body)
+        end
+
+        def export_as_file(path, format)
+          open(path, "wb") do |f|
+            export_to_io(f, format)
+          end
         end
         
-        # Updates the file with the content of the local file.
-        #
-        # e.g.
-        #   file.update_from_file("/path/to/hoge.txt")
-        def update_from_file(path, params = {})
-          params = {:file_name => ::File.basename(path)}.merge(params)
-          open(path, "rb") do |f|
-            update_from_io(f, params)
+        def export_as_string(format)
+          sio = StringIO.new()
+          export_to_io(sio, format)
+          return sio.string
+        end
+
+        def export_to_io(io, format)
+          mime_type = EXT_TO_CONTENT_TYPE["." + format] || format
+          export_url = self.export_links[mime_type]
+          if !export_url
+            raise(
+                GoogleDrive::Error,
+                "This file doesn't support export with mime type %p. Supported mime types: %p" %
+                    [mime_type, self.export_links.to_hash().keys])
           end
+          # TODO Use streaming if possible.
+          api_result = @session.execute!(:uri => export_url)
+          io.write(api_result.body)
         end
         
         # Updates the file with +content+.
@@ -170,42 +131,77 @@ module GoogleDrive
         # e.g.
         #   file.update_from_string("Good bye, world.")
         def update_from_string(content, params = {})
-          update_from_io(StringIO.new(content), params)
+          media = new_upload_io(StringIO.new(content), params)
+          return update_from_media(media, params)
         end
         
+        # Updates the file with the content of the local file.
+        #
+        # e.g.
+        #   file.update_from_file("/path/to/hoge.txt")
+        def update_from_file(path, params = {})
+          file_name = ::File.basename(path)
+          params = {:file_name => file_name}.merge(params)
+          media = new_upload_io(path, params)
+          return update_from_media(media, params)
+        end
+
         # Reads content from +io+ and updates the file with the content.
         def update_from_io(io, params = {})
-          params = {:header => {"If-Match" => "*"}}.merge(params)
-          initial_url = self.document_feed_entry.css(
-              "link[rel='http://schemas.google.com/g/2005#resumable-edit-media']")[0]["href"]
-          @document_feed_entry = @session.upload_raw(
-              :put, initial_url, io, self.title, params)
+          media = new_upload_io(io, params)
+          return update_from_media(media, params)
         end
-        
+
+        def update_from_media(media, params = {})
+          api_result = @session.execute!(
+              :api_method => @session.drive.files.update,
+              :media => media,
+              :parameters => {
+                "fileId" => self.id,
+                "uploadType" => "media",
+              })
+          return @session.wrap_api_file(api_result.data)
+        end
+
         # If +permanent+ is +false+, moves the file to the trash.
         # If +permanent+ is +true+, deletes the file permanently.
         def delete(permanent = false)
-          url = to_v3_url(self.document_feed_url)
-          url = concat_url(url, "?delete=true") if permanent
-          @session.request(:delete, url,
-            :auth => :writely, :header => {"If-Match" => "*"})
+          if permanent
+            @session.execute!(
+                :api_method => @session.drive.files.delete,
+                :parameters => {"fileId" => self.id})
+          else
+            @session.execute!(
+                :api_method => @session.drive.files.trash,
+                :parameters => {"fileId" => self.id})
+          end
+          return nil
         end
 
         # Renames title of the file.
         def rename(title)
-          edit_url = self.document_feed_entry.css("link[rel='edit']").first["href"]
-          xml = <<-"EOS"
-            <atom:entry
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                xmlns:docs="http://schemas.google.com/docs/2007">
-              <atom:title>#{h(title)}</atom:title>
-            </atom:entry>
-          EOS
-          header = {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"}
-          @session.request(:put, edit_url, :data => xml, :auth => :writely, :header => header)
+          api_result = @session.execute!(
+              :api_method => @session.drive.files.patch,
+              :body_object => {"title" => title},
+              :parameters => {"fileId" => self.id})
+          @api_file = api_result.data
         end
         
         alias title= rename
+
+        # Creates copy of this file with the given title.
+        def copy(title)
+          copied_file = @session.drive.files.copy.request_schema.new({
+              "title" => title,
+          })
+          api_result = @session.execute!(
+              :api_method => @session.drive.files.copy,
+              :body_object => copied_file,
+              :parameters => {"fileId" => self.id})
+          return @session.wrap_api_file(api_result.data)
+        end
+
+        alias duplicate copy
         
         # Returns GoogleDrive::Acl object for the file.
         #
@@ -235,15 +231,13 @@ module GoogleDrive
         #   file.acl.delete(file.acl[1])
         def acl(params = {})
           if !@acl || params[:reload]
-            @acl = Acl.new(@session, self.acl_feed_url)
+            @acl = Acl.new(@session, self)
           end
           return @acl
         end
 
         def inspect
-          fields = {:document_feed_url => self.document_feed_url}
-          fields[:title] = self.title if @document_feed_entry
-          return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
+          return "\#<%p id=%p title=%p>" % [self.class, self.id, self.title]
         end
         
     end

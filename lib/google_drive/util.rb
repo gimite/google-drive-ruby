@@ -3,14 +3,13 @@
 
 require "cgi"
 
+require "google/api_client"
+
 
 module GoogleDrive
     
     module Util #:nodoc:
 
-        # The beginning of Doc List API URL that is used in all requests (version 3).
-        DOCS_BASE_URL = "https://docs.google.com/feeds/default/private/full"
-        
         EXT_TO_CONTENT_TYPE = {
             ".csv" =>"text/csv",
             ".tsv" =>"text/tab-separated-values",
@@ -49,18 +48,69 @@ module GoogleDrive
               (result_query.empty? ? "" : "?#{result_query}")
         end
 
-        # Returns a URL with added version parameter ("?v=3") if needed.
-        def to_v3_url(url)
-          if url =~ %r{docs.google.com/feeds/default/private/} && !(url =~ /[?&]v=3/)
-            return concat_url(url, "?v=3")
-          else
-            return url
-          end
-        end
-
         def h(str)
           # Should also escape "\n" to keep it in cell contents.
           return CGI.escapeHTML(str.to_s()).gsub(/\n/, '&#x0a;')
+        end
+        
+        def construct_query(arg)
+          case arg
+            when String
+              return arg
+            when Array
+              if arg[0].scan(/\?/).size != arg.size - 1
+                raise(
+                    ArgumentError,
+                    "The number of placeholders doesn't match the number of arguments: %p" % [arg])
+              end
+              i = 1
+              return arg[0].gsub(/\?/) do
+                v = arg[i]
+                i += 1
+                case v
+                  when String
+                    "'%s'" % v.gsub(/['\\]/){ "\\" + $& }
+                  when Time
+                    "'%s'" % v.iso8601
+                  when TrueClass
+                    "true"
+                  when FalseClass
+                    "false"
+                  else
+                    raise(ArgumentError, "Expected String, Time, true or false, but got %p" % [v])
+                end
+              end
+            else
+              raise(ArgumentError, "Expected String or Array, but got %p" % [arg])
+          end
+        end
+
+        def construct_and_query(args)
+          return args.select(){ |a| a }.map(){ |a| "(%s)" % construct_query(a) }.join(" and ")
+        end
+
+        def singleton_class(obj)
+          class << obj
+            return self
+          end
+        end
+
+        def delegate_api_methods(obj, api_obj, exceptions = [])
+          sc = singleton_class(obj)
+          names = api_obj.class.keys.keys - exceptions
+          names.each() do |name|
+            sc.__send__(:define_method, name) do
+              api_obj.__send__(name)
+            end
+          end
+        end
+
+        def new_upload_io(path_or_io, params)
+          content_type =
+              params[:content_type] ||
+              (params[:file_name] ? EXT_TO_CONTENT_TYPE[::File.extname(params[:file_name]).downcase] : nil) ||
+              "application/octet-stream"
+          return Google::APIClient::UploadIO.new(path_or_io, content_type)
         end
         
     end

@@ -3,16 +3,16 @@
 
 require "set"
 
-require "google_drive/util"
-require "google_drive/error"
-require "google_drive/table"
-require "google_drive/list"
+require "google_drive_v1/util"
+require "google_drive_v1/error"
+require "google_drive_v1/table"
+require "google_drive_v1/list"
 
 
-module GoogleDrive
+module GoogleDriveV1
 
     # A worksheet (i.e. a tab) in a spreadsheet.
-    # Use GoogleDrive::Spreadsheet#worksheets to get GoogleDrive::Worksheet object.
+    # Use GoogleDriveV1::Spreadsheet#worksheets to get GoogleDriveV1::Worksheet object.
     class Worksheet
 
         include(Util)
@@ -43,18 +43,18 @@ module GoogleDrive
           # from it.
           if !(@cells_feed_url =~
               %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
-            raise(GoogleDrive::Error,
+            raise(GoogleDriveV1::Error,
               "Cells feed URL is in unknown format: #{@cells_feed_url}")
           end
           return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
         end
 
-        # GoogleDrive::Spreadsheet which this worksheet belongs to.
+        # GoogleDriveV1::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
             if !(@cells_feed_url =~
                 %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full(\?.*)?$})
-              raise(GoogleDrive::Error,
+              raise(GoogleDriveV1::Error,
                 "Cells feed URL is in unknown format: #{@cells_feed_url}")
             end
             @spreadsheet = @session.spreadsheet_by_key($1)
@@ -337,11 +337,11 @@ module GoogleDrive
               for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
-                  raise(GoogleDrive::Error, "Update has failed: %s" %
+                  raise(GoogleDriveV1::Error, "Update has failed: %s" %
                     interrupted["reason"])
                 end
                 if !(entry.css("batch|status").first["code"] =~ /^2/)
-                  raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
+                  raise(GoogleDriveV1::Error, "Updating cell %s has failed: %s" %
                     [entry.css("atom|id").text, entry.css("batch|status")[0]["reason"]])
                 end
               end
@@ -378,7 +378,7 @@ module GoogleDrive
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
         #
-        # Creates table for the worksheet and returns GoogleDrive::Table.
+        # Creates table for the worksheet and returns GoogleDriveV1::Table.
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
@@ -434,7 +434,7 @@ module GoogleDrive
         end
         
         # Provides access to cells using column names, assuming the first row contains column
-        # names. Returned object is GoogleDrive::List which you can use mostly as
+        # names. Returned object is GoogleDriveV1::List which you can use mostly as
         # Array of Hash.
         #
         # e.g. Assuming the first row is ["x", "y"]:

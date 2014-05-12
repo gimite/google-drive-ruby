@@ -1,13 +1,22 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "json"
-require "google/api_client"
-
-require "google_drive/session"
+require "google_drive_v1/session"
 
 
-module GoogleDrive
+module GoogleDriveV1
+
+    # Authenticates with given +mail+ and +password+, and returns GoogleDriveV1::Session
+    # if succeeds. Raises GoogleDriveV1::AuthenticationError if fails.
+    # Google Apps account is supported.
+    #
+    # +proxy+ can be nil or return value of Net::HTTP.Proxy. If +proxy+ is specified, all
+    # HTTP access in the session uses the proxy. If +proxy+ is nil, it uses the proxy
+    # specified by http_proxy environment variable if available. Otherwise it performs direct
+    # access.
+    def self.login(mail, password, proxy = nil)
+      return Session.login(mail, password, proxy)
+    end
 
     # Authenticates with given OAuth1 or OAuth2 token.
     #
@@ -34,14 +43,14 @@ module GoogleDrive
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth_token = client.auth_code.get_token(
     #       authorization_code, :redirect_uri => "http://example.com/")
-    #   session = GoogleDrive.login_with_oauth(auth_token.token)
+    #   session = GoogleDriveV1.login_with_oauth(auth_token.token)
     #
     # Or, from existing refresh token:
     #
     #   auth_token = OAuth2::AccessToken.from_hash(client,
     #       {:refresh_token => refresh_token, :expires_at => expires_at})
     #   auth_token = auth_token.refresh!
-    #   session = GoogleDrive.login_with_oauth(auth_token.token)
+    #   session = GoogleDriveV1.login_with_oauth(auth_token.token)
     #
     # If your app is not a Web app, use "urn:ietf:wg:oauth:2.0:oob" as redirect_url. Then
     # authorization code is shown after authorization.
@@ -66,72 +75,59 @@ module GoogleDrive
     # - http://code.google.com/apis/accounts/docs/OAuth2.html
     # - http://oauth.rubyforge.org/
     # - http://code.google.com/apis/accounts/docs/OAuth.html
-    def self.login_with_oauth(client_or_access_token, proxy = nil)
-      return Session.new(client_or_access_token, proxy)
+    def self.login_with_oauth(access_token, proxy = nil)
+      return Session.login_with_oauth(access_token, proxy)
     end
 
-    # Restores GoogleDrive::Session from +path+ and returns it.
+    # Restores session using return value of auth_tokens method of previous session.
+    #
+    # See GoogleDriveV1.login for description of parameter +proxy+.
+    def self.restore_session(auth_tokens, proxy = nil)
+      return Session.restore_session(auth_tokens, proxy)
+    end
+    
+    # Restores GoogleDriveV1::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts mail and password on console,
     # authenticates with them, stores the session to +path+ and returns it.
     #
     # See login for description of parameter +proxy+.
     #
     # This method requires Highline library: http://rubyforge.org/projects/highline/
-    def self.saved_session(
-        client_id, client_secret, path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil)
-
+    def self.saved_session(path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil)
+      tokens = {}
       if ::File.exist?(path)
-        lines = ::File.readlines(path)
-        case lines.size
-          when 1
-            token_data = JSON.parse(lines[0].chomp())
-          when 2
-            # Old format.
-            token_data = nil
-          else
-            raise(ArgumentError, "Not a token file: %s" % path)
+        open(path) do |f|
+          for auth in [:wise, :writely]
+            line = f.gets()
+            tokens[auth] = line && line.chomp()
+          end
         end
-      else
-        token_data = nil
       end
-
-      client = Google::APIClient.new()
-      auth = client.authorization
-      auth.client_id = client_id
-      auth.client_secret = client_secret
-      auth.scope =
-          "https://www.googleapis.com/auth/drive " +
-          "https://spreadsheets.google.com/feeds/"
-      auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
-
-      if token_data
-
-        auth.access_token = token_data["access_token"]
-        auth.refresh_token = token_data["refresh_token"]
-        auth.expires_in = token_data["expires_in"]
-        auth.issued_at = Time.iso8601(token_data["issued_at"])
-        auth.fetch_access_token!()
-
-      else
-
-        $stderr.print("\n1. Open this page:\n%s\n\n" % auth.authorization_uri)
-        $stderr.print("2. Enter the authorization code shown in the page: ")
-        auth.code = $stdin.gets().chomp()
-        auth.fetch_access_token!()
-        token_data = {
-            "access_token" => auth.access_token,
-            "refresh_token" => auth.refresh_token,
-            "expires_in" => auth.expires_in,
-            "issued_at" => auth.issued_at.iso8601,
-        }
+      session = Session.new(tokens, nil, proxy)
+      session.on_auth_fail = proc() do
+        begin
+          require "highline"
+        rescue LoadError
+          raise(LoadError,
+            "GoogleDriveV1.saved_session requires Highline library.\n" +
+            "Run\n" +
+            "  \$ sudo gem install highline\n" +
+            "to install it.")
+        end
+        highline = HighLine.new()
+        mail = highline.ask("Mail: ")
+        password = highline.ask("Password: "){ |q| q.echo = false }
+        session.login(mail, password)
         open(path, "w", 0600) do |f|
-          f.puts(JSON.dump(token_data))
+          f.puts(session.auth_token(:wise))
+          f.puts(session.auth_token(:writely))
         end
-
+        true
       end
-
-      return GoogleDrive.login_with_oauth(client)
-
+      if !session.auth_token
+        session.on_auth_fail.call()
+      end
+      return session
     end
     
 end
