@@ -257,7 +257,8 @@ module GoogleDrive
         end
 
         # Saves your changes made by []=, etc. to the server.
-        def save()
+        # If chunk_size is 0 then sending in chunks is disabled
+        def save(chunk_size = 25)
           
           sent = false
 
@@ -301,9 +302,12 @@ module GoogleDrive
               cell_entries[[row, col]] = entry
             end
 
+            if chunk_size == 0
+              chunk_size = @modified.length()
+            end
             # Updates cell values using batch operation.
             # If the data is large, we split it into multiple operations, otherwise batch may fail.
-            @modified.each_slice(25) do |chunk|
+            @modified.each_slice(chunk_size) do |chunk|
 
               xml = <<-EOS
                 <feed xmlns="http://www.w3.org/2005/Atom"
