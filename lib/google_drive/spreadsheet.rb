@@ -126,14 +126,8 @@ module GoogleDrive
         # exported.
         def export_as_string(format, worksheet_index = nil)
           gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
-          format_string = "&format=#{format}"
-          if self.human_url.match("edit")
-            url = self.human_url.gsub(/edit/, "export") + gid_param + format_string
-          else
-            url =
-              "https://spreadsheets.google.com/feeds/download/spreadsheets/Export" +
-              "?key=#{key}&exportFormat=#{format}#{gid_param}"
-          end
+          format_string = "exportFormat=csv"
+          url = "https://docs.google.com/a/jombay.com/spreadsheets/d/#{key}/export?#{format_string}#{gid_param}"
           return @session.request(:get, url, :response_type => :raw)
         end
         
