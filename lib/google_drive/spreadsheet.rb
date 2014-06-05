@@ -125,9 +125,8 @@ module GoogleDrive
         # In format such as "csv", only the worksheet specified with +worksheet_index+ is
         # exported.
         def export_as_string(format, worksheet_index = nil)
-          gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
           format_string = "exportFormat=csv"
-          url = "https://docs.google.com/a/jombay.com/spreadsheets/d/#{key}/export?#{format_string}#{gid_param}"
+          url = "https://docs.google.com/a/jombay.com/spreadsheets/d/#{key}/export?#{format_string}"
           return @session.request(:get, url, :response_type => :raw)
         end
         
