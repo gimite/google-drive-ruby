@@ -48,8 +48,8 @@ module GoogleDrive
         #   spreadsheet.acl.push(
         #       {:scope_type => "default", :with_key => true, :role => "reader"})
         def push(params)
-          # TODO Support old params
-          new_permission = @session.drive.permissions.insert.request_schema.new(params)
+          new_permission = @session.drive.permissions.insert.request_schema.new(
+              convert_params(params))
           api_result = @session.execute!(
               :api_method => @session.drive.permissions.insert,
               :body_object => new_permission,
@@ -87,6 +87,26 @@ module GoogleDrive
 
         def inspect
           return "\#<%p %p>" % [self.class, @entries]
+        end
+
+      private
+
+        def convert_params(orig_params)
+          new_params = {}
+          for k, v in orig_params
+            k = k.to_s()
+            case k
+              when "scope_type"
+                new_params["type"] = (v == "default" ? "anyone" : v)
+              when "scope"
+                new_params["value"] = v
+              when "with_key"
+                new_params["withLink"] = v
+              else
+                new_params[k] = v
+            end
+          end
+          return new_params
         end
 
     end

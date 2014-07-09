@@ -55,8 +55,10 @@ module GoogleDrive
         
         def construct_query(arg)
           case arg
+
             when String
               return arg
+
             when Array
               if arg[0].scan(/\?/).size != arg.size - 1
                 raise(
@@ -80,6 +82,46 @@ module GoogleDrive
                     raise(ArgumentError, "Expected String, Time, true or false, but got %p" % [v])
                 end
               end
+
+            when Hash
+              # For backward compatibility with the old API using Document List API.
+              terms = []
+              showfolders = "false"
+              for k, v in arg
+                case k.to_s()
+                  when "title"
+                    terms.push(["title contains ?", v])
+                  when "title-exact"
+                    terms.push(["title = ?", v])
+                  when "opened-min"
+                    terms.push(["lastViewedByMeDate >= ?", v])
+                  when "opened-max"
+                    terms.push(["lastViewedByMeDate <= ?", v])
+                  when "edited-min"
+                    terms.push(["modifiedDate >= ?", v])
+                  when "edited-max"
+                    terms.push(["modifiedDate <= ?", v])
+                  when "owner"
+                    terms.push(["? in owners", v])
+                  when "writer"
+                    terms.push(["? in writers", v])
+                  when "reader"
+                    terms.push(["? in readers", v])
+                  when "showfolders"
+                    showfolders = v
+                  when "showdeleted"
+                    # TODO
+                  when "ocr", "targetLanguage", "sourceLanguage"
+                    raise(ArgumentError, "'%s' parameter is no longer supported." % k)
+                  else
+                    raise(ArgumentError, "Unknown parameter: '%s'" % k)
+                end
+              end
+              if showfolders.to_s() == "false"
+                terms.push("mimeType != 'application/vnd.google-apps.folder'")
+              end
+              return construct_and_query(terms)
+
             else
               raise(ArgumentError, "Expected String or Array, but got %p" % [arg])
           end
