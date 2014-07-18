@@ -176,8 +176,7 @@ module GoogleDrive
         # Reads content from +io+ and updates the file with the content.
         def update_from_io(io, params = {})
           params = {:header => {"If-Match" => "*"}}.merge(params)
-          initial_url = self.document_feed_entry.css(
-              "link[rel='http://schemas.google.com/g/2005#resumable-edit-media']")[0]["href"]
+          initial_url = self.document_feed_entry.css("link[rel='edit-media']")[0]['href']
           @document_feed_entry = @session.upload_raw(
               :put, initial_url, io, self.title, params)
         end
