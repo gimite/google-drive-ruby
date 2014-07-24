@@ -118,6 +118,18 @@ module GoogleDrive
               "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(@session, ss_url, new_title)
         end
+        
+        # Gets JSON string from specified worksheet. To get the rows do:
+        # require 'json'
+        # json_string = spreadsheet.get_json(worksheet_index) # worksheet_index is optional. defaults to 0.
+        # json_object = JSON.parse(json_string)
+        # rows = json_object['feed']['entry']
+
+        def get_json(worksheet_index = 0)
+          ws = worksheets[worksheet_index]
+          url = ws.list_feed_url + "?alt=json"
+          return @session.request(:get, url, response_type: :raw)
+        end
 
         # Exports the spreadsheet in +format+ and returns it as String.
         #
