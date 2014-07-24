@@ -23,7 +23,7 @@ module GoogleDrive
             # The root collection doesn't have document feed.
             return concat_url(ROOT_URL, "/contents")
           else
-            return self.document_feed_entry.css(
+            return self.feed_entry.css(
                 "content[type='application/atom+xml;type=feed']")[0]["src"]
           end
         end

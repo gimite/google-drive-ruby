@@ -35,7 +35,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal(ss_title, ss.title)
 
       ws = ss.worksheets[0]
-      assert_equal(ss.worksheets_feed_url, ws.spreadsheet.worksheets_feed_url)
+      assert_equal(ss.feed_url, ws.spreadsheet.feed_url)
       ws.title = "hoge"
       ws.max_rows = 20
       ws.max_cols = 10
@@ -69,7 +69,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       ss2 = session.spreadsheet_by_key(ss.key)
       assert_equal(ss_title, ss2.title)
-      assert_equal(ss.worksheets_feed_url, ss2.worksheets_feed_url)
+      assert_equal(ss.feed_url, ss2.feed_url)
       assert_equal(ss.human_url, ss2.human_url)
       assert_equal("hoge", ss2.worksheets[0].title)
       assert_equal("3", ss2.worksheets[0][1, 1])
@@ -81,9 +81,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
       end
 
       ss3 = session.spreadsheet_by_url("http://spreadsheets.google.com/ccc?key=#{ss.key}&hl=en")
-      assert_equal(ss.worksheets_feed_url, ss3.worksheets_feed_url)
-      ss4 = session.spreadsheet_by_url(ss.worksheets_feed_url)
-      assert_equal(ss.worksheets_feed_url, ss4.worksheets_feed_url)
+      assert_equal(ss.feed_url, ss3.feed_url)
+      ss4 = session.spreadsheet_by_url(ss.feed_url)
+      assert_equal(ss.feed_url, ss4.feed_url)
 
       assert_not_nil(session.spreadsheets.find(){ |s| s.title == ss_title })
       assert_not_nil(session.spreadsheets("title" => ss_title, "title-exact" => "true").
@@ -303,7 +303,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("writer", acl[1].role)
 
       delete_test_file(file, true)
-      
+
     end
 
     def get_session()

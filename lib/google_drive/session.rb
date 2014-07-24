@@ -16,6 +16,7 @@ require "google_drive/oauth2_fetcher"
 require "google_drive/error"
 require "google_drive/authentication_error"
 require "google_drive/spreadsheet"
+require "google_drive/document"
 require "google_drive/worksheet"
 require "google_drive/collection"
 require "google_drive/file"
@@ -31,7 +32,7 @@ module GoogleDrive
         extend(Util)
 
         UPLOAD_CHUNK_SIZE = 512 * 1024
-        
+
         # The same as GoogleDrive.login.
         def self.login(mail, password, proxy = nil)
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
@@ -60,7 +61,7 @@ module GoogleDrive
         def self.restore_session(auth_tokens, proxy = nil)
           return Session.new(auth_tokens, nil, proxy)
         end
-        
+
         # Creates a dummy GoogleDrive::Session object for testing.
         def self.new_dummy()
           return Session.new(nil, Object.new())
@@ -128,7 +129,7 @@ module GoogleDrive
           doc = request(:get, url, :auth => :writely)
           return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
         end
-        
+
         # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
@@ -171,6 +172,12 @@ module GoogleDrive
           return Spreadsheet.new(self, url)
         end
 
+        # Returns GoogleDrive::Document with given +key+.
+        def document_by_key(key)
+          url = "https://docs.google.com/feeds/default/private/full/document%3A#{key}?v=3"
+          return Document.new(self, url)
+        end
+
         # Returns GoogleDrive::Spreadsheet with given +url+. You must specify either of:
         # - URL of the page you open to access the spreadsheet in your browser
         # - URL of worksheet-based feed of the spreadseet
@@ -204,7 +211,7 @@ module GoogleDrive
         def spreadsheet_by_title(title)
           return spreadsheets({"title" => title, "title-exact" => "true"})[0]
         end
-        
+
         # Returns GoogleDrive::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
@@ -215,17 +222,17 @@ module GoogleDrive
         def worksheet_by_url(url)
           return Worksheet.new(self, nil, url)
         end
-        
+
         # Returns the root collection.
         def root_collection
           return Collection.new(self, Collection::ROOT_URL)
         end
-        
+
         # Returns the top-level collections (direct children of the root collection).
         def collections
           return self.root_collection.subcollections
         end
-        
+
         # Returns a top-level collection whose title exactly matches +title+ as
         # GoogleDrive::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
@@ -233,7 +240,7 @@ module GoogleDrive
         def collection_by_title(title)
           return self.root_collection.subcollection_by_title(title)
         end
-        
+
         # Returns GoogleDrive::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
@@ -264,7 +271,7 @@ module GoogleDrive
         def create_spreadsheet(
             title = "Untitled",
             feed_url = "https://docs.google.com/feeds/documents/private/full")
-          
+
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"
@@ -281,9 +288,9 @@ module GoogleDrive
           ss_url = doc.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
           return Spreadsheet.new(self, ss_url, title)
-          
+
         end
-        
+
         # Uploads a file with the given +title+ and +content+.
         # Returns a GoogleSpreadsheet::File object.
         #
@@ -291,31 +298,31 @@ module GoogleDrive
         #   # Uploads and converts to a Google Docs document:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain")
-        #   
+        #
         #   # Uploads without conversion:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain", :convert => false)
-        #   
+        #
         #   # Uploads and converts to a Google Spreadsheet:
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
         def upload_from_string(content, title = "Untitled", params = {})
           return upload_from_io(StringIO.new(content), title, params)
         end
-        
+
         # Uploads a local file.
         # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
         #   # Uploads a text file and converts to a Google Docs document:
         #   session.upload_from_file("/path/to/hoge.txt")
-        #   
+        #
         #   # Uploads without conversion:
         #   session.upload_from_file("/path/to/hoge.txt", "Hoge", :convert => false)
-        #   
+        #
         #   # Uploads with explicit content type:
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
-        #   
+        #
         #   # Uploads a text file and converts to a Google Spreadsheet:
         #   session.upload_from_file("/path/to/hoge.tsv", "Hoge")
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
@@ -328,7 +335,7 @@ module GoogleDrive
             return upload_from_io(f, title || file_name, params)
           end
         end
-        
+
         # Uploads a file. Reads content from +io+.
         # Returns a GoogleSpreadsheet::File object.
         def upload_from_io(io, title = "Untitled", params = {})
@@ -341,7 +348,7 @@ module GoogleDrive
         end
 
         def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
-          
+
           params = {:convert => true}.merge(params)
           pos = io.pos
           io.seek(0, IO::SEEK_END)
@@ -354,14 +361,14 @@ module GoogleDrive
           if !content_type
             content_type = "application/octet-stream"
           end
-          
+
           initial_xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom" 
+            <entry xmlns="http://www.w3.org/2005/Atom"
                 xmlns:docs="http://schemas.google.com/docs/2007">
               <title>#{h(title)}</title>
             </entry>
           EOS
-          
+
           default_initial_header = {
               "Content-Type" => "application/atom+xml;charset=utf-8",
               "X-Upload-Content-Type" => content_type,
@@ -374,7 +381,7 @@ module GoogleDrive
               :auth => :writely,
               :response_type => :response)
           upload_url = initial_response["location"]
-          
+
           if total_bytes > 0
             sent_bytes = 0
             while data = io.read(UPLOAD_CHUNK_SIZE)
@@ -398,11 +405,11 @@ module GoogleDrive
             doc = request(
                 :put, upload_url, :header => upload_header, :data => "", :auth => :writely)
           end
-          
+
           return doc.root
-          
+
         end
-        
+
         def entry_element_to_file(entry) #:nodoc:
           type, resource_id = entry.css("gd|resourceId").text.split(/:/)
           title = entry.css("title").text
@@ -419,7 +426,7 @@ module GoogleDrive
         end
 
         def request(method, url, params = {}) #:nodoc:
-          
+
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
@@ -446,9 +453,9 @@ module GoogleDrive
             end
             return convert_response(response, response_type)
           end
-          
+
         end
-        
+
         def inspect
           return "#<%p:0x%x>" % [self.class, self.object_id]
         end
