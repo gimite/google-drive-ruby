@@ -303,7 +303,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("writer", acl[1].role)
 
       delete_test_file(file, true)
-      
+
     end
 
     def get_session()
