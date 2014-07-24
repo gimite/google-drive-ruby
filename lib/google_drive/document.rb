@@ -4,19 +4,18 @@
 require "time"
 
 require "google_drive/util"
-require "google_drive/error"
 require "google_drive/worksheet"
 require "google_drive/table"
 require "google_drive/acl"
 require "google_drive/file"
-
+require "google_drive/interface"
 
 module GoogleDrive
 
     # A Document.
     #
     # Use methods in GoogleDrive::Session to get GoogleDrive::Document object.
-    class Document < GoogleDrive::File
+    class Document < GoogleDrive::Interface
 
         include(Util)
 
@@ -29,68 +28,7 @@ module GoogleDrive
         end
 
         # URL of worksheet-based feed of the document.
-        attr_reader(:worksheets_feed_url)
-
-        # Title of the document.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the title.
-        def title(params = {})
-          if !@title || params[:reload]
-            @title = document_feed_entry(params).css("title").text
-          end
-          return @title
-        end
-
-        # Key of the document.
-        def key
-          if !(@docs_feed_url =~
-              %r{^https?://docs.google.com/feeds/default/private/full/document%3A(.*)\?.*$})
-            raise(GoogleDrive::Error,
-              "Documents feed URL is in unknown format: #{@docs_feed_url}")
-          end
-          return $1
-        end
-
-        # Spreadsheet feed URL of the document.
-        def document_feed_url
-          return "https://docs.google.com/feeds/default/private/full/document%3A#{self.key}?v=3"
-        end
-
-        # URL which you can open the document in a Web browser with.
-        #
-        # e.g. "http://documents.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
-        def human_url
-          # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
-          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
-        end
-
-
-        # URL of feed used in document list feed API.
-        def document_feed_url
-          return "https://docs.google.com/feeds/default/private/full/document%3A#{self.key}?v=3"
-        end
-
-        # <entry> element of document feed as Nokogiri::XML::Element.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
-        def document_feed_entry(params = {})
-          if !@document_feed_entry || params[:reload]
-            @document_feed_entry =
-                @session.request(:get, self.document_feed_url).css("entry")[0]
-          end
-          return @document_feed_entry
-        end
-
-        # <entry> element of document list feed as Nokogiri::XML::Element.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
-        def document_feed_entry(params = {})
-          if !@document_feed_entry || params[:reload]
-            @document_feed_entry =
-                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
-          end
-          return @document_feed_entry
-        end
+        attr_reader(:docs_feed_url)
 
         # Creates copy of this document with the given title.
         def duplicate(new_title = nil)
@@ -160,7 +98,7 @@ module GoogleDrive
         end
 
         def inspect
-          fields = {:worksheets_feed_url => self.worksheets_feed_url}
+          fields = {:docs_feed_url => self.docs_feed_url}
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end

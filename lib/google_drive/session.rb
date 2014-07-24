@@ -124,7 +124,6 @@ module GoogleDrive
         #   session.files
         #   session.files("title" => "hoge", "title-exact" => "true")
         def files(params = {})
-          debugger
           url = concat_url(
               "#{DOCS_BASE_URL}?v=3", "?" + encode_query(params))
           doc = request(:get, url, :auth => :writely)
@@ -173,7 +172,7 @@ module GoogleDrive
           return Spreadsheet.new(self, url)
         end
 
-
+        # Returns GoogleDrive::Document with given +key+.
         def document_by_key(key)
           url = "https://docs.google.com/feeds/default/private/full/document%3A#{key}?v=3"
           return Document.new(self, url)
