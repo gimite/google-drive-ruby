@@ -16,3 +16,9 @@ doc = session.document_by_key("1qf7MFp4IH-bSj--AQFW6mioK-EMzX-t1d04RgpqJsC8")
 
 puts doc.human_url
 puts doc.title
+doc.download_to_string
+
+spread = session.spreadsheet_by_key("1VegPL25-AjvVXAijetBpoIMnzqpeWeRIOsX9fHhvwiM")
+
+puts spread.human_url
+puts spread.title

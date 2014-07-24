@@ -9,6 +9,7 @@ require "google_drive/worksheet"
 require "google_drive/table"
 require "google_drive/acl"
 require "google_drive/file"
+require "google_drive/interface"
 
 
 module GoogleDrive
@@ -16,53 +17,20 @@ module GoogleDrive
     # A spreadsheet.
     #
     # Use methods in GoogleDrive::Session to get GoogleDrive::Spreadsheet object.
-    class Spreadsheet < GoogleDrive::File
+    class Spreadsheet < GoogleDrive::Interface
 
         include(Util)
         
         SUPPORTED_EXPORT_FORMAT = Set.new(["xls", "csv", "pdf", "ods", "tsv", "html"])
 
-        def initialize(session, worksheets_feed_url, title = nil) #:nodoc:
+        def initialize(session, feed_url, title = nil) #:nodoc:
           super(session, nil)
-          @worksheets_feed_url = worksheets_feed_url
+          @feed_url = feed_url
           @title = title
         end
 
         # URL of worksheet-based feed of the spreadsheet.
-        attr_reader(:worksheets_feed_url)
-
-        # Title of the spreadsheet.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the title.
-        def title(params = {})
-          if !@title || params[:reload]
-            @title = spreadsheet_feed_entry(params).css("title").text
-          end
-          return @title
-        end
-
-        # Key of the spreadsheet.
-        def key
-          if !(@worksheets_feed_url =~
-              %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/.*$})
-            raise(GoogleDrive::Error,
-              "Worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
-          end
-          return $1
-        end
-        
-        # Spreadsheet feed URL of the spreadsheet.
-        def spreadsheet_feed_url
-          return "https://spreadsheets.google.com/feeds/spreadsheets/private/full/#{self.key}"
-        end
-        
-        # URL which you can open the spreadsheet in a Web browser with.
-        #
-        # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
-        def human_url
-          # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
-          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
-        end
+        attr_reader(:feed_url)
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
@@ -73,33 +41,6 @@ module GoogleDrive
               "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
               "will not be available after March 2012.")
           return "https://spreadsheets.google.com/feeds/#{self.key}/tables"
-        end
-
-        # URL of feed used in document list feed API.
-        def document_feed_url
-          return "https://docs.google.com/feeds/documents/private/full/spreadsheet%3A#{self.key}"
-        end
-
-        # <entry> element of spreadsheet feed as Nokogiri::XML::Element.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
-        def spreadsheet_feed_entry(params = {})
-          if !@spreadsheet_feed_entry || params[:reload]
-            @spreadsheet_feed_entry =
-                @session.request(:get, self.spreadsheet_feed_url).css("entry")[0]
-          end
-          return @spreadsheet_feed_entry
-        end
-        
-        # <entry> element of document list feed as Nokogiri::XML::Element.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the feed.
-        def document_feed_entry(params = {})
-          if !@document_feed_entry || params[:reload]
-            @document_feed_entry =
-                @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
-          end
-          return @document_feed_entry
         end
         
         # Creates copy of this spreadsheet with the given title.
@@ -171,11 +112,11 @@ module GoogleDrive
         
         # Returns worksheets of the spreadsheet as array of GoogleDrive::Worksheet.
         def worksheets
-          doc = @session.request(:get, @worksheets_feed_url)
+          doc = @session.request(:get, @feed_url)
           if doc.root.name != "feed"
             raise(GoogleDrive::Error,
                 "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
-                @worksheets_feed_url)
+                @feed_url)
           end
           result = []
           doc.css("entry").each() do |entry|
@@ -206,7 +147,7 @@ module GoogleDrive
               <gs:colCount>#{h(max_cols)}</gs:colCount>
             </entry>
           EOS
-          doc = @session.request(:post, @worksheets_feed_url, :data => xml)
+          doc = @session.request(:post, @feed_url, :data => xml)
           url = doc.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
           return Worksheet.new(@session, self, url, title)
@@ -225,7 +166,7 @@ module GoogleDrive
         end
         
         def inspect
-          fields = {:worksheets_feed_url => self.worksheets_feed_url}
+          fields = {:feed_url => self.feed_url}
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end

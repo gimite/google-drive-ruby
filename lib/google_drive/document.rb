@@ -4,6 +4,7 @@
 require "time"
 
 require "google_drive/util"
+require "google_drive/error"
 require "google_drive/worksheet"
 require "google_drive/table"
 require "google_drive/acl"
@@ -21,14 +22,14 @@ module GoogleDrive
 
         SUPPORTED_EXPORT_FORMAT = Set.new(["xls", "csv", "pdf", "ods", "tsv", "html"])
 
-        def initialize(session, docs_feed_url, title = nil) #:nodoc:
+        def initialize(session, feed_url, title = nil) #:nodoc:
           super(session, nil)
-          @docs_feed_url = docs_feed_url
+          @feed_url = feed_url
           @title = title
         end
 
         # URL of worksheet-based feed of the document.
-        attr_reader(:docs_feed_url)
+        attr_reader(:feed_url)
 
         # Creates copy of this document with the given title.
         def duplicate(new_title = nil)
@@ -98,7 +99,7 @@ module GoogleDrive
         end
 
         def inspect
-          fields = {:docs_feed_url => self.docs_feed_url}
+          fields = {:feed_url => self.feed_url}
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
