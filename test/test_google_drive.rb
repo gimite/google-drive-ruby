@@ -105,7 +105,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Access via GoogleDrive::Worksheet#list.
       ws.list.keys = ["x", "y"]
-      ws.list.push({"x" => "1", "y" => "2"})
+      ws.save()
+      ws.insert!({"x" => "1", "y" => "2"})
+      ws.reload()
       ws.list.push({"x" => "3", "y" => "4"})
       assert_equal(["x", "y"], ws.list.keys)
       assert_equal(2, ws.list.size)
