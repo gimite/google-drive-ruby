@@ -143,6 +143,21 @@ module GoogleDrive
           end
         end
 
+        # Returns GoogleDrive::File or its subclass whose key exactly matches +key+.
+        # Raises an error if not found.
+        #
+        # e.g.
+        #   session.file_by_key('0AkCUOtrZrtc-dHhPSDNDVFpTWEhqNW8yaVVTNlZrLVE')
+        def file_by_key(key)
+          url = "#{DOCS_BASE_URL}/#{key}?v=3"
+          begin
+            doc = request(:get, url, :auth => :writely)
+            return entry_element_to_file(doc.css("entry"))
+          rescue GoogleDrive::Error => ex
+            raise(ArgumentError, "Invalid key: %p" % key)
+          end
+        end
+
         # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
         # You can specify query parameters e.g. "title", "title-exact".
         #
