@@ -41,33 +41,41 @@ module GoogleDrive
 
         # Creates a dummy GoogleDrive::Session object for testing.
         def self.new_dummy()
-          return Session.new(Object.new())
+          return Session.new(nil)
         end
 
         def initialize(client_or_access_token, proxy = nil)
           # TODO Support proxy
-          case client_or_access_token
-            when Google::APIClient
-              client = client_or_access_token
-            when String
-              client = Google::APIClient.new()
-              client.authorization.access_token = client_or_access_token
-            when OAuth2::AccessToken
-              client = Google::APIClient.new()
-              client.authorization.access_token = client_or_access_token.token
-            when OAuth::AccessToken
-              raise(
-                  ArgumentError,
-                  "Passing OAuth::AccessToken to login_with_oauth is no longer supported. " +
-                  "You can use OAuth1 by passing Google::APIClient.")
-            else
-              raise(
-                  ArgumentError,
-                  ("client_or_access_token is neither Google::APIClient, " +
-                   "String, OAuth2::Token nor OAuth::Token: %p") %
-                  client_or_access_token)
+          if client_or_access_token
+            api_client_params = {
+              :application_name => "google_drive Ruby library",
+              :application_version => "0.4.0",
+            }
+            case client_or_access_token
+              when Google::APIClient
+                client = client_or_access_token
+              when String
+                client = Google::APIClient.new(api_client_params)
+                client.authorization.access_token = client_or_access_token
+              when OAuth2::AccessToken
+                client = Google::APIClient.new(api_client_params)
+                client.authorization.access_token = client_or_access_token.token
+              when OAuth::AccessToken
+                raise(
+                    ArgumentError,
+                    "Passing OAuth::AccessToken to login_with_oauth is no longer supported. " +
+                    "You can use OAuth1 by passing Google::APIClient.")
+              else
+                raise(
+                    ArgumentError,
+                    ("client_or_access_token is neither Google::APIClient, " +
+                     "String nor OAuth2::AccessToken: %p") %
+                    client_or_access_token)
+            end
+            @fetcher = ApiClientFetcher.new(client)
+          else
+            @fetcher = nil
           end
-          @fetcher = ApiClientFetcher.new(client)
         end
 
         # Proc or Method called when authentication has failed.
@@ -96,13 +104,11 @@ module GoogleDrive
         #   session.files
         #   session.files("title" => "hoge", "title-exact" => "true")
         def files(params = {}, &block)
-          # TODO Support old parameters
+          params = convert_params(params)
           # TODO Consider paging control
-          api_params = params.dup()
-          api_params["q"] = construct_query(api_params["q"]) if api_params.has_key?("q")
           return execute_paged!(
               :api_method => self.drive.files.list,
-              :parameters => api_params,
+              :parameters => params,
               :converter => proc(){ |af| wrap_api_file(af) },
               &block)
         end
@@ -159,6 +165,7 @@ module GoogleDrive
         #   session.spreadsheets("title" => "hoge")
         #   session.spreadsheets("title" => "hoge", "title-exact" => "true")
         def spreadsheets(params = {}, &block)
+          params = convert_params(params)
           query = construct_and_query([
               "mimeType = 'application/vnd.google-apps.spreadsheet'",
               params["q"],

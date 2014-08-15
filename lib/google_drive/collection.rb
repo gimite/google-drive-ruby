@@ -129,6 +129,7 @@ module GoogleDrive
       private
 
         def files_with_type(type, params = {}, &block)
+          params = convert_params(params)
           query = construct_and_query([
               ["? in parents", self.id],
               type ? ["mimeType = ?", type] : nil,

@@ -24,6 +24,8 @@ module GoogleDrive
               return @client_response.body
             end
 
+            attr_reader(:client_response)
+
         end
 
         def initialize(client)

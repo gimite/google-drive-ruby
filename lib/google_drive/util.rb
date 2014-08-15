@@ -54,6 +54,7 @@ module GoogleDrive
         end
         
         def construct_query(arg)
+
           case arg
 
             when String
@@ -83,52 +84,71 @@ module GoogleDrive
                 end
               end
 
-            when Hash
-              # For backward compatibility with the old API using Document List API.
-              terms = []
-              showfolders = "false"
-              for k, v in arg
-                case k.to_s()
-                  when "title"
-                    terms.push(["title contains ?", v])
-                  when "title-exact"
-                    terms.push(["title = ?", v])
-                  when "opened-min"
-                    terms.push(["lastViewedByMeDate >= ?", v])
-                  when "opened-max"
-                    terms.push(["lastViewedByMeDate <= ?", v])
-                  when "edited-min"
-                    terms.push(["modifiedDate >= ?", v])
-                  when "edited-max"
-                    terms.push(["modifiedDate <= ?", v])
-                  when "owner"
-                    terms.push(["? in owners", v])
-                  when "writer"
-                    terms.push(["? in writers", v])
-                  when "reader"
-                    terms.push(["? in readers", v])
-                  when "showfolders"
-                    showfolders = v
-                  when "showdeleted"
-                    # TODO
-                  when "ocr", "targetLanguage", "sourceLanguage"
-                    raise(ArgumentError, "'%s' parameter is no longer supported." % k)
-                  else
-                    raise(ArgumentError, "Unknown parameter: '%s'" % k)
-                end
-              end
-              if showfolders.to_s() == "false"
-                terms.push("mimeType != 'application/vnd.google-apps.folder'")
-              end
-              return construct_and_query(terms)
-
             else
               raise(ArgumentError, "Expected String or Array, but got %p" % [arg])
+
           end
+
         end
 
         def construct_and_query(args)
           return args.select(){ |a| a }.map(){ |a| "(%s)" % construct_query(a) }.join(" and ")
+        end
+
+        def convert_params(params)
+          str_params = {}
+          for k, v in params
+            str_params[k.to_s()] = v
+          end
+          old_terms = []
+          new_params = {}
+          for k, v in str_params
+            case k
+              when "q"
+                new_params["q"] = construct_query(v)
+              # Parameters in the old API.
+              when "title"
+                if str_params["title-exact"].to_s() == "true"
+                  old_terms.push(["title = ?", v])
+                else
+                  old_terms.push(["title contains ?", v])
+                end
+              when "title-exact"
+                # Skips it. It is handled above.
+              when "opened-min"
+                old_terms.push(["lastViewedByMeDate >= ?", v])
+              when "opened-max"
+                old_terms.push(["lastViewedByMeDate <= ?", v])
+              when "edited-min"
+                old_terms.push(["modifiedDate >= ?", v])
+              when "edited-max"
+                old_terms.push(["modifiedDate <= ?", v])
+              when "owner"
+                old_terms.push(["? in owners", v])
+              when "writer"
+                old_terms.push(["? in writers", v])
+              when "reader"
+                old_terms.push(["? in readers", v])
+              when "showfolders"
+                if v.to_s() == "false"
+                  old_terms.push("mimeType != 'application/vnd.google-apps.folder'")
+                end
+              when "showdeleted"
+                # TODO
+              when "ocr", "targetLanguage", "sourceLanguage"
+                raise(ArgumentError, "'%s' parameter is no longer supported." % k)
+              else
+                new_params[k] = v
+            end
+          end
+          if !old_terms.empty?
+            if new_params.has_key?("q")
+              raise(ArgumentError, "Cannot specify both 'q' parameter and old query parameters.")
+            else
+              new_params["q"] = construct_and_query(old_terms)
+            end
+          end
+          return new_params
         end
 
         def singleton_class(obj)
