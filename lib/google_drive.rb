@@ -95,7 +95,10 @@ module GoogleDrive
         token_data = nil
       end
 
-      client = Google::APIClient.new()
+      client = Google::APIClient.new(
+          :application_name => "google_drive Ruby library",
+          :application_version => "0.4.0"
+      )
       auth = client.authorization
       auth.client_id = client_id
       auth.client_secret = client_secret
