@@ -188,8 +188,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert(!collection.root?)
       assert_not_nil(collection.resource_id)
       assert_not_nil(root.subcollection_by_title(test_collection_title))
-      collection2 = session.file_by_id(collection.id)
-      assert_instance_of(GoogleDrive::Collection, collection2)
+      collection2 = session.collection_by_url(collection.document_feed_url)
       assert(collection2.files.empty?)
       collection3 = session.collection_by_url(
           "https://drive.google.com/#folders/%s" % collection.resource_id.split(/:/)[1])

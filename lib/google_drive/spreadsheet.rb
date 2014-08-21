@@ -32,6 +32,10 @@ module GoogleDrive
               self.id
         end
 
+        def document_feed_url
+          return "https://docs.google.com/feeds/documents/private/full/" + CGI.escape(self.resource_id)
+        end
+        
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
         #

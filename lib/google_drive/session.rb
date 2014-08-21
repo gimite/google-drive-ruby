@@ -213,7 +213,7 @@ module GoogleDrive
           if ["spreadsheets.google.com", "docs.google.com", "drive.google.com"].include?(uri.host)
             case uri.path
               # Document feed.
-              when /^\/feeds\/default\/private\/full\/\w+%3A(.*)$/
+              when /^\/feeds\/\w+\/private\/full\/\w+%3A(.*)$/
                 return $1
               # Worksheets feed of a spreadsheet.
               when /^\/feeds\/worksheets\/([^\/]+)/
@@ -238,7 +238,7 @@ module GoogleDrive
                 return $1
             end
           end
-          raise(GoogleDrive::Error, "The given URL is not a known Google Drive URL.")
+          raise(GoogleDrive::Error, "The given URL is not a known Google Drive URL: %s" % url)
         end
 
         # Returns GoogleDrive::Spreadsheet with given +title+.
@@ -293,7 +293,7 @@ module GoogleDrive
         def collection_by_url(url)
           file = file_by_url(url)
           if !file.is_a?(Collection)
-            raise(GoogleDrive::Error, "The file with the URL is not a spreadsheet: %s" % url)
+            raise(GoogleDrive::Error, "The file with the URL is not a collection: %s" % url)
           end
           return file
         end

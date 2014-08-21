@@ -41,6 +41,10 @@ module GoogleDrive
           return "%s:%s" % [self.resource_type, self.id]
         end
 
+        def document_feed_url
+          return "https://docs.google.com/feeds/default/private/full/" + CGI.escape(self.resource_id)
+        end
+
         # The type of resourse. e.g. "document", "spreadsheet", "folder"
         def resource_type
           return self.mime_type.slice(/^application\/vnd.google-apps.(.+)$/, 1) || "file"
