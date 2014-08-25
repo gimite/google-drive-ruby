@@ -299,6 +299,11 @@ module GoogleDrive
         #   # Uploads and converts to a Google Spreadsheet:
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
+        #
+        #   # Uploads with progress tracking:
+        #   session.upload_from_string("Hello world.", "Hello", :content_type => "text/plain") do |sent_bytes, total_bytes|
+        #     puts "%.2f%%" % ((sent_bytes.to_f / total_bytes) * 100)
+        #   end
         def upload_from_string(content, title = "Untitled", params = {}, &progress)
           return upload_from_io(StringIO.new(content), title, params, &progress)
         end
@@ -321,6 +326,11 @@ module GoogleDrive
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
+        #
+        #   # Uploads with progress tracking:
+        #   session.upload_from_file("/path/to/hoge.txt", "Hoge") do |sent_bytes, total_bytes|
+        #     puts "%.2f%%" % ((sent_bytes.to_f / total_bytes) * 100)
+        #   end
         def upload_from_file(path, title = nil, params = {}, &progress)
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)
