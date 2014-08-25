@@ -200,12 +200,12 @@ class TC_GoogleDrive < Test::Unit::TestCase
       file = session.upload_from_file(test_file_path, test_file_title, :convert => false)
       assert_instance_of(GoogleDrive::File, file)
       assert_equal(test_file_title, file.title)
-      assert_equal(File.read(test_file_path), file.download_to_string())
+      assert_equal(File.binread(test_file_path), file.download_to_string())
 
       # Updates the content of the file.
       test_file2_path = File.join(File.dirname(__FILE__), "test_file2.txt")
       file.update_from_file(test_file2_path)
-      assert_equal(File.read(test_file2_path), file.download_to_string())
+      assert_equal(File.binread(test_file2_path), file.download_to_string())
 
       # Uploads an empty file.
       file2 = session.upload_from_string("", test_file2_title, :content_type => "text/plain", :convert => false)
