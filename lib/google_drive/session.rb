@@ -299,8 +299,8 @@ module GoogleDrive
         #   # Uploads and converts to a Google Spreadsheet:
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
-        def upload_from_string(content, title = "Untitled", params = {})
-          return upload_from_io(StringIO.new(content), title, params)
+        def upload_from_string(content, title = "Untitled", params = {}, &progress)
+          return upload_from_io(StringIO.new(content), title, params, &progress)
         end
         
         # Uploads a local file.
@@ -321,22 +321,22 @@ module GoogleDrive
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
-        def upload_from_file(path, title = nil, params = {})
+        def upload_from_file(path, title = nil, params = {}, &progress)
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)
           open(path, "rb") do |f|
-            return upload_from_io(f, title || file_name, params)
+            return upload_from_io(f, title || file_name, params, &progress)
           end
         end
         
         # Uploads a file. Reads content from +io+.
         # Returns a GoogleSpreadsheet::File object.
-        def upload_from_io(io, title = "Untitled", params = {})
+        def upload_from_io(io, title = "Untitled", params = {}, &progress)
           doc = request(:get, "#{DOCS_BASE_URL}?v=3",
               :auth => :writely)
           initial_url = doc.css(
               "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
-          entry = upload_raw(:post, initial_url, io, title, params)
+          entry = upload_raw(:post, initial_url, io, title, params, &progress)
           return entry_element_to_file(entry)
         end
 
@@ -346,6 +346,7 @@ module GoogleDrive
           pos = io.pos
           io.seek(0, IO::SEEK_END)
           total_bytes = io.pos - pos
+          yield 0, total_bytes if block_given?
           io.pos = pos
           content_type = params[:content_type]
           if !content_type && params[:file_name]
@@ -390,6 +391,7 @@ module GoogleDrive
               doc = request(
                   :put, upload_url, :header => upload_header, :data => data, :auth => :writely)
               sent_bytes += data.bytesize
+              yield sent_bytes, total_bytes if block_given?
             end
           else
             upload_header = {
