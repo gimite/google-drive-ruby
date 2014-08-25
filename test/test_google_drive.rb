@@ -306,6 +306,30 @@ class TC_GoogleDrive < Test::Unit::TestCase
       
     end
 
+    def test_progress()
+      session = get_session()
+
+      test_file_title = "#{PREFIX}progress-test-file"
+
+      sequence = 0
+      content = "hoge"
+
+      file = session.upload_from_string(content, test_file_title, :content_type => "text/plain", :convert => false) do |sent_bytes, total_bytes|
+        if sequence == 0
+          assert_equal(0, sent_bytes)
+        else
+          assert_equal(total_bytes, sent_bytes)
+        end
+
+        assert_equal(content.length, total_bytes)
+
+        sequence += 1
+      end
+
+      delete_test_file(file, true)
+      assert_equal(2, sequence)
+    end
+
     def get_session()
       if !@@session
         puts("\nThis test will create files/spreadsheets/collections with your account,")
