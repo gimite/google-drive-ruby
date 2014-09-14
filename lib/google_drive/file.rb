@@ -46,6 +46,9 @@ module GoogleDrive
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def document_feed_entry(params = {})
+          warn(
+              "WARNING: GoogleDrive::file\#document_feed_entry is deprecated and will be removed " +
+              "in the next version.")
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
                 @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]

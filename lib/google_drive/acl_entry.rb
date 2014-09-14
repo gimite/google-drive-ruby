@@ -39,6 +39,12 @@ module GoogleDrive
           end
         end
 
+        def edit_url
+          warn(
+              "WARNING: GoogleDrive::AclEntry\#edit_url is deprecated and will be removed in the next version.")
+          return @params[:edit_url]
+        end
+
         # Changes the role of the scope.
         #
         # e.g.

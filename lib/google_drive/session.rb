@@ -34,6 +34,9 @@ module GoogleDrive
         
         # The same as GoogleDrive.login.
         def self.login(mail, password, proxy = nil)
+          warn(
+              "WARNING: GoogleDrive.login is deprecated and will be removed in the next version. " +
+              "Use GoogleDrive.login_with_oauth instead.")
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
           session.login(mail, password)
           return session
@@ -58,6 +61,9 @@ module GoogleDrive
 
         # The same as GoogleDrive.restore_session.
         def self.restore_session(auth_tokens, proxy = nil)
+          warn(
+              "WARNING: GoogleDrive.restore_session is deprecated and will be removed in the next version. " +
+              "Use GoogleDrive.login_with_oauth instead.")
           return Session.new(auth_tokens, nil, proxy)
         end
         
@@ -96,6 +102,8 @@ module GoogleDrive
 
         # Authentication tokens.
         def auth_tokens
+          warn(
+              "WARNING: GoogleDrive::Session\#auth_tokens is deprecated and will be removed in the next version.")
           if !@fetcher.is_a?(ClientLoginFetcher)
             raise(GoogleDrive::Error,
                 "Cannot call auth_tokens for session created by " +
@@ -106,12 +114,24 @@ module GoogleDrive
 
         # Authentication token.
         def auth_token(auth = :wise)
+          warn(
+              "WARNING: GoogleDrive::Session\#auth_token is deprecated and will be removed in the next version.")
           return self.auth_tokens[auth]
         end
 
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
-        attr_accessor :on_auth_fail
+        def on_auth_fail
+          warn(
+              "WARNING: GoogleDrive::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+          return @on_auth_fail
+        end
+
+        def on_auth_fail=(func)
+          warn(
+              "WARNING: GoogleDrive::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+          @on_auth_fail = func
+        end
 
         # Returns list of files for the user as array of GoogleDrive::File or its subclass.
         # You can specify query parameters described at
