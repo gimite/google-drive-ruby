@@ -122,10 +122,10 @@ module GoogleDrive
         # Exports the spreadsheet in +format+ and returns it as String.
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
-        # In format such as "csv", only the worksheet specified with +worksheet_index+ is
+        # In format such as "csv", only the worksheet specified with +gid+ is
         # exported.
-        def export_as_string(format, worksheet_index = nil)
-          gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
+        def export_as_string(format, gid = nil)
+          gid_param = gid ? "&gid=#{gid}" : ""
           format_string = "&format=#{format}"
           if self.human_url.match("edit")
             url = self.human_url.gsub(/edit/, "export") + gid_param + format_string
@@ -141,12 +141,12 @@ module GoogleDrive
         #
         # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
         # If +format+ is nil, it is guessed from the file name.
-        # In format such as "csv", only the worksheet specified with +worksheet_index+ is exported.
+        # In format such as "csv", only the worksheet specified with +gid+ is exported.
         #
         # e.g.
         #   spreadsheet.export_as_file("hoge.ods")
         #   spreadsheet.export_as_file("hoge.csv", nil, 0)
-        def export_as_file(local_path, format = nil, worksheet_index = nil)
+        def export_as_file(local_path, format = nil, gid = nil)
           if !format
             format = ::File.extname(local_path).gsub(/^\./, "")
             if !SUPPORTED_EXPORT_FORMAT.include?(format)
@@ -157,7 +157,7 @@ module GoogleDrive
             end
           end
           open(local_path, "wb") do |f|
-            f.write(export_as_string(format, worksheet_index))
+            f.write(export_as_string(format, gid))
           end
         end
         
