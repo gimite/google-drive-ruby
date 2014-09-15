@@ -25,6 +25,7 @@ module GoogleDrive
           @title = title
           @updated = updated
 
+          @gid = nil
           @cells = nil
           @input_values = nil
           @numeric_values = nil
@@ -47,6 +48,11 @@ module GoogleDrive
               "Cells feed URL is in unknown format: #{@cells_feed_url}")
           end
           return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
+        end
+
+        # Request or return the gid of this worksheet
+        def gid
+          @gid ||= @session.request(:get, worksheet_feed_url, :response_type => :raw)[/gid=(\d+)/, 1]
         end
 
         # GoogleDrive::Spreadsheet which this worksheet belongs to.
