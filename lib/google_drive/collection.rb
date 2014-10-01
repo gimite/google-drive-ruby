@@ -13,6 +13,8 @@ module GoogleDrive
     class Collection < GoogleDrive::File
 
         include(Util)
+
+        alias collection_feed_url document_feed_url
         
         # Adds the given GoogleDrive::File to the collection.
         def add(file)
@@ -108,6 +110,10 @@ module GoogleDrive
         # If given an Array, does a recursive subcollection traversal.
         def subcollection_by_title(title)
           return file_by_title_with_type(title, "application/vnd.google-apps.folder")
+        end
+
+        def contents_url
+          self.document_feed_url + "/contents"
         end
         
       protected

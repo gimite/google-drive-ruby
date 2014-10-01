@@ -78,7 +78,14 @@ module GoogleDrive
     #
     # This method requires Highline library: http://rubyforge.org/projects/highline/
     def self.saved_session(
-        client_id, client_secret, path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil)
+        path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil, client_id = nil, client_secret = nil)
+
+      if !client_id && !client_secret
+        client_id = "452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.apps.googleusercontent.com"
+        client_secret = "1U3-Krii5x1oLPrwD5zgn-ry"
+      elsif !client_id || !client_secret
+        raise(ArgumentError, "client_id and client_secret must be both specified or both omitted")
+      end
 
       if ::File.exist?(path)
         lines = ::File.readlines(path)

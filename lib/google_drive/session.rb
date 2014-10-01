@@ -118,7 +118,7 @@ module GoogleDrive
             page_token = nil
             begin
               parameters = (opts[:parameters] || {}).dup()
-              parameters['pageToken'] = page_token if page_token
+              parameters["pageToken"] = page_token if page_token
               api_result = self.execute!(
                   :api_method => opts[:api_method],
                   :parameters => parameters)
