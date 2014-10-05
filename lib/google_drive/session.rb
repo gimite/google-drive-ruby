@@ -114,26 +114,34 @@ module GoogleDrive
         end
 
         def execute_paged!(opts, &block) #:nodoc:
+
           if block
+
             page_token = nil
             begin
-              parameters = (opts[:parameters] || {}).dup()
-              parameters["pageToken"] = page_token if page_token
-              api_result = self.execute!(
-                  :api_method => opts[:api_method],
-                  :parameters => parameters)
-              for item in api_result.data.items
-                yield opts[:converter] ? opts[:converter].call(item) : item
-              end
-              page_token = api_result.data.next_page_token
+              parameters = (opts[:parameters] || {}).merge({"pageToken" => page_token})
+              (items, page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+              items.each(&block)
             end while page_token
-          else
-            result = []
-            execute_paged!(opts) do |r|
-              result.push(*r)
+
+          elsif opts[:parameters] && opts[:parameters].has_key?("pageToken")
+
+            api_result = self.execute!(
+                :api_method => opts[:api_method],
+                :parameters => opts[:parameters])
+            items = api_result.data.items.map() do |item|
+              opts[:converter] ? opts[:converter].call(item) : item
             end
-            return result
+            return [items, api_result.data.next_page_token]
+
+          else
+
+            parameters = (opts[:parameters] || {}).merge({"pageToken" => nil})
+            (items, next_page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+            return items
+
           end
+          
         end
         
         # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
