@@ -45,7 +45,13 @@ module GoogleDrive
         end
 
         def initialize(client_or_access_token, proxy = nil)
-          # TODO Support proxy
+
+          if proxy
+            raise(
+                ArgumentError,
+                "Specifying a proxy object is no longer supported. Set ENV[\"http_proxy\"] instead.")
+          end
+
           if client_or_access_token
             api_client_params = {
               :application_name => "google_drive Ruby library",
@@ -76,36 +82,48 @@ module GoogleDrive
           else
             @fetcher = nil
           end
+
         end
 
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
         attr_accessor :on_auth_fail
 
-        def execute!(*args)
+        def execute!(*args) #:nodoc:
           return @fetcher.client.execute!(*args)
         end
 
+        # Returns the Google::APIClient object.
         def client
           return @fetcher.client
         end
 
+        # Returns client.discovered_api("drive", "v2").
         def drive
           return @fetcher.drive
         end
 
         # Returns list of files for the user as array of GoogleDrive::File or its subclass.
-        # You can specify query parameters described at
-        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
-        #
-        # files doesn't return collections unless "showfolders" => true is specified.
+        # You can specify parameters documented at
+        # https://developers.google.com/drive/v2/reference/files/list
         #
         # e.g.
         #   session.files
-        #   session.files("title" => "hoge", "title-exact" => "true")
+        #   session.files("q" => "title = 'hoge'")
+        #   session.files("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+        #
+        # By default, it returns the first 100 files. You can get all files by calling with a block:
+        #   session.files do |file|
+        #     p file
+        #   end
+        # Or passing "pageToken" parameter:
+        #   page_token = nil
+        #   begin
+        #     (files, page_token) = session.files("pageToken" => page_token)
+        #     p files
+        #   end while page_token
         def files(params = {}, &block)
           params = convert_params(params)
-          # TODO Consider paging control
           return execute_paged!(
               :api_method => self.drive.files.list,
               :parameters => params,
@@ -113,37 +131,6 @@ module GoogleDrive
               &block)
         end
 
-        def execute_paged!(opts, &block) #:nodoc:
-
-          if block
-
-            page_token = nil
-            begin
-              parameters = (opts[:parameters] || {}).merge({"pageToken" => page_token})
-              (items, page_token) = execute_paged!(opts.merge({:parameters => parameters}))
-              items.each(&block)
-            end while page_token
-
-          elsif opts[:parameters] && opts[:parameters].has_key?("pageToken")
-
-            api_result = self.execute!(
-                :api_method => opts[:api_method],
-                :parameters => opts[:parameters])
-            items = api_result.data.items.map() do |item|
-              opts[:converter] ? opts[:converter].call(item) : item
-            end
-            return [items, api_result.data.next_page_token]
-
-          else
-
-            parameters = (opts[:parameters] || {}).merge({"pageToken" => nil})
-            (items, next_page_token) = execute_paged!(opts.merge({:parameters => parameters}))
-            return items
-
-          end
-          
-        end
-        
         # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
@@ -158,6 +145,7 @@ module GoogleDrive
           end
         end
 
+        # Returns GoogleDrive::File or its subclass with a given +id+.
         def file_by_id(id)
           api_result = execute!(
             :api_method => self.drive.files.get,
@@ -165,13 +153,23 @@ module GoogleDrive
           return wrap_api_file(api_result.data)
         end
 
+        # Returns GoogleDrive::File or its subclass with a given +url+. +url+ must be eitehr of:
+        # - URL of the page you open to access a document/spreadsheet in your browser
+        # - URL of worksheet-based feed of a spreadseet
+        def file_by_url(url)
+          return file_by_id(url_to_id(url))
+        end
+
         # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
         # You can specify query parameters e.g. "title", "title-exact".
         #
         # e.g.
         #   session.spreadsheets
-        #   session.spreadsheets("title" => "hoge")
-        #   session.spreadsheets("title" => "hoge", "title-exact" => "true")
+        #   session.spreadsheets("q" => "title = 'hoge'")
+        #   session.spreadsheets("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+        #
+        # By default, it returns the first 100 spreadsheets. See document of files method for how to get
+        # all spreadsheets.
         def spreadsheets(params = {}, &block)
           params = convert_params(params)
           query = construct_and_query([
@@ -184,8 +182,8 @@ module GoogleDrive
         # Returns GoogleDrive::Spreadsheet with given +key+.
         #
         # e.g.
-        #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
-        #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
+        #   # https://docs.google.com/spreadsheets/d/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/edit
+        #   session.spreadsheet_by_key("1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0")
         def spreadsheet_by_key(key)
           file = file_by_id(key)
           if !file.is_a?(Spreadsheet)
@@ -200,53 +198,16 @@ module GoogleDrive
         #
         # e.g.
         #   session.spreadsheet_by_url(
-        #     "https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg")
+        #     "https://docs.google.com/spreadsheets/d/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/edit")
         #   session.spreadsheet_by_url(
         #     "https://spreadsheets.google.com/feeds/" +
-        #     "worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
+        #     "worksheets/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/private/full")
         def spreadsheet_by_url(url)
           file = file_by_url(url)
           if !file.is_a?(Spreadsheet)
             raise(GoogleDrive::Error, "The file with the URL is not a spreadsheet: %s" % url)
           end
           return file
-        end
-
-        def file_by_url(url)
-          return file_by_id(url_to_id(url))
-        end
-
-        def url_to_id(url)
-          uri = URI.parse(url)
-          if ["spreadsheets.google.com", "docs.google.com", "drive.google.com"].include?(uri.host)
-            case uri.path
-              # Document feed.
-              when /^\/feeds\/\w+\/private\/full\/\w+%3A(.*)$/
-                return $1
-              # Worksheets feed of a spreadsheet.
-              when /^\/feeds\/worksheets\/([^\/]+)/
-                return $1
-              # Human-readable new spreadsheet/document.
-              when /\/d\/([^\/]+)/
-                return $1
-              # Human-readable folder view.
-              when /\/folderview$/
-                if (uri.query || "").split(/&/).find(){ |s| s=~ /^id=(.*)$/ }
-                  return $1
-                end
-              # Human-readable old spreadsheet.
-              when /\/ccc$/
-                if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
-                  return $1
-                end
-            end
-            case uri.fragment
-              # Human-readable collection page.
-              when /^folders\/(.+)$/
-                return $1
-            end
-          end
-          raise(GoogleDrive::Error, "The given URL is not a known Google Drive URL: %s" % url)
         end
 
         # Returns GoogleDrive::Spreadsheet with given +title+.
@@ -273,6 +234,9 @@ module GoogleDrive
         end
         
         # Returns the top-level collections (direct children of the root collection).
+        #
+        # By default, it returns the first 100 collections. See document of files method for how to get
+        # all collections.
         def collections
           return self.root_collection.subcollections
         end
@@ -355,9 +319,7 @@ module GoogleDrive
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
         #   
         #   # Uploads a text file and converts to a Google Spreadsheet:
-        #   session.upload_from_file("/path/to/hoge.tsv", "Hoge")
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
-        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
         def upload_from_file(path, title = nil, params = {})
           file_name = ::File.basename(path)
@@ -373,6 +335,8 @@ module GoogleDrive
           return upload_from_media(media, title, params)
         end
 
+        # Uploads a file. Reads content from +media+.
+        # Returns a GoogleSpreadsheet::File object.
         def upload_from_media(media, title = "Untitled", params = {})
           file = self.drive.files.insert.request_schema.new({
             "title" => title,
@@ -399,6 +363,37 @@ module GoogleDrive
           end
         end
 
+        def execute_paged!(opts, &block) #:nodoc:
+
+          if block
+
+            page_token = nil
+            begin
+              parameters = (opts[:parameters] || {}).merge({"pageToken" => page_token})
+              (items, page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+              items.each(&block)
+            end while page_token
+
+          elsif opts[:parameters] && opts[:parameters].has_key?("pageToken")
+
+            api_result = self.execute!(
+                :api_method => opts[:api_method],
+                :parameters => opts[:parameters])
+            items = api_result.data.items.map() do |item|
+              opts[:converter] ? opts[:converter].call(item) : item
+            end
+            return [items, api_result.data.next_page_token]
+
+          else
+
+            parameters = (opts[:parameters] || {}).merge({"pageToken" => nil})
+            (items, next_page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+            return items
+
+          end
+          
+        end
+        
         def request(method, url, params = {}) #:nodoc:
           
           # Always uses HTTPS.
@@ -448,6 +443,39 @@ module GoogleDrive
               raise(GoogleDrive::Error,
                   "Unknown params[:response_type]: %s" % response_type)
           end
+        end
+
+        def url_to_id(url)
+          uri = URI.parse(url)
+          if ["spreadsheets.google.com", "docs.google.com", "drive.google.com"].include?(uri.host)
+            case uri.path
+              # Document feed.
+              when /^\/feeds\/\w+\/private\/full\/\w+%3A(.*)$/
+                return $1
+              # Worksheets feed of a spreadsheet.
+              when /^\/feeds\/worksheets\/([^\/]+)/
+                return $1
+              # Human-readable new spreadsheet/document.
+              when /\/d\/([^\/]+)/
+                return $1
+              # Human-readable folder view.
+              when /\/folderview$/
+                if (uri.query || "").split(/&/).find(){ |s| s=~ /^id=(.*)$/ }
+                  return $1
+                end
+              # Human-readable old spreadsheet.
+              when /\/ccc$/
+                if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
+                  return $1
+                end
+            end
+            case uri.fragment
+              # Human-readable collection page.
+              when /^folders\/(.+)$/
+                return $1
+            end
+          end
+          raise(GoogleDrive::Error, "The given URL is not a known Google Drive URL: %s" % url)
         end
 
     end
