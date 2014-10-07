@@ -27,6 +27,7 @@ module GoogleDrive
     #       "https://www.googleapis.com/auth/drive " +
     #       "https://spreadsheets.google.com/feeds/"
     #   auth.redirect_uri = "http://example.com/redirect"
+    #   auth.access_type = 'offline' # This must be set to have a refresh_token returned in the response.
     #   auth_url = auth.authorization_uri
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth.code = authorization_code
@@ -148,5 +149,5 @@ module GoogleDrive
       return GoogleDrive.login_with_oauth(client)
 
     end
-    
+
 end
