@@ -20,8 +20,9 @@ module GoogleDrive
 
         include(Util)
         
-        SUPPORTED_EXPORT_FORMAT = Set.new(["xls", "csv", "pdf", "ods", "tsv", "html"])
+        SUPPORTED_EXPORT_FORMAT = Set.new(["xlsx", "csv", "pdf"])
 
+        # Key of the spreadsheet.
         def key
           return self.id
         end
@@ -32,10 +33,12 @@ module GoogleDrive
               self.id
         end
 
+        # URL of feed used in the deprecated document list feed API.
         def document_feed_url
           return "https://docs.google.com/feeds/documents/private/full/" + CGI.escape(self.resource_id)
         end
 
+        # Spreadsheet feed URL of the spreadsheet.
         def spreadsheet_feed_url
           return "https://spreadsheets.google.com/feeds/spreadsheets/private/full/" + self.id
         end

@@ -83,9 +83,10 @@ module GoogleDrive
     # If +path+ doesn't exist or authentication has failed, prompts the user to authorize the access,
     # stores the session to +path+ and returns it.
     #
+    # +path+ defaults to ENV["HOME"] + "/.ruby_google_drive.token".
+    #
     # You can specify your own OAuth +client_id+ and +client_secret+. Otherwise the default one is used.
-    def self.saved_session(
-        path = ENV["HOME"] + "/.ruby_google_drive.token", proxy = nil, client_id = nil, client_secret = nil)
+    def self.saved_session(path = nil, proxy = nil, client_id = nil, client_secret = nil)
 
       if proxy
         raise(
@@ -100,6 +101,7 @@ module GoogleDrive
         raise(ArgumentError, "client_id and client_secret must be both specified or both omitted")
       end
 
+      path ||= ENV["HOME"] + "/.ruby_google_drive.token"
       if ::File.exist?(path)
         lines = ::File.readlines(path)
         case lines.size

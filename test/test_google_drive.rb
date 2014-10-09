@@ -298,14 +298,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
           account = {"auth_method" => "prompt"}
         end
         case account["auth_method"]
-          when "prompt"
-            highline = HighLine.new()
-            mail = highline.ask("Mail: ")
-            password = highline.ask("Password: "){ |q| q.echo = false }
-            @@session = GoogleDrive.login(mail, password)
           when "saved_session"
             @@session = GoogleDrive.saved_session(
-                account["oauth2_client_id"], account["oauth2_client_secret"])
+                nil, nil, account["oauth2_client_id"], account["oauth2_client_secret"])
           when "oauth2"
             client = OAuth2::Client.new(
                 account["oauth2_client_id"], account["oauth2_client_secret"],
@@ -323,8 +318,8 @@ class TC_GoogleDrive < Test::Unit::TestCase
             code = gets().chomp()
             token = client.auth_code.get_token(code, :redirect_uri => redirect_url)
             @@session = GoogleDrive.login_with_oauth(token)
-          when "client_login"
-            raise("auth_method client_login is no longer supported in %s" % account_path)
+          when "client_login", "prompt"
+            raise("auth_method %s is no longer supported in %s" % [account["auth_method"], account_path])
           else
             raise("auth_method field is missing in %s" % account_path)
         end

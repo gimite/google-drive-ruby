@@ -62,16 +62,20 @@ module GoogleDrive
 
         # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
         #
-        # You can specify query parameters described at
-        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
+        # You can specify parameters documented at
+        # https://developers.google.com/drive/v2/reference/files/list
         #
         # e.g.
         #
         #   # Gets all the files in collection, including subcollections.
         #   collection.files
-        #   
         #   # Gets only files with title "hoge".
-        #   collection.files("title" => "hoge", "title-exact" => "true")
+        #   collection.files("q" => "title = 'hoge'")
+        #   # Same as above with a placeholder.
+        #   collection.files("q" => ["title = ?", "hoge"])
+        #
+        # By default, it returns the first 100 files. See document of GoogleDrive::Session#files method
+        # for how to get all files.
         def files(params = {}, &block)
           return files_with_type(nil, params, &block)
         end
@@ -79,16 +83,25 @@ module GoogleDrive
         alias contents files
 
         # Returns all the spreadsheets in the collection.
+        #
+        # By default, it returns the first 100 spreadsheets. See document of GoogleDrive::Session#files method
+        # for how to get all spreadsheets.
         def spreadsheets(params = {}, &block)
           return files_with_type("application/vnd.google-apps.spreadsheet", params, &block)
         end
         
         # Returns all the Google Docs documents in the collection.
+        #
+        # By default, it returns the first 100 documents. See document of GoogleDrive::Session#files method
+        # for how to get all documents.
         def documents(params = {}, &block)
           return files_with_type("application/vnd.google-apps.document", params, &block)
         end
         
         # Returns all its subcollections.
+        #
+        # By default, it returns the first 100 subcollections. See document of GoogleDrive::Session#files method
+        # for how to get all subcollections.
         def subcollections(params = {}, &block)
           return files_with_type("application/vnd.google-apps.folder", params, &block)
         end
@@ -112,6 +125,7 @@ module GoogleDrive
           return file_by_title_with_type(title, "application/vnd.google-apps.folder")
         end
 
+        # Returns URL of the deprecated contents feed.
         def contents_url
           self.document_feed_url + "/contents"
         end
