@@ -65,7 +65,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
         assert_equal(Encoding::UTF_8, ws[1, 1].encoding)
       end
 
-      assert_equal("3\t5\t8\t13", ss.export_as_string("tsv", 0))
+      assert_equal("3,5,8,13", ss.export_as_string("csv"))
 
       ss2 = session.spreadsheet_by_key(ss.key)
       assert_equal(ss_title, ss2.title)

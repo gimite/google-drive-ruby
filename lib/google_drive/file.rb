@@ -49,6 +49,10 @@ module GoogleDrive
           warn(
               "WARNING: GoogleDrive::file\#document_feed_entry is deprecated and will be removed " +
               "in the next version.")
+          return self.document_feed_entry_internal(params)
+        end
+
+        def document_feed_entry_internal(params = {}) #:nodoc:
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
                 @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
@@ -58,7 +62,7 @@ module GoogleDrive
 
         # Resource ID.
         def resource_id
-          return self.document_feed_entry.css("gd|resourceId").text
+          return self.document_feed_entry_internal.css("gd|resourceId").text
         end
 
         # The type of resourse. e.g. "document", "spreadsheet", "folder"
@@ -70,19 +74,19 @@ module GoogleDrive
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
         def title(params = {})
-          return document_feed_entry(params).css("title").text
+          return document_feed_entry_internal(params).css("title").text
         end
         
         # URL to view/edit the file in a Web browser.
         #
         # e.g. "https://docs.google.com/file/d/xxxx/edit"
         def human_url
-          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
+          return self.document_feed_entry_internal.css("link[rel='alternate']")[0]["href"]
         end
         
         # ACL feed URL of the file.
         def acl_feed_url
-          orig_acl_feed_url = self.document_feed_entry.css(
+          orig_acl_feed_url = self.document_feed_entry_internal.css(
               "gd|feedLink[rel='http://schemas.google.com/acl/2007#accessControlList']")[0]["href"]
           case orig_acl_feed_url
             when %r{^https?://docs.google.com/feeds/default/private/full/.*/acl(\?.*)?$}
@@ -99,7 +103,7 @@ module GoogleDrive
         # Content types you can specify in methods download_to_file, download_to_string,
         # download_to_io .
         def available_content_types
-          return self.document_feed_entry.css("content").map(){ |c| c["type"] }
+          return self.document_feed_entry_internal.css("content").map(){ |c| c["type"] }
         end
         
         # Downloads the file to a local file.
@@ -131,7 +135,7 @@ module GoogleDrive
         
         # Downloads the file and writes it to +io+.
         def download_to_io(io, params = {})
-          all_contents = self.document_feed_entry.css("content")
+          all_contents = self.document_feed_entry_internal.css("content")
           if params[:content_type] && (!params[:content_type_is_hint] || all_contents.size > 1)
             contents = all_contents.select(){ |c| c["type"] == params[:content_type] }
           else
@@ -179,7 +183,7 @@ module GoogleDrive
         # Reads content from +io+ and updates the file with the content.
         def update_from_io(io, params = {})
           params = {:header => {"If-Match" => "*"}}.merge(params)
-          initial_url = self.document_feed_entry.css(
+          initial_url = self.document_feed_entry_internal.css(
               "link[rel='http://schemas.google.com/g/2005#resumable-edit-media']")[0]["href"]
           @document_feed_entry = @session.upload_raw(
               :put, initial_url, io, self.title, params)
@@ -196,7 +200,7 @@ module GoogleDrive
 
         # Renames title of the file.
         def rename(title)
-          edit_url = self.document_feed_entry.css("link[rel='edit']").first["href"]
+          edit_url = self.document_feed_entry_internal.css("link[rel='edit']").first["href"]
           xml = <<-"EOS"
             <atom:entry
                 xmlns:atom="http://www.w3.org/2005/Atom"

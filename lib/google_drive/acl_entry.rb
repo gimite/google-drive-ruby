@@ -42,6 +42,10 @@ module GoogleDrive
         def edit_url
           warn(
               "WARNING: GoogleDrive::AclEntry\#edit_url is deprecated and will be removed in the next version.")
+          return self.edit_url_internal
+        end
+
+        def edit_url_internal #:nodoc:
           return @params[:edit_url]
         end
 

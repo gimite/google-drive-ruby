@@ -37,6 +37,11 @@ module GoogleDrive
       module_function
         
         def encode_query(params)
+          for k, v in params
+            if ["ocr", "targetLanguage", "sourceLanguage"].include?(k.to_s())
+              warn("WARNING: Parameter '%s' is deprecated, and will not work in the next version." % k)
+            end
+          end
           return params.map(){ |k, v| CGI.escape(k.to_s()) + "=" + CGI.escape(v.to_s()) }.join("&")
         end
         

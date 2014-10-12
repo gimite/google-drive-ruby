@@ -32,6 +32,8 @@ module GoogleDrive
 
         UPLOAD_CHUNK_SIZE = 512 * 1024
         
+        # DEPRECATED: Will be removed in the next version.
+        #
         # The same as GoogleDrive.login.
         def self.login(mail, password, proxy = nil)
           warn(
@@ -44,8 +46,16 @@ module GoogleDrive
 
         # The same as GoogleDrive.login_with_oauth.
         def self.login_with_oauth(access_token, proxy = nil)
+          if proxy
+            warn(
+              "WARNING: Specifying a proxy object is deprecated and will not work in the next version. " +
+              "Set ENV[\"http_proxy\"] instead.")
+          end
           case access_token
             when OAuth::AccessToken
+              warn(
+                "WARNING: Authorization with OAuth1 is deprecated and will not work in the next version. " +
+                "Use OAuth2 instead.")
               raise(GoogleDrive::Error, "proxy is not supported with OAuth1.") if proxy
               fetcher = OAuth1Fetcher.new(access_token)
             when OAuth2::AccessToken

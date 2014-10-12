@@ -66,7 +66,7 @@ module GoogleDrive
         #   spreadsheet.acl.delete(spreadsheet.acl[1])
         def delete(entry)
           header = {"GData-Version" => "3.0"}
-          @session.request(:delete, entry.edit_url, :header => header, :auth => :writely)
+          @session.request(:delete, entry.edit_url_internal, :header => header, :auth => :writely)
           @acls.delete(entry)
         end
 
@@ -74,7 +74,7 @@ module GoogleDrive
 
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           doc = @session.request(
-              :put, entry.edit_url, :data => entry.to_xml(), :header => header, :auth => :writely)
+              :put, entry.edit_url_internal, :data => entry.to_xml(), :header => header, :auth => :writely)
 
           entry.params = entry_to_params(doc.root)
           return entry
