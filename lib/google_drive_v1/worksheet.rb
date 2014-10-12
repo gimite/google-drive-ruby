@@ -333,7 +333,6 @@ module GoogleDriveV1
 
               batch_url = concat_url(@cells_feed_url, "/batch")
               result = @session.request(:post, batch_url, :data => xml, :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
-              p result.to_s()
               for entry in result.css("atom|entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted

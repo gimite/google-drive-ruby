@@ -36,7 +36,7 @@ module GoogleDriveV1
         # Set <tt>params[:reload]</tt> to true to force reloading the title.
         def title(params = {})
           if !@title || params[:reload]
-            @title = spreadsheet_feed_entry(params).css("title").text
+            @title = spreadsheet_feed_entry_internal(params).css("title").text
           end
           return @title
         end
@@ -61,7 +61,7 @@ module GoogleDriveV1
         # e.g. "http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg"
         def human_url
           # Uses Document feed because Spreadsheet feed returns wrong URL for Apps account.
-          return self.document_feed_entry.css("link[rel='alternate']")[0]["href"]
+          return self.document_feed_entry_internal.css("link[rel='alternate']")[0]["href"]
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -84,6 +84,13 @@ module GoogleDriveV1
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def spreadsheet_feed_entry(params = {})
+          warn(
+              "WARNING: GoogleDriveV1::Spreadsheet\#spreadsheet_feed_entry is deprecated and will be removed " +
+              "in the next version.")
+          return spreadsheet_feed_entry_internal(params)
+        end
+        
+        def spreadsheet_feed_entry_internal(params = {}) #:nodoc
           if !@spreadsheet_feed_entry || params[:reload]
             @spreadsheet_feed_entry =
                 @session.request(:get, self.spreadsheet_feed_url).css("entry")[0]
@@ -95,6 +102,9 @@ module GoogleDriveV1
         #
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def document_feed_entry(params = {})
+          warn(
+              "WARNING: GoogleDriveV1::Spreadsheet\#document_feed_entry is deprecated and will be removed " +
+              "in the next version.")
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
                 @session.request(:get, self.document_feed_url, :auth => :writely).css("entry")[0]
@@ -121,14 +131,22 @@ module GoogleDriveV1
 
         # Exports the spreadsheet in +format+ and returns it as String.
         #
-        # +format+ can be either "xls", "csv", "pdf", "ods", "tsv" or "html".
+        # +format+ can be either "csv" or "pdf".
         # In format such as "csv", only the worksheet specified with +worksheet_index+ is
         # exported.
         def export_as_string(format, worksheet_index = nil)
+          if ["xls", "ods", "tsv", "html"].include?(format)
+            warn("WARNING: Export with format '%s' is deprecated, and will not work in the next version." % format)
+          end
           gid_param = worksheet_index ? "&gid=#{worksheet_index}" : ""
-          url =
+          format_string = "&format=#{format}"
+          if self.human_url.match("edit")
+            url = self.human_url.gsub(/edit/, "export") + gid_param + format_string
+          else
+            url =
               "https://spreadsheets.google.com/feeds/download/spreadsheets/Export" +
               "?key=#{key}&exportFormat=#{format}#{gid_param}"
+          end
           return @session.request(:get, url, :response_type => :raw)
         end
         

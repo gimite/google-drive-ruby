@@ -8,10 +8,8 @@ require "rubygems"
 require "nokogiri"
 require "oauth"
 require "oauth2"
-require "google/api_client"
 
 require "google_drive_v1/util"
-require "google_drive_v1/api_client_fetcher"
 require "google_drive_v1/client_login_fetcher"
 require "google_drive_v1/oauth1_fetcher"
 require "google_drive_v1/oauth2_fetcher"
@@ -34,8 +32,13 @@ module GoogleDriveV1
 
         UPLOAD_CHUNK_SIZE = 512 * 1024
         
+        # DEPRECATED: Will be removed in the next version.
+        #
         # The same as GoogleDriveV1.login.
         def self.login(mail, password, proxy = nil)
+          warn(
+              "WARNING: GoogleDriveV1.login is deprecated and will be removed in the next version. " +
+              "Use GoogleDriveV1.login_with_oauth instead.")
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
           session.login(mail, password)
           return session
@@ -43,14 +46,20 @@ module GoogleDriveV1
 
         # The same as GoogleDriveV1.login_with_oauth.
         def self.login_with_oauth(access_token, proxy = nil)
+          if proxy
+            warn(
+              "WARNING: Specifying a proxy object is deprecated and will not work in the next version. " +
+              "Set ENV[\"http_proxy\"] instead.")
+          end
           case access_token
             when OAuth::AccessToken
+              warn(
+                "WARNING: Authorization with OAuth1 is deprecated and will not work in the next version. " +
+                "Use OAuth2 instead.")
               raise(GoogleDriveV1::Error, "proxy is not supported with OAuth1.") if proxy
               fetcher = OAuth1Fetcher.new(access_token)
             when OAuth2::AccessToken
               fetcher = OAuth2Fetcher.new(access_token.token, proxy)
-            when Google::APIClient
-              fetcher = ApiClientFetcher.new(access_token)
             when String
               fetcher = OAuth2Fetcher.new(access_token, proxy)
             else
@@ -62,6 +71,9 @@ module GoogleDriveV1
 
         # The same as GoogleDriveV1.restore_session.
         def self.restore_session(auth_tokens, proxy = nil)
+          warn(
+              "WARNING: GoogleDriveV1.restore_session is deprecated and will be removed in the next version. " +
+              "Use GoogleDriveV1.login_with_oauth instead.")
           return Session.new(auth_tokens, nil, proxy)
         end
         
@@ -100,6 +112,8 @@ module GoogleDriveV1
 
         # Authentication tokens.
         def auth_tokens
+          warn(
+              "WARNING: GoogleDriveV1::Session\#auth_tokens is deprecated and will be removed in the next version.")
           if !@fetcher.is_a?(ClientLoginFetcher)
             raise(GoogleDriveV1::Error,
                 "Cannot call auth_tokens for session created by " +
@@ -110,12 +124,24 @@ module GoogleDriveV1
 
         # Authentication token.
         def auth_token(auth = :wise)
+          warn(
+              "WARNING: GoogleDriveV1::Session\#auth_token is deprecated and will be removed in the next version.")
           return self.auth_tokens[auth]
         end
 
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
-        attr_accessor :on_auth_fail
+        def on_auth_fail
+          warn(
+              "WARNING: GoogleDriveV1::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+          return @on_auth_fail
+        end
+
+        def on_auth_fail=(func)
+          warn(
+              "WARNING: GoogleDriveV1::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+          @on_auth_fail = func
+        end
 
         # Returns list of files for the user as array of GoogleDriveV1::File or its subclass.
         # You can specify query parameters described at
