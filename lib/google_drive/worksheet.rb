@@ -476,22 +476,22 @@ module GoogleDrive
         end
         
         # Get the url for the worksheet
-        def get_worksheet_human_url(spreadsheet, worksheet)
-          gid = parse_gid(spreadsheet, worksheet.title)
-          worksheet_url = spreadsheet.human_url.sub! 'edit?usp=docslist_api',"edit#gid=#{gid}"
+        def human_url()
+          gid = parse_gid()
+          worksheet_url = @spreadsheet.human_url.sub! 'edit?usp=docslist_api',"edit#gid=#{gid}"
           return worksheet_url
         end
 
         # Get the unique id for the worksheet by its title
         # this relies upon the worksheet titles being unique
         # not sure if there is a better way to get the gid
-        def parse_gid(spreadsheet, title)
+        def parse_gid()
 
-          result = @session.request(:get,"https://spreadsheets.google.com/feeds/worksheets/#{spreadsheet.key()}/private/full")
+          result = @session.request(:get,"https://spreadsheets.google.com/feeds/worksheets/#{@spreadsheet.key()}/private/full")
 
           entries = result.css("entry")
           entries.each do |entry|
-            if (entry.at_css("title").inner_text == title)
+            if (entry.at_css("title").inner_text == @title)
               links = entry.css("link")
 
               links.each do |link|
