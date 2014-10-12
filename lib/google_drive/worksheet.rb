@@ -475,6 +475,39 @@ module GoogleDrive
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
         
+        # Get the url for the worksheet
+        def get_worksheet_human_url(spreadsheet, worksheet)
+          gid = parse_gid(spreadsheet, worksheet.title)
+          worksheet_url = spreadsheet.human_url.sub! 'edit?usp=docslist_api',"edit#gid=#{gid}"
+          return worksheet_url
+        end
+
+        # Get the unique id for the worksheet by its title
+        # this relies upon the worksheet titles being unique
+        # not sure if there is a better way to get the gid
+        def parse_gid(spreadsheet, title)
+
+          result = @session.request(:get,"https://spreadsheets.google.com/feeds/worksheets/#{spreadsheet.key()}/private/full")
+
+          entries = result.css("entry")
+          entries.each do |entry|
+            if (entry.at_css("title").inner_text == title)
+              links = entry.css("link")
+
+              links.each do |link|
+                match = link["href"].match(/gid=(.*)&/i)
+                if (!match.nil?) 
+                  gid = match.captures
+                  if (gid.count > 0)
+                    return gid.first
+                  end
+                end
+              end
+            end
+          end
+          return nil
+        end
+
       private
 
         def parse_cell_args(args)
