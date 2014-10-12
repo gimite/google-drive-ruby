@@ -134,7 +134,9 @@ module GoogleDrive
                   old_terms.push("mimeType != 'application/vnd.google-apps.folder'")
                 end
               when "showdeleted"
-                # TODO
+                if v.to_s() == "false"
+                  old_terms.push("trashed = false")
+                end
               when "ocr", "targetLanguage", "sourceLanguage"
                 raise(ArgumentError, "'%s' parameter is no longer supported." % k)
               else
