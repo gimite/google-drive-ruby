@@ -15,6 +15,12 @@ module GoogleDrive
     #
     # Use GoogleDrive::Session#files or GoogleDrive::Session#file_by_title to
     # get this object.
+    #
+    # In addition to the methods below, properties defined here are also available as attributes:
+    # https://developers.google.com/drive/v2/reference/files#resource
+    #
+    # e.g.,
+    #   file.mime_type  # ==> "text/plain"
     class File
 
         include(Util)
@@ -41,7 +47,7 @@ module GoogleDrive
           end
         end
 
-        # Resource ID.
+        # Returns resource_type + ":" + id.
         def resource_id
           return "%s:%s" % [self.resource_type, self.id]
         end
