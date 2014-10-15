@@ -397,6 +397,8 @@ module GoogleDrive
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
           auth = params[:auth] || :wise
+          response_type = params[:response_type] || :xml
+
           if params[:header]
             extra_header = params[:header]
           elsif data
@@ -404,7 +406,7 @@ module GoogleDrive
           else
             extra_header = {}
           end
-          response_type = params[:response_type] || :xml
+          extra_header = {"GData-Version" => "3.0"}.merge(extra_header)
 
           while true
             response = @fetcher.request_raw(method, url, data, extra_header, auth)

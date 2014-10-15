@@ -332,8 +332,12 @@ module GoogleDrive
               EOS
 
               batch_url = concat_url(@cells_feed_url, "/batch")
-              result = @session.request(:post, batch_url, :data => xml, :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
-              for entry in result.css("atom|entry")
+              result = @session.request(
+                  :post,
+                  batch_url,
+                  :data => xml,
+                  :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
+              for entry in result.css("entry")
                 interrupted = entry.css("batch|interrupted")[0]
                 if interrupted
                   raise(GoogleDrive::Error, "Update has failed: %s" %
@@ -341,7 +345,7 @@ module GoogleDrive
                 end
                 if !(entry.css("batch|status").first["code"] =~ /^2/)
                   raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
-                    [entry.css("atom|id").text, entry.css("batch|status")[0]["reason"]])
+                    [entry.css("id").text, entry.css("batch|status")[0]["reason"]])
                 end
               end
 
