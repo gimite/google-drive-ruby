@@ -62,15 +62,7 @@ module GoogleDrive
                 "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
                 self.worksheets_feed_url)
           end
-          result = []
-          doc.css("entry").each() do |entry|
-            title = entry.css("title").text
-            updated = Time.parse(entry.css("updated").text)
-            url = entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, self, url, title, updated))
-          end
-          return result.freeze()
+          return doc.css("entry").map(){ |e| Worksheet.new(@session, self, e) }.freeze
         end
         
         # Returns a GoogleDrive::Worksheet with the given title in the spreadsheet.
@@ -92,9 +84,7 @@ module GoogleDrive
             </entry>
           EOS
           doc = @session.request(:post, self.worksheets_feed_url, :data => xml)
-          url = doc.css(
-            "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-          return Worksheet.new(@session, self, url, title)
+          return Worksheet.new(@session, self, doc.root)
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after

@@ -222,7 +222,13 @@ module GoogleDrive
         #     "http://spreadsheets.google.com/feeds/" +
         #     "cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
-          return Worksheet.new(self, nil, url)
+          if !(url =~
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
+            raise(GoogleDrive::Error, "URL is not a cell-based feed URL: #{url}")
+          end
+          worksheet_feed_url = "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
+          worksheet_feed_entry = request(:get, worksheet_feed_url)
+          return Worksheet.new(self, nil, worksheet_feed_entry)
         end
         
         # Returns the root collection.
