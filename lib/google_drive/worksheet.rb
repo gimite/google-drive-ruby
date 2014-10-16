@@ -59,6 +59,18 @@ module GoogleDrive
               "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']")[0]["href"]
         end
 
+        # Exports the worksheet as String in CSV format.
+        def export_as_string()
+          api_result = @session.execute!(:uri => self.csv_export_url)
+          return api_result.body
+        end
+
+        # Exports the worksheet to +path+ in CSV format.
+        def export_as_file(path)
+          data = export_as_string()
+          open(path, "w:utf-8"){ |f| f.write(data) }
+        end
+
         # gid of the worksheet.
         def gid
           # A bit tricky but couldn't find a better way.
