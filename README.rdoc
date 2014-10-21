@@ -10,15 +10,31 @@ NOTE: This is NOT a library to create Google Drive App.
 
 = How to use
 
+First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
+
 Example to read/write files in Google Drive:
 
   require "rubygems"
+  require "google/api_client"
   require "google_drive"
-  
-  # Logs in.
-  # You can also use OAuth. See document of
-  # GoogleDrive.login_with_oauth for details.
-  session = GoogleDrive.login("username@gmail.com", "mypassword")
+
+  # Authorizes with OAuth and gets an access token.
+  client = Google::APIClient.new
+  auth = client.authorization
+  auth.client_id = "YOUR CLIENT ID"
+  auth.client_secret = "YOUR CLIENT SECRET"
+  auth.scope =
+      "https://www.googleapis.com/auth/drive " +
+      "https://spreadsheets.google.com/feeds/"
+  auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+  print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
+  print("2. Enter the authorization code shown in the page: ")
+  auth.code = $stdin.gets.chomp
+  auth.fetch_access_token!
+  access_token = auth.access_token
+
+  # Creates a session.
+  session = GoogleDrive.login_with_oauth(access_token)
   
   # Gets list of remote files.
   for file in session.files
@@ -38,12 +54,13 @@ Example to read/write files in Google Drive:
 Example to read/write spreadsheets:
   
   require "rubygems"
+  require "google/api_client"
   require "google_drive"
+
+  # Same as the code above to get access_token...
   
-  # Logs in.
-  # You can also use OAuth. See document of
-  # GoogleDrive.login_with_oauth for details.
-  session = GoogleDrive.login("username@gmail.com", "mypassword")
+  # Creates a session.
+  session = GoogleDrive.login(access_token)
   
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
