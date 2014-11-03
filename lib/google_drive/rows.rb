@@ -42,6 +42,10 @@ module GoogleDrive
       self
     end
 
+    def size
+      @rows.size
+    end
+
     def each &block
       @rows.each &block
     end
