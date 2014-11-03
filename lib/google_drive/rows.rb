@@ -33,6 +33,7 @@ module GoogleDrive
     end
 
     def fetch(query = Query.new(@feed_url))
+      @rows.clear
       doc = @session.request(:get, query.to_url)
       doc.css('feed > entry').each do |entry|
         @rows.push Row.build(entry).with_list(self)
