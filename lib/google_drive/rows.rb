@@ -3,8 +3,9 @@
 
 require "google_drive/util"
 require "google_drive/error"
+require "google_drive/query"
+require "google_drive/list_query"
 require "google_drive/row"
-
 
 module GoogleDrive
 
@@ -17,25 +18,47 @@ module GoogleDrive
   class Rows
     include Enumerable
 
+    def self.columnize(column)
+      # The keys are the header values of the worksheet lowercased and with all non-alpha-numeric characters removed
+      column.gsub(/\p{^Alnum}/, '').downcase
+    end
+
+    attr_reader :feed_url, :append_url
+
     def initialize(session, worksheet) #:nodoc:
       @session = session
       @worksheet = worksheet
       @feed_url = worksheet.list_feed_url
+      @rows = []
     end
 
-    def fetch(search = {})
-      #e.g. {'reverse' => true, 'startIndex' => 1, 'count': 1}
-      actual_url = @feed_url + add_search_query(search)
-      puts '----------   ' + actual_url
-      doc = @session.request(:get, actual_url)
-      doc.css("feed > entry")
+    def fetch(query = Query.new(@feed_url))
+      doc = @session.request(:get, query.to_url)
+      doc.css('feed > entry').each do |entry|
+        @rows.push Row.build(entry).with_list(self)
+      end
+      @append_url = doc.at_css("link[rel='http://schemas.google.com/g/2005#post']")['href']
+      self
     end
 
-    private
+    def each &block
+      @rows.each &block
+    end
 
-    def add_search_query(search)
-      return '' if search.size.zero?
-      "?#{URI.encode_www_form(search)}"
+    def upload_insert(row)
+      @session.request(:post, append_url, :data => row.as_insert_xml)
+    end
+
+    def upload_update(row)
+      @session.request(:put, row.edit_url, :data => row.as_update_xml, :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
+    end
+
+    def new_query
+      ListQuery.new(@feed_url)
+    end
+
+    def columnize(str)
+      self.class.columnize(str)
     end
   end
 end
