@@ -25,6 +25,8 @@ Example to read/write files in Google Drive:
   auth.client_secret = "YOUR CLIENT SECRET"
   auth.scope =
       "https://www.googleapis.com/auth/drive " +
+      "https://docs.google.com/feeds/ " +
+      "https://docs.googleusercontent.com/ " +
       "https://spreadsheets.google.com/feeds/"
   auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
   print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
