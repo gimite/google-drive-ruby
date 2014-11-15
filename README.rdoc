@@ -62,7 +62,7 @@ Example to read/write spreadsheets:
   # Same as the code above to get access_token...
   
   # Creates a session.
-  session = GoogleDrive.login(access_token)
+  session = GoogleDrive.login_with_oauth(access_token)
   
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
