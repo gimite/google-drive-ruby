@@ -14,6 +14,7 @@ require "google_drive/util"
 require "google_drive/api_client_fetcher"
 require "google_drive/error"
 require "google_drive/authentication_error"
+require "google_drive/response_code_error"
 require "google_drive/spreadsheet"
 require "google_drive/worksheet"
 require "google_drive/collection"
@@ -419,11 +420,9 @@ module GoogleDrive
             if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
               next
             end
-            if !(response.code =~ /^[23]/)
-              raise(
-                response.code == "401" ? AuthenticationError : GoogleDrive::Error,
-                "Response code #{response.code} for #{method} #{url}: " +
-                CGI.unescapeHTML(response.body))
+            if !(response.code =~ /^2/)
+              raise((response.code == "401" ? AuthenticationError : ResponseCodeError).
+                  new(response.code, response.body, method, url))
             end
             return convert_response(response, response_type)
           end

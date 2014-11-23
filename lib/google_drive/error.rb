@@ -4,7 +4,7 @@
 
 module GoogleDrive
 
-    # Raised when spreadsheets.google.com has returned error.
+    # Raised on errors in this library.
     class Error < RuntimeError
 
     end
