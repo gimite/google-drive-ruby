@@ -1,18 +1,18 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_drive_v1/util"
-require "google_drive_v1/error"
-require "google_drive_v1/record"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
+require "google_drive_v0/record"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
     # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
     # March 2012.
     #
-    # Use GoogleDriveV1::Worksheet#add_table to create table.
-    # Use GoogleDriveV1::Worksheet#tables to get GoogleDriveV1::Table objects.
+    # Use GoogleDriveV0::Worksheet#add_table to create table.
+    # Use GoogleDriveV0::Worksheet#tables to get GoogleDriveV0::Table objects.
     class Table
 
         include(Util)

@@ -1,19 +1,19 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_drive_v1/util"
-require "google_drive_v1/error"
-require "google_drive_v1/list_row"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
+require "google_drive_v0/list_row"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
     # Provides access to cells using column names.
-    # Use GoogleDriveV1::Worksheet#list to get GoogleDriveV1::List object.
+    # Use GoogleDriveV0::Worksheet#list to get GoogleDriveV0::List object.
     #--
-    # This is implemented as wrapper of GoogleDriveV1::Worksheet i.e. using cells
+    # This is implemented as wrapper of GoogleDriveV0::Worksheet i.e. using cells
     # feed, not list feed. In this way, we can easily provide consistent API as
-    # GoogleDriveV1::Worksheet using save()/reload().
+    # GoogleDriveV0::Worksheet using save()/reload().
     class List
         
         include(Enumerable)
@@ -27,12 +27,12 @@ module GoogleDriveV1
           return @worksheet.num_rows - 1
         end
         
-        # Returns Hash-like object (GoogleDriveV1::ListRow) for the row with the
+        # Returns Hash-like object (GoogleDriveV0::ListRow) for the row with the
         # index. Keys of the object are colum names (the first row).
         # The second row has index 0.
         #
         # Note that updates to the returned object are not sent to the server until
-        # you call GoogleDriveV1::Worksheet#save().
+        # you call GoogleDriveV0::Worksheet#save().
         def [](index)
           return ListRow.new(self, index)
         end
@@ -42,12 +42,12 @@ module GoogleDriveV1
         # The second row has index 0.
         #
         # Note that update is not sent to the server until
-        # you call GoogleDriveV1::Worksheet#save().
+        # you call GoogleDriveV0::Worksheet#save().
         def []=(index, hash)
           self[index].replace(hash)
         end
         
-        # Iterates over Hash-like object (GoogleDriveV1::ListRow) for each row
+        # Iterates over Hash-like object (GoogleDriveV0::ListRow) for each row
         # (except for the first row).
         # Keys of the object are colum names (the first row).
         def each(&block)
@@ -65,7 +65,7 @@ module GoogleDriveV1
         # Updates column names i.e. the contents of the first row.
         #
         # Note that update is not sent to the server until
-        # you call GoogleDriveV1::Worksheet#save().
+        # you call GoogleDriveV0::Worksheet#save().
         def keys=(ary)
           for i in 1..ary.size
             @worksheet[1, i] = ary[i - 1]
@@ -77,10 +77,10 @@ module GoogleDriveV1
         
         # Adds a new row to the bottom.
         # Keys of +hash+ are colum names (the first row).
-        # Returns GoogleDriveV1::ListRow for the new row.
+        # Returns GoogleDriveV0::ListRow for the new row.
         #
         # Note that update is not sent to the server until
-        # you call GoogleDriveV1::Worksheet#save().
+        # you call GoogleDriveV0::Worksheet#save().
         def push(hash)
           row = self[self.size]
           row.update(hash)
@@ -110,7 +110,7 @@ module GoogleDriveV1
         def key_to_col(key)
           key = key.to_s()
           col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
-          raise(GoogleDriveV1::Error, "Column doesn't exist: %p" % key) if !col
+          raise(GoogleDriveV0::Error, "Column doesn't exist: %p" % key) if !col
           return col
         end
         

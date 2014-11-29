@@ -9,22 +9,22 @@ require "nokogiri"
 require "oauth"
 require "oauth2"
 
-require "google_drive_v1/util"
-require "google_drive_v1/client_login_fetcher"
-require "google_drive_v1/oauth1_fetcher"
-require "google_drive_v1/oauth2_fetcher"
-require "google_drive_v1/error"
-require "google_drive_v1/authentication_error"
-require "google_drive_v1/spreadsheet"
-require "google_drive_v1/worksheet"
-require "google_drive_v1/collection"
-require "google_drive_v1/file"
+require "google_drive_v0/util"
+require "google_drive_v0/client_login_fetcher"
+require "google_drive_v0/oauth1_fetcher"
+require "google_drive_v0/oauth2_fetcher"
+require "google_drive_v0/error"
+require "google_drive_v0/authentication_error"
+require "google_drive_v0/spreadsheet"
+require "google_drive_v0/worksheet"
+require "google_drive_v0/collection"
+require "google_drive_v0/file"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
-    # Use GoogleDriveV1.login or GoogleDriveV1.saved_session to get
-    # GoogleDriveV1::Session object.
+    # Use GoogleDriveV0.login or GoogleDriveV0.saved_session to get
+    # GoogleDriveV0::Session object.
     class Session
 
         include(Util)
@@ -34,17 +34,17 @@ module GoogleDriveV1
         
         # DEPRECATED: Will be removed in the next version.
         #
-        # The same as GoogleDriveV1.login.
+        # The same as GoogleDriveV0.login.
         def self.login(mail, password, proxy = nil)
           warn(
-              "WARNING: GoogleDriveV1.login is deprecated and will be removed in the next version. " +
-              "Use GoogleDriveV1.login_with_oauth instead.")
+              "WARNING: GoogleDriveV0.login is deprecated and will be removed in the next version. " +
+              "Use GoogleDriveV0.login_with_oauth instead.")
           session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
           session.login(mail, password)
           return session
         end
 
-        # The same as GoogleDriveV1.login_with_oauth.
+        # The same as GoogleDriveV0.login_with_oauth.
         def self.login_with_oauth(access_token, proxy = nil)
           if proxy
             warn(
@@ -56,33 +56,33 @@ module GoogleDriveV1
               warn(
                 "WARNING: Authorization with OAuth1 is deprecated and will not work in the next version. " +
                 "Use OAuth2 instead.")
-              raise(GoogleDriveV1::Error, "proxy is not supported with OAuth1.") if proxy
+              raise(GoogleDriveV0::Error, "proxy is not supported with OAuth1.") if proxy
               fetcher = OAuth1Fetcher.new(access_token)
             when OAuth2::AccessToken
               fetcher = OAuth2Fetcher.new(access_token.token, proxy)
             when String
               fetcher = OAuth2Fetcher.new(access_token, proxy)
             else
-              raise(GoogleDriveV1::Error,
+              raise(GoogleDriveV0::Error,
                   "access_token is neither String, OAuth2::Token nor OAuth::Token: %p" % access_token)
           end
           return Session.new(nil, fetcher)
         end
 
-        # The same as GoogleDriveV1.restore_session.
+        # The same as GoogleDriveV0.restore_session.
         def self.restore_session(auth_tokens, proxy = nil)
           warn(
-              "WARNING: GoogleDriveV1.restore_session is deprecated and will be removed in the next version. " +
-              "Use GoogleDriveV1.login_with_oauth instead.")
+              "WARNING: GoogleDriveV0.restore_session is deprecated and will be removed in the next version. " +
+              "Use GoogleDriveV0.login_with_oauth instead.")
           return Session.new(auth_tokens, nil, proxy)
         end
         
-        # Creates a dummy GoogleDriveV1::Session object for testing.
+        # Creates a dummy GoogleDriveV0::Session object for testing.
         def self.new_dummy()
           return Session.new(nil, Object.new())
         end
 
-        # DEPRECATED: Use GoogleDriveV1.restore_session instead.
+        # DEPRECATED: Use GoogleDriveV0.restore_session instead.
         def initialize(auth_tokens = nil, fetcher = nil, proxy = nil)
           if fetcher
             @fetcher = fetcher
@@ -92,11 +92,11 @@ module GoogleDriveV1
         end
 
         # Authenticates with given +mail+ and +password+, and updates current session object
-        # if succeeds. Raises GoogleDriveV1::AuthenticationError if fails.
+        # if succeeds. Raises GoogleDriveV0::AuthenticationError if fails.
         # Google Apps account is supported.
         def login(mail, password)
           if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleDriveV1::Error,
+            raise(GoogleDriveV0::Error,
                 "Cannot call login for session created by login_with_oauth.")
           end
           begin
@@ -104,7 +104,7 @@ module GoogleDriveV1
               :wise => authenticate(mail, password, :wise),
               :writely => authenticate(mail, password, :writely),
             }
-          rescue GoogleDriveV1::Error => ex
+          rescue GoogleDriveV0::Error => ex
             return true if @on_auth_fail && @on_auth_fail.call()
             raise(AuthenticationError, "Authentication failed for #{mail}: #{ex.message}")
           end
@@ -113,9 +113,9 @@ module GoogleDriveV1
         # Authentication tokens.
         def auth_tokens
           warn(
-              "WARNING: GoogleDriveV1::Session\#auth_tokens is deprecated and will be removed in the next version.")
+              "WARNING: GoogleDriveV0::Session\#auth_tokens is deprecated and will be removed in the next version.")
           if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleDriveV1::Error,
+            raise(GoogleDriveV0::Error,
                 "Cannot call auth_tokens for session created by " +
                 "login_with_oauth.")
           end
@@ -125,7 +125,7 @@ module GoogleDriveV1
         # Authentication token.
         def auth_token(auth = :wise)
           warn(
-              "WARNING: GoogleDriveV1::Session\#auth_token is deprecated and will be removed in the next version.")
+              "WARNING: GoogleDriveV0::Session\#auth_token is deprecated and will be removed in the next version.")
           return self.auth_tokens[auth]
         end
 
@@ -133,17 +133,17 @@ module GoogleDriveV1
         # When this function returns +true+, it tries again.
         def on_auth_fail
           warn(
-              "WARNING: GoogleDriveV1::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+              "WARNING: GoogleDriveV0::Session\#on_auth_fail is deprecated and will be removed in the next version.")
           return @on_auth_fail
         end
 
         def on_auth_fail=(func)
           warn(
-              "WARNING: GoogleDriveV1::Session\#on_auth_fail is deprecated and will be removed in the next version.")
+              "WARNING: GoogleDriveV0::Session\#on_auth_fail is deprecated and will be removed in the next version.")
           @on_auth_fail = func
         end
 
-        # Returns list of files for the user as array of GoogleDriveV1::File or its subclass.
+        # Returns list of files for the user as array of GoogleDriveV0::File or its subclass.
         # You can specify query parameters described at
         # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
         #
@@ -159,7 +159,7 @@ module GoogleDriveV1
           return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
         end
         
-        # Returns GoogleDriveV1::File or its subclass whose title exactly matches +title+.
+        # Returns GoogleDriveV0::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
         #
@@ -173,7 +173,7 @@ module GoogleDriveV1
           end
         end
 
-        # Returns list of spreadsheets for the user as array of GoogleDriveV1::Spreadsheet.
+        # Returns list of spreadsheets for the user as array of GoogleDriveV0::Spreadsheet.
         # You can specify query parameters e.g. "title", "title-exact".
         #
         # e.g.
@@ -191,7 +191,7 @@ module GoogleDriveV1
               select(){ |f| f.is_a?(Spreadsheet) }
         end
 
-        # Returns GoogleDriveV1::Spreadsheet with given +key+.
+        # Returns GoogleDriveV0::Spreadsheet with given +key+.
         #
         # e.g.
         #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
@@ -201,7 +201,7 @@ module GoogleDriveV1
           return Spreadsheet.new(self, url)
         end
 
-        # Returns GoogleDriveV1::Spreadsheet with given +url+. You must specify either of:
+        # Returns GoogleDriveV0::Spreadsheet with given +url+. You must specify either of:
         # - URL of the page you open to access the spreadsheet in your browser
         # - URL of worksheet-based feed of the spreadseet
         #
@@ -228,14 +228,14 @@ module GoogleDriveV1
           return Spreadsheet.new(self, url)
         end
 
-        # Returns GoogleDriveV1::Spreadsheet with given +title+.
+        # Returns GoogleDriveV0::Spreadsheet with given +title+.
         # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
         # one of them.
         def spreadsheet_by_title(title)
           return spreadsheets({"title" => title, "title-exact" => "true"})[0]
         end
         
-        # Returns GoogleDriveV1::Worksheet with given +url+.
+        # Returns GoogleDriveV0::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
         # e.g.
@@ -257,14 +257,14 @@ module GoogleDriveV1
         end
         
         # Returns a top-level collection whose title exactly matches +title+ as
-        # GoogleDriveV1::Collection.
+        # GoogleDriveV0::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
         # one of them.
         def collection_by_title(title)
           return self.root_collection.subcollection_by_title(title)
         end
         
-        # Returns GoogleDriveV1::Collection with given +url+.
+        # Returns GoogleDriveV0::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
         #   open a collection
@@ -287,7 +287,7 @@ module GoogleDriveV1
           return Collection.new(self, to_v3_url(url))
         end
 
-        # Creates new spreadsheet and returns the new GoogleDriveV1::Spreadsheet.
+        # Creates new spreadsheet and returns the new GoogleDriveV0::Spreadsheet.
         #
         # e.g.
         #   session.create_spreadsheet("My new sheet")
@@ -444,7 +444,7 @@ module GoogleDriveV1
                 "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
               return Spreadsheet.new(self, worksheets_feed_link["href"], title)
             else
-              return GoogleDriveV1::File.new(self, entry)
+              return GoogleDriveV0::File.new(self, entry)
           end
         end
 
@@ -470,7 +470,7 @@ module GoogleDriveV1
             end
             if !(response.code =~ /^[23]/)
               raise(
-                response.code == "401" ? AuthenticationError : GoogleDriveV1::Error,
+                response.code == "401" ? AuthenticationError : GoogleDriveV0::Error,
                 "Response code #{response.code} for #{method} #{url}: " +
                 CGI.unescapeHTML(response.body))
             end
@@ -494,7 +494,7 @@ module GoogleDriveV1
             when :response
               return response
             else
-              raise(GoogleDriveV1::Error,
+              raise(GoogleDriveV0::Error,
                   "Unknown params[:response_type]: %s" % response_type)
           end
         end

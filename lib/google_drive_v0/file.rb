@@ -4,15 +4,15 @@
 require "cgi"
 require "stringio"
 
-require "google_drive_v1/util"
-require "google_drive_v1/acl"
+require "google_drive_v0/util"
+require "google_drive_v0/acl"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
     
     # A file in Google Drive, including Google Docs document/spreadsheet/presentation.
     #
-    # Use GoogleDriveV1::Session#files or GoogleDriveV1::Session#file_by_title to
+    # Use GoogleDriveV0::Session#files or GoogleDriveV0::Session#file_by_title to
     # get this object.
     class File
 
@@ -47,7 +47,7 @@ module GoogleDriveV1
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def document_feed_entry(params = {})
           warn(
-              "WARNING: GoogleDriveV1::file\#document_feed_entry is deprecated and will be removed " +
+              "WARNING: GoogleDriveV0::file\#document_feed_entry is deprecated and will be removed " +
               "in the next version.")
           return self.document_feed_entry_internal(params)
         end
@@ -95,7 +95,7 @@ module GoogleDriveV1
               # URL of old API version. Converts to v3 URL.
               return "#{DOCS_BASE_URL}/#{$1}/acl"
             else
-              raise(GoogleDriveV1::Error,
+              raise(GoogleDriveV0::Error,
                 "ACL feed URL is in unknown format: #{orig_acl_feed_url}")
           end
         end
@@ -145,12 +145,12 @@ module GoogleDriveV1
             url = contents[0]["src"]
           else
             if contents.empty?
-              raise(GoogleDriveV1::Error,
+              raise(GoogleDriveV0::Error,
                   ("Downloading with content type %p not supported for this file. " +
                    "Specify one of these to content_type: %p") %
                   [params[:content_type], self.available_content_types])
             else
-              raise(GoogleDriveV1::Error,
+              raise(GoogleDriveV0::Error,
                   ("Multiple content types are available for this file. " +
                    "Specify one of these to content_type: %p") %
                   [self.available_content_types])
@@ -214,7 +214,7 @@ module GoogleDriveV1
         
         alias title= rename
         
-        # Returns GoogleDriveV1::Acl object for the file.
+        # Returns GoogleDriveV0::Acl object for the file.
         #
         # With the object, you can see and modify people who can access the file.
         # Modifications take effect immediately.

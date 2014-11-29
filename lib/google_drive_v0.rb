@@ -5,13 +5,13 @@ require "rubygems"
 require "google/api_client"
 require "json"
 
-require "google_drive_v1/session"
+require "google_drive_v0/session"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
-    # Authenticates with given +mail+ and +password+, and returns GoogleDriveV1::Session
-    # if succeeds. Raises GoogleDriveV1::AuthenticationError if fails.
+    # Authenticates with given +mail+ and +password+, and returns GoogleDriveV0::Session
+    # if succeeds. Raises GoogleDriveV0::AuthenticationError if fails.
     # Google Apps account is supported.
     #
     # +proxy+ is deprecated, and will be removed in the next version.
@@ -42,14 +42,14 @@ module GoogleDriveV1
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
     #   auth_token = client.auth_code.get_token(
     #       authorization_code, :redirect_uri => "http://example.com/")
-    #   session = GoogleDriveV1.login_with_oauth(auth_token.token)
+    #   session = GoogleDriveV0.login_with_oauth(auth_token.token)
     #
     # Or, from existing refresh token:
     #
     #   auth_token = OAuth2::AccessToken.from_hash(client,
     #       {:refresh_token => refresh_token, :expires_at => expires_at})
     #   auth_token = auth_token.refresh!
-    #   session = GoogleDriveV1.login_with_oauth(auth_token.token)
+    #   session = GoogleDriveV0.login_with_oauth(auth_token.token)
     #
     # If your app is not a Web app, use "urn:ietf:wg:oauth:2.0:oob" as redirect_url. Then
     # authorization code is shown after authorization.
@@ -66,12 +66,12 @@ module GoogleDriveV1
 
     # Restores session using return value of auth_tokens method of previous session.
     #
-    # See GoogleDriveV1.login for description of parameter +proxy+.
+    # See GoogleDriveV0.login for description of parameter +proxy+.
     def self.restore_session(auth_tokens, proxy = nil)
       return Session.restore_session(auth_tokens, proxy)
     end
     
-    # Restores GoogleDriveV1::Session from +path+ and returns it.
+    # Restores GoogleDriveV0::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts the user to authorize the access,
     # stores the session to +path+ and returns it.
     #
@@ -141,7 +141,7 @@ module GoogleDriveV1
 
       end
 
-      return GoogleDriveV1.login_with_oauth(auth.access_token)
+      return GoogleDriveV0.login_with_oauth(auth.access_token)
 
     end
 

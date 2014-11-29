@@ -4,11 +4,11 @@
 # Author: Phuogn Nguyen <https://github.com/phuongnd08>
 # The license of this source is "New BSD Licence"
 
-module GoogleDriveV1
+module GoogleDriveV0
 
     # An entry of an ACL (access control list) of a spreadsheet.
     #
-    # Use GoogleDriveV1::Acl#[] to get GoogleDriveV1::AclEntry object.
+    # Use GoogleDriveV0::Acl#[] to get GoogleDriveV0::AclEntry object.
     #
     # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
     class AclEntry
@@ -41,7 +41,7 @@ module GoogleDriveV1
 
         def edit_url
           warn(
-              "WARNING: GoogleDriveV1::AclEntry\#edit_url is deprecated and will be removed in the next version.")
+              "WARNING: GoogleDriveV0::AclEntry\#edit_url is deprecated and will be removed in the next version.")
           return self.edit_url_internal
         end
 

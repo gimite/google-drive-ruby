@@ -3,20 +3,20 @@
 
 require "time"
 
-require "google_drive_v1/util"
-require "google_drive_v1/error"
-require "google_drive_v1/worksheet"
-require "google_drive_v1/table"
-require "google_drive_v1/acl"
-require "google_drive_v1/file"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
+require "google_drive_v0/worksheet"
+require "google_drive_v0/table"
+require "google_drive_v0/acl"
+require "google_drive_v0/file"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
     
     # A spreadsheet.
     #
-    # Use methods in GoogleDriveV1::Session to get GoogleDriveV1::Spreadsheet object.
-    class Spreadsheet < GoogleDriveV1::File
+    # Use methods in GoogleDriveV0::Session to get GoogleDriveV0::Spreadsheet object.
+    class Spreadsheet < GoogleDriveV0::File
 
         include(Util)
         
@@ -45,7 +45,7 @@ module GoogleDriveV1
         def key
           if !(@worksheets_feed_url =~
               %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/private/.*$})
-            raise(GoogleDriveV1::Error,
+            raise(GoogleDriveV0::Error,
               "Worksheets feed URL is in unknown format: #{@worksheets_feed_url}")
           end
           return $1
@@ -85,7 +85,7 @@ module GoogleDriveV1
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def spreadsheet_feed_entry(params = {})
           warn(
-              "WARNING: GoogleDriveV1::Spreadsheet\#spreadsheet_feed_entry is deprecated and will be removed " +
+              "WARNING: GoogleDriveV0::Spreadsheet\#spreadsheet_feed_entry is deprecated and will be removed " +
               "in the next version.")
           return spreadsheet_feed_entry_internal(params)
         end
@@ -103,7 +103,7 @@ module GoogleDriveV1
         # Set <tt>params[:reload]</tt> to true to force reloading the feed.
         def document_feed_entry(params = {})
           warn(
-              "WARNING: GoogleDriveV1::Spreadsheet\#document_feed_entry is deprecated and will be removed " +
+              "WARNING: GoogleDriveV0::Spreadsheet\#document_feed_entry is deprecated and will be removed " +
               "in the next version.")
           if !@document_feed_entry || params[:reload]
             @document_feed_entry =
@@ -179,14 +179,14 @@ module GoogleDriveV1
           # authorization token, and it has a bug that it downloads PDF when text/html is
           # requested.
           raise(NotImplementedError,
-              "Use export_as_file or export_as_string instead for GoogleDriveV1::Spreadsheet.")
+              "Use export_as_file or export_as_string instead for GoogleDriveV0::Spreadsheet.")
         end
         
-        # Returns worksheets of the spreadsheet as array of GoogleDriveV1::Worksheet.
+        # Returns worksheets of the spreadsheet as array of GoogleDriveV0::Worksheet.
         def worksheets
           doc = @session.request(:get, @worksheets_feed_url)
           if doc.root.name != "feed"
-            raise(GoogleDriveV1::Error,
+            raise(GoogleDriveV0::Error,
                 "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
                 @worksheets_feed_url)
           end
@@ -201,7 +201,7 @@ module GoogleDriveV1
           return result.freeze()
         end
         
-        # Returns a GoogleDriveV1::Worksheet with the given title in the spreadsheet.
+        # Returns a GoogleDriveV0::Worksheet with the given title in the spreadsheet.
         #
         # Returns nil if not found. Returns the first one when multiple worksheets with the
         # title are found.
@@ -209,7 +209,7 @@ module GoogleDriveV1
           return self.worksheets.find(){ |ws| ws.title == title }
         end
 
-        # Adds a new worksheet to the spreadsheet. Returns added GoogleDriveV1::Worksheet.
+        # Adds a new worksheet to the spreadsheet. Returns added GoogleDriveV0::Worksheet.
         def add_worksheet(title, max_rows = 100, max_cols = 20)
           xml = <<-"EOS"
             <entry xmlns='http://www.w3.org/2005/Atom'

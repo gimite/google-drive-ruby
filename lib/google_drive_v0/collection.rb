@@ -1,16 +1,16 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_drive_v1/util"
-require "google_drive_v1/error"
-require "google_drive_v1/spreadsheet"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
+require "google_drive_v0/spreadsheet"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
-    # Use GoogleDriveV1::Session#root_collection, GoogleDriveV1::Collection#subcollections,
-    # or GoogleDriveV1::Session#collection_by_url to get GoogleDriveV1::Collection object.
-    class Collection < GoogleDriveV1::File
+    # Use GoogleDriveV0::Session#root_collection, GoogleDriveV0::Collection#subcollections,
+    # or GoogleDriveV0::Session#collection_by_url to get GoogleDriveV0::Collection object.
+    class Collection < GoogleDriveV0::File
 
         include(Util)
         
@@ -44,7 +44,7 @@ module GoogleDriveV1
           return self.root? ? nil : super
         end
         
-        # Adds the given GoogleDriveV1::File to the collection.
+        # Adds the given GoogleDriveV0::File to the collection.
         def add(file)
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           xml = <<-"EOS"
@@ -57,7 +57,7 @@ module GoogleDriveV1
           return nil
         end
 
-        # Creates a sub-collection with given title. Returns GoogleDriveV1::Collection object.
+        # Creates a sub-collection with given title. Returns GoogleDriveV0::Collection object.
         def create_subcollection(title)
           header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
           xml = <<-EOS
@@ -72,7 +72,7 @@ module GoogleDriveV1
           return @session.entry_element_to_file(doc)
         end
 
-        # Removes the given GoogleDriveV1::File from the collection.
+        # Removes the given GoogleDriveV0::File from the collection.
         def remove(file)
           url = to_v3_url("#{contents_url}/#{file.resource_id}")
           @session.request(:delete, url, :auth => :writely, :header => {"If-Match" => "*"})
@@ -117,7 +117,7 @@ module GoogleDriveV1
         end
         
         # Returns a file (can be a spreadsheet, document, subcollection or other files) in the
-        # collection which exactly matches +title+ as GoogleDriveV1::File.
+        # collection which exactly matches +title+ as GoogleDriveV0::File.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
         # one of them.
         #
@@ -126,7 +126,7 @@ module GoogleDriveV1
           return file_by_title_with_type(title, nil)
         end
         
-        # Returns its subcollection whose title exactly matches +title+ as GoogleDriveV1::Collection.
+        # Returns its subcollection whose title exactly matches +title+ as GoogleDriveV0::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
         # one of them.
         #

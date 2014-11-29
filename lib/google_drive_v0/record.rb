@@ -1,16 +1,16 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_drive_v1/util"
-require "google_drive_v1/error"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
 
 
-module GoogleDriveV1
+module GoogleDriveV0
 
     # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
     # March 2012.
     #
-    # Use GoogleDriveV1::Table#records to get GoogleDriveV1::Record objects.
+    # Use GoogleDriveV0::Table#records to get GoogleDriveV0::Record objects.
     class Record < Hash
         include(Util)
 
