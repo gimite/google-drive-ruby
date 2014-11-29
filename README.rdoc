@@ -1,6 +1,13 @@
-This is a Ruby 1.8/1.9/2.0 library to read/write files/spreadsheets in Google Drive/Docs.
+This is a Ruby 1.9/2.0 library to read/write files/spreadsheets in Google Drive/Docs.
 
 NOTE: This is NOT a library to create Google Drive App.
+
+
+= Incompatibility introduced in ver. 1.0.0
+
+Ver. 1.0.0 is not 100% backward compatible with 0.3.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.login_with_oauth instead, as in the example code below.
+
+I recommend to switch to the new API. But if you somehow want to continue using the old API, you can keep using it by requiring "google_drive_v0" instead of "google_drive" and use GoogleDriveV0 class instead of GoogleDrive class. It should continue working at least until April 20, 2015 when Google stops support of Documents List API.
 
 
 = How to install
