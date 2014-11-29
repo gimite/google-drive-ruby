@@ -30,6 +30,9 @@ module GoogleDrive
 
         def initialize(client)
           @client = client
+          # Sets virtually infinite default timeout because some operations (e.g., uploading
+          # a large files/spreadsheets) can take very long.
+          @client.connection.options[:timeout] ||= 100000000
           @drive = @client.discovered_api("drive", "v2")
         end
 
