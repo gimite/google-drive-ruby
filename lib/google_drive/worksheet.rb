@@ -297,54 +297,48 @@ module GoogleDrive
               cell_entries[[row, col]] = entry
             end
 
-            # Updates cell values using batch operation.
-            # If the data is large, we split it into multiple operations, otherwise batch may fail.
-            @modified.each_slice(25) do |chunk|
-
-              xml = <<-EOS
-                <feed xmlns="http://www.w3.org/2005/Atom"
-                      xmlns:batch="http://schemas.google.com/gdata/batch"
-                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                  <id>#{h(self.cells_feed_url)}</id>
+            xml = <<-EOS
+              <feed xmlns="http://www.w3.org/2005/Atom"
+                    xmlns:batch="http://schemas.google.com/gdata/batch"
+                    xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+                <id>#{h(self.cells_feed_url)}</id>
+            EOS
+            for row, col in @modified
+              value = @cells[[row, col]]
+              entry = cell_entries[[row, col]]
+              id = entry.css("id").text
+              edit_url = entry.css("link[rel='edit']")[0]["href"]
+              xml << <<-EOS
+                <entry>
+                  <batch:id>#{h(row)},#{h(col)}</batch:id>
+                  <batch:operation type="update"/>
+                  <id>#{h(id)}</id>
+                  <link rel="edit" type="application/atom+xml"
+                    href="#{h(edit_url)}"/>
+                  <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                </entry>
               EOS
-              for row, col in chunk
-                value = @cells[[row, col]]
-                entry = cell_entries[[row, col]]
-                id = entry.css("id").text
-                edit_url = entry.css("link[rel='edit']")[0]["href"]
-                xml << <<-EOS
-                  <entry>
-                    <batch:id>#{h(row)},#{h(col)}</batch:id>
-                    <batch:operation type="update"/>
-                    <id>#{h(id)}</id>
-                    <link rel="edit" type="application/atom+xml"
-                      href="#{h(edit_url)}"/>
-                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                  </entry>
-                EOS
-              end
-              xml << <<-"EOS"
-                </feed>
-              EOS
+            end
+            xml << <<-"EOS"
+              </feed>
+            EOS
 
-              batch_url = concat_url(self.cells_feed_url, "/batch")
-              result = @session.request(
-                  :post,
-                  batch_url,
-                  :data => xml,
-                  :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
-              for entry in result.css("entry")
-                interrupted = entry.css("batch|interrupted")[0]
-                if interrupted
-                  raise(GoogleDrive::Error, "Update has failed: %s" %
-                    interrupted["reason"])
-                end
-                if !(entry.css("batch|status").first["code"] =~ /^2/)
-                  raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
-                    [entry.css("id").text, entry.css("batch|status")[0]["reason"]])
-                end
+            batch_url = concat_url(self.cells_feed_url, "/batch")
+            result = @session.request(
+                :post,
+                batch_url,
+                :data => xml,
+                :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
+            for entry in result.css("entry")
+              interrupted = entry.css("batch|interrupted")[0]
+              if interrupted
+                raise(GoogleDrive::Error, "Update has failed: %s" %
+                  interrupted["reason"])
               end
-
+              if !(entry.css("batch|status").first["code"] =~ /^2/)
+                raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
+                  [entry.css("id").text, entry.css("batch|status")[0]["reason"]])
+              end
             end
 
             @modified.clear()
