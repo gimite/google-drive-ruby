@@ -17,13 +17,14 @@ module GoogleDrive
 
         include(Util)
 
-        def initialize(session, spreadsheet, cells_feed_url, title = nil, updated = nil) #:nodoc:
-          
+        def initialize(session, spreadsheet, cells_feed_url, title = nil, updated = nil, gid = nil) #:nodoc:
+
           @session = session
           @spreadsheet = spreadsheet
           @cells_feed_url = cells_feed_url
           @title = title
           @updated = updated
+          @gid = gid
 
           @cells = nil
           @input_values = nil
@@ -199,6 +200,11 @@ module GoogleDrive
         def updated
           reload() if !@updated
           return @updated
+        end
+
+        # Gid of the worksheet if provided by the api.
+        def gid
+          return @gid
         end
 
         # Updates title of the worksheet.
