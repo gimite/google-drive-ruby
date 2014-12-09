@@ -194,9 +194,10 @@ module GoogleDrive
           doc.css("entry").each() do |entry|
             title = entry.css("title").text
             updated = Time.parse(entry.css("updated").text)
+            gid = extract_gid(entry)
             url = entry.css(
               "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-            result.push(Worksheet.new(@session, self, url, title, updated))
+            result.push(Worksheet.new(@session, self, url, title, updated, gid))
           end
           return result.freeze()
         end
@@ -207,6 +208,10 @@ module GoogleDrive
         # title are found.
         def worksheet_by_title(title)
           return self.worksheets.find(){ |ws| ws.title == title }
+        end
+
+        def worksheet_by_gid(gid)
+          return self.worksheets.find { |ws| ws.gid == gid }
         end
 
         # Adds a new worksheet to the spreadsheet. Returns added GoogleDrive::Worksheet.
@@ -242,7 +247,17 @@ module GoogleDrive
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
-        
+
+        protected
+
+        # Look for integer gid in url params. Return nil if not available.
+        def extract_gid(entry)
+          entry.css('link[href*="gid="]').reduce(nil) do |gid, link|
+            gid ||= link.attributes["href"].value.match(/gid=(\d+)/)[1]
+            gid ? Integer(gid) : nil
+          end
+        end
+
     end
     
 end
