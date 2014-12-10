@@ -15,7 +15,7 @@ module GoogleDrive
             @proxy = proxy
           elsif ENV["http_proxy"] && !ENV["http_proxy"].empty?
             proxy_url = URI.parse(ENV["http_proxy"])
-            @proxy = Net::HTTP.Proxy(proxy_url.host, proxy_url.port)
+            @proxy = Net::HTTP.Proxy(proxy_url.host, proxy_url.port, proxy_url.user, proxy_url.password)
           else
             @proxy = Net::HTTP
           end
