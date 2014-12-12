@@ -73,6 +73,14 @@ module GoogleDrive
           return self.worksheets.find(){ |ws| ws.title == title }
         end
 
+        # Returns a GoogleDrive::Worksheet with the given gid.
+        #
+        # Returns nil if not found.
+        def worksheet_by_gid(gid)
+          gid = gid.to_s()
+          return self.worksheets.find(){ |ws| ws.gid == gid }
+        end
+
         # Adds a new worksheet to the spreadsheet. Returns added GoogleDrive::Worksheet.
         def add_worksheet(title, max_rows = 100, max_cols = 20)
           xml = <<-"EOS"
