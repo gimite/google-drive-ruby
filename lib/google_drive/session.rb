@@ -30,8 +30,6 @@ module GoogleDrive
         include(Util)
         extend(Util)
 
-        UPLOAD_CHUNK_SIZE = 512 * 1024
-        
         # The same as GoogleDrive.login_with_oauth.
         def self.login_with_oauth(client_or_access_token, proxy = nil)
           return Session.new(client_or_access_token, proxy)
