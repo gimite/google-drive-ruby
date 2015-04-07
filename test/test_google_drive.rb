@@ -1,6 +1,6 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
 require "yaml"
-require "test/unit"
+require "minitest/autorun"
 
 require "rubygems"
 require "bundler/setup"
@@ -9,7 +9,7 @@ require "highline"
 require "google_drive"
 
 
-class TC_GoogleDrive < Test::Unit::TestCase
+class TestGoogleDrive < Minitest::Test
 
     # Random string is added to avoid conflict with existing file titles.
     PREFIX = "google-drive-ruby-test-4101301e303c-"
@@ -85,8 +85,8 @@ class TC_GoogleDrive < Test::Unit::TestCase
       ss4 = session.spreadsheet_by_url(ss.worksheets_feed_url)
       assert_equal(ss.worksheets_feed_url, ss4.worksheets_feed_url)
 
-      assert_not_nil(session.spreadsheets.find(){ |s| s.title == ss_title })
-      assert_not_nil(session.spreadsheets("title" => ss_title, "title-exact" => "true").
+      assert(session.spreadsheets.find(){ |s| s.title == ss_title })
+      assert(session.spreadsheets("title" => ss_title, "title-exact" => "true").
         find(){ |s| s.title == ss_title })
 
       ws2 = session.worksheet_by_url(ws.cells_feed_url)
@@ -94,12 +94,12 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("hoge", ws2.title)
 
       ss_copy = ss.duplicate(ss_copy_title)
-      assert_not_nil(session.spreadsheets("title" => ss_copy_title, "title-exact" => "true").
+      assert(session.spreadsheets("title" => ss_copy_title, "title-exact" => "true").
         find(){ |s| s.title == ss_copy_title })
       assert_equal("3", ss_copy.worksheets[0][1, 1])
 
       ss5 = session.spreadsheet_by_title(ss_title)
-      assert_not_nil(ss5)
+      assert(ss5)
       # This should be the one with title exact match, not ss_copy.
       assert_equal(ss_title, ss5.title)
 
@@ -186,8 +186,8 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_instance_of(GoogleDrive::Collection, collection)
       assert_equal(test_collection_title, collection.title)
       assert(!collection.root?)
-      assert_not_nil(collection.resource_id)
-      assert_not_nil(root.subcollection_by_title(test_collection_title))
+      assert(collection.resource_id)
+      assert(root.subcollection_by_title(test_collection_title))
       collection2 = session.collection_by_url(collection.document_feed_url)
       assert(collection2.files.empty?)
       collection3 = session.collection_by_url(
@@ -214,16 +214,16 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Checks if file exists in root.
       tfile = session.file_by_title(test_file_title)
-      assert_not_nil(tfile)
+      assert(tfile)
       assert_equal(test_file_title, tfile.title)
       tfile = root.file_by_title(test_file_title)
-      assert_not_nil(tfile)
+      assert(tfile)
       assert_equal(test_file_title, tfile.title)
       tfiles = root.files("title" => test_file_title, "title-exact" => "true")
       assert_equal(1, tfiles.size)
       assert_equal(test_file_title, tfiles[0].title)
       tfile = session.file_by_title([test_file_title])
-      assert_not_nil(tfile)
+      assert(tfile)
       assert_equal(test_file_title, tfile.title)
 
       # Moves file to collection.
@@ -233,13 +233,13 @@ class TC_GoogleDrive < Test::Unit::TestCase
       # Checks if file exists in collection.
       assert(root.files("title" => test_file_title, "title-exact" => "true").empty?)
       tfile = collection.file_by_title(test_file_title)
-      assert_not_nil(tfile)
+      assert(tfile)
       assert_equal(test_file_title, tfile.title)
       tfiles = collection.files("title" => test_file_title, "title-exact" => "true")
       assert_equal(1, tfiles.size)
       assert_equal(test_file_title, tfiles[0].title)
       tfile = session.file_by_title([test_collection_title, test_file_title])
-      assert_not_nil(tfile)
+      assert(tfile)
       assert_equal(test_file_title, tfile.title)
 
       # Deletes files.
