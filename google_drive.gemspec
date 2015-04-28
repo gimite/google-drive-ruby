@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
 
   s.name = "google_drive"
-  s.version = "0.3.11"
+  s.version = "1.0.0"
   s.authors = ["Hiroshi Ichikawa"]
   s.email = ["gimite+github@gmail.com"]
   s.summary = "A library to read/write files/spreadsheets in Google Drive/Docs."
@@ -15,7 +15,6 @@ Gem::Specification.new do |s|
   s.has_rdoc = true
   s.extra_rdoc_files = ["README.rdoc"] + Dir["doc_src/**/*"]
   s.rdoc_options = ["--main", "README.rdoc"]
-  s.required_ruby_version = ">= 1.9.2"
 
   s.add_dependency("nokogiri", [">= 1.4.4", "!= 1.5.1", "!= 1.5.2"])
   s.add_dependency("oauth", [">= 0.3.6"])

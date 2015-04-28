@@ -150,8 +150,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
       assert_equal("7", ws[3, 1])
 
       delete_test_file(ss)
-      assert_nil(session.spreadsheets("title" => ss_title, "title-exact" => "true").
-        find(){ |s| s.title == ss_title })
+      assert(session.spreadsheets("q" => ["title = ? and trashed = false", ss_title]).empty?)
       delete_test_file(ss_copy, true)
       assert_nil(session.spreadsheets("title" => ss_copy_title, "title-exact" => "true").
         find(){ |s| s.title == ss_copy_title })
@@ -174,7 +173,7 @@ class TC_GoogleDrive < Test::Unit::TestCase
 
       # Removes test files/collections in the previous run in case the previous run failed.
       for title in [test_file_title, test_collection_title]
-        for file in root.files("title" => title, "title-exact" => "true", "showfolders" => "true")
+        for file in session.files("title" => title, "title-exact" => "true", "showfolders" => "true")
           delete_test_file(file, true)
         end
       end
@@ -260,24 +259,6 @@ class TC_GoogleDrive < Test::Unit::TestCase
           "title" => test_collection_title, "title-exact" => "true", "showfolders" => "true").empty?)
     end
 
-    def test_collection_offline()
-
-      browser_url =
-          "https://docs.google.com/?tab=mo&authuser=0#folders/" +
-          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc"
- 	    collection_feed_url =
-          "https://docs.google.com/feeds/default/private/full/folder%3A" +
-          "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc?v=3"
-      session = GoogleDrive::Session.new_dummy()
-
-      collection = session.collection_by_url(browser_url)
-      assert_equal(collection_feed_url, collection.collection_feed_url)
-
-      collection = session.collection_by_url(collection_feed_url)
-      assert_equal(collection_feed_url, collection.collection_feed_url)
-
-    end
-
     def test_acl_online()
 
       session = get_session()
@@ -290,10 +271,10 @@ class TC_GoogleDrive < Test::Unit::TestCase
       end
 
       file = session.upload_from_string("hoge", test_file_title, :content_type => "text/plain", :convert => false)
-      file.acl.push({:scope_type => "default", :with_key => true, :role => "reader"})
+      file.acl.push({:scope_type => "anyone", :with_key => true, :role => "reader"})
       acl = file.acl(:reload => true)
       assert_equal(2, acl.size)
-      assert_equal("default", acl[1].scope_type)
+      assert_equal("anyone", acl[1].scope_type)
       assert(acl[1].with_key)
       assert_equal("reader", acl[1].role)
 
@@ -317,15 +298,9 @@ class TC_GoogleDrive < Test::Unit::TestCase
           account = {"auth_method" => "prompt"}
         end
         case account["auth_method"]
-          when "prompt"
-            highline = HighLine.new()
-            mail = highline.ask("Mail: ")
-            password = highline.ask("Password: "){ |q| q.echo = false }
-            @@session = GoogleDrive.login(mail, password)
           when "saved_session"
-            @@session = GoogleDrive.saved_session
-          when "client_login"
-            @@session = GoogleDrive.login(account["mail"], account["password"])
+            @@session = GoogleDrive.saved_session(
+                nil, nil, account["oauth2_client_id"], account["oauth2_client_secret"])
           when "oauth2"
             client = OAuth2::Client.new(
                 account["oauth2_client_id"], account["oauth2_client_secret"],
@@ -343,6 +318,8 @@ class TC_GoogleDrive < Test::Unit::TestCase
             code = gets().chomp()
             token = client.auth_code.get_token(code, :redirect_uri => redirect_url)
             @@session = GoogleDrive.login_with_oauth(token)
+          when "client_login", "prompt"
+            raise("auth_method %s is no longer supported in %s" % [account["auth_method"], account_path])
           else
             raise("auth_method field is missing in %s" % account_path)
         end

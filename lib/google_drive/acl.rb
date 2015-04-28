@@ -18,15 +18,16 @@ module GoogleDrive
         include(Util)
         extend(Forwardable)
 
-        def initialize(session, acls_feed_url) #:nodoc:
+        def initialize(session, file) #:nodoc:
           @session = session
-          @acls_feed_url = acls_feed_url
-          header = {"GData-Version" => "3.0"}
-          doc = @session.request(:get, @acls_feed_url, :header => header, :auth => :writely)
-          @acls = doc.css("entry").map(){ |e| AclEntry.new(entry_to_params(e)) }
+          @file = file
+          api_result = @session.execute!(
+              :api_method => @session.drive.permissions.list,
+              :parameters => { "fileId" => @file.id })
+          @entries = api_result.data.items.map(){ |i| AclEntry.new(i, self) }
         end
 
-        def_delegators(:@acls, :size, :[], :each)
+        def_delegators(:@entries, :size, :[], :each)
 
         # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with keys
         # :scope_type, :scope and :role. See GoogleDrive::AclEntry#scope_type and
@@ -37,27 +38,28 @@ module GoogleDrive
         # e.g.
         #   # A specific user can read or write.
         #   spreadsheet.acl.push(
-        #       {:scope_type => "user", :scope => "example2@gmail.com", :role => "reader"})
+        #       {:type => "user", :value => "example2@gmail.com", :role => "reader"})
         #   spreadsheet.acl.push(
-        #       {:scope_type => "user", :scope => "example3@gmail.com", :role => "writer"})
+        #       {:type => "user", :value => "example3@gmail.com", :role => "writer"})
         #   # Publish on the Web.
         #   spreadsheet.acl.push(
-        #       {:scope_type => "default", :role => "reader"})
+        #       {:type => "anyone", :role => "reader"})
         #   # Anyone who knows the link can read.
         #   spreadsheet.acl.push(
-        #       {:scope_type => "default", :with_key => true, :role => "reader"})
-        def push(entry)
-
-          entry = AclEntry.new(entry) if entry.is_a?(Hash)
-
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
-          doc = @session.request(
-              :post, @acls_feed_url, :data => entry.to_xml(), :header => header, :auth => :writely)
-
-          entry.params = entry_to_params(doc.root)
-          @acls.push(entry)
-          return entry
-
+        #       {:type => "anyone", :withLink => true, :role => "reader"})
+        #
+        # See here for parameter detais:
+        # https://developers.google.com/drive/v2/reference/permissions/insert
+        def push(params_or_entry)
+          entry = params_or_entry.is_a?(AclEntry) ? params_or_entry : AclEntry.new(params_or_entry)
+          new_permission = @session.drive.permissions.insert.request_schema.new(entry.params)
+          api_result = @session.execute!(
+              :api_method => @session.drive.permissions.insert,
+              :body_object => new_permission,
+              :parameters => { "fileId" => @file.id })
+          new_entry = AclEntry.new(api_result.data, self)
+          @entries.push(new_entry)
+          return new_entry
         end
 
         # Deletes an ACL entry.
@@ -65,49 +67,29 @@ module GoogleDrive
         # e.g.
         #   spreadsheet.acl.delete(spreadsheet.acl[1])
         def delete(entry)
-          header = {"GData-Version" => "3.0"}
-          @session.request(:delete, entry.edit_url_internal, :header => header, :auth => :writely)
-          @acls.delete(entry)
+          @session.execute!(
+              :api_method => @session.drive.permissions.delete,
+              :parameters => {
+                  "fileId" => @file.id,
+                  "permissionId" => entry.id,
+                })
+          @entries.delete(entry)
         end
 
         def update_role(entry) #:nodoc:
-
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
-          doc = @session.request(
-              :put, entry.edit_url_internal, :data => entry.to_xml(), :header => header, :auth => :writely)
-
-          entry.params = entry_to_params(doc.root)
+          api_result = @session.execute!(
+              :api_method => @session.drive.permissions.update,
+              :body_object => entry.api_permission,
+              :parameters => {
+                  "fileId" => @file.id,
+                  "permissionId" => entry.id,
+              })
+          entry.api_permission = api_result.data
           return entry
-
         end
 
         def inspect
-          return "\#<%p %p>" % [self.class, @acls]
-        end
-
-      private
-
-        def entry_to_params(entry)
-          
-          if !entry.css("gAcl|withKey").empty?
-            with_key = true
-            role = entry.css("gAcl|withKey gAcl|role")[0]["value"]
-          else
-            with_key = false
-            role = entry.css("gAcl|role")[0]["value"]
-          end
-
-          return {
-            :acl => self,
-            :scope_type => entry.css("gAcl|scope")[0]["type"],
-            :scope => entry.css("gAcl|scope")[0]["value"],
-            :with_key => with_key,
-            :role => role,
-            :title => entry.css("title").text,
-            :edit_url => entry.css("link[rel='edit']")[0]["href"],
-            :etag => entry["etag"],
-          }
-          
+          return "\#<%p %p>" % [self.class, @entries]
         end
 
     end

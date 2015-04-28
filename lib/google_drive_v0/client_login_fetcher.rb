@@ -1,10 +1,10 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "google_drive/basic_fetcher"
+require "google_drive_v0/basic_fetcher"
 
 
-module GoogleDrive
+module GoogleDriveV0
 
     class ClientLoginFetcher < BasicFetcher #:nodoc:
         

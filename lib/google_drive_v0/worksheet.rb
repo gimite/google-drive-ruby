@@ -1,95 +1,63 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "cgi"
 require "set"
-require "uri"
 
-require "google_drive/util"
-require "google_drive/error"
-require "google_drive/table"
-require "google_drive/list"
+require "google_drive_v0/util"
+require "google_drive_v0/error"
+require "google_drive_v0/table"
+require "google_drive_v0/list"
 
 
-module GoogleDrive
+module GoogleDriveV0
 
     # A worksheet (i.e. a tab) in a spreadsheet.
-    # Use GoogleDrive::Spreadsheet#worksheets to get GoogleDrive::Worksheet object.
+    # Use GoogleDriveV0::Spreadsheet#worksheets to get GoogleDriveV0::Worksheet object.
     class Worksheet
 
         include(Util)
 
-        def initialize(session, spreadsheet, worksheet_feed_entry) #:nodoc:
-
+        def initialize(session, spreadsheet, cells_feed_url, title = nil, updated = nil) #:nodoc:
+          
           @session = session
           @spreadsheet = spreadsheet
-          set_worksheet_feed_entry(worksheet_feed_entry)
+          @cells_feed_url = cells_feed_url
+          @title = title
+          @updated = updated
 
           @cells = nil
           @input_values = nil
           @numeric_values = nil
           @modified = Set.new()
           @list = nil
-
+          
         end
-
-        # Nokogiri::XML::Element object of the <entry> element in a worksheets feed.
-        attr_reader(:worksheet_feed_entry)
-
-        # Title of the worksheet (shown as tab label in Web interface).
-        attr_reader(:title)
-
-        # Time object which represents the time the worksheet was last updated.
-        attr_reader(:updated)
 
         # URL of cell-based feed of the worksheet.
-        def cells_feed_url
-          return @worksheet_feed_entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-        end
+        attr_reader(:cells_feed_url)
 
         # URL of worksheet feed URL of the worksheet.
         def worksheet_feed_url
-          return @worksheet_feed_entry.css("link[rel='self']")[0]["href"]
+          # I don't know good way to get worksheet feed URL from cells feed URL.
+          # Probably it would be cleaner to keep worksheet feed URL and get cells feed URL
+          # from it.
+          if !(@cells_feed_url =~
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
+            raise(GoogleDriveV0::Error,
+              "Cells feed URL is in unknown format: #{@cells_feed_url}")
+          end
+          return "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
         end
 
-        # URL to export the worksheet as CSV.
-        def csv_export_url
-          return @worksheet_feed_entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']")[0]["href"]
-        end
-
-        # Exports the worksheet as String in CSV format.
-        def export_as_string()
-          api_result = @session.execute!(:uri => self.csv_export_url)
-          return api_result.body
-        end
-
-        # Exports the worksheet to +path+ in CSV format.
-        def export_as_file(path)
-          data = export_as_string()
-          open(path, "wb"){ |f| f.write(data) }
-        end
-
-        # gid of the worksheet.
-        def gid
-          # A bit tricky but couldn't find a better way.
-          return CGI.parse(URI.parse(self.csv_export_url).query)["gid"].last
-        end
-
-        # URL to view/edit the worksheet in a Web browser.
-        def human_url
-          return "%s\#gid=%s" % [self.spreadsheet.human_url, self.gid]
-        end
-
-        # GoogleDrive::Spreadsheet which this worksheet belongs to.
+        # GoogleDriveV0::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
-            if !(self.worksheet_feed_url =~ %r{https?://spreadsheets\.google\.com/feeds/worksheets/(.*)/(.*)$})
-              raise(GoogleDrive::Error,
-                  "Worksheet feed URL is in unknown format: #{self.worksheet_feed_url}")
+            if !(@cells_feed_url =~
+                %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full(\?.*)?$})
+              raise(GoogleDriveV0::Error,
+                "Cells feed URL is in unknown format: #{@cells_feed_url}")
             end
-            @spreadsheet = @session.file_by_id($1)
+            @spreadsheet = @session.spreadsheet_by_key($1)
           end
           return @spreadsheet
         end
@@ -106,7 +74,7 @@ module GoogleDrive
         end
 
         # Updates content of the cell.
-        # Arguments in the bracket must be either (row number, column number) or cell name.
+        # Arguments in the bracket must be either (row number, column number) or cell name. 
         # Note that update is not sent to the server until you call save().
         # Top-left cell is [1, 1].
         #
@@ -117,7 +85,7 @@ module GoogleDrive
         def []=(*args)
           (row, col) = parse_cell_args(args[0...-1])
           value = args[-1].to_s()
-          reload_cells() if !@cells
+          reload() if !@cells
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
           @numeric_values[[row, col]] = nil
@@ -154,7 +122,7 @@ module GoogleDrive
         #   worksheet.input_value(1, 3)  #=> "=RC[-2]+RC[-1]"
         def input_value(*args)
           (row, col) = parse_cell_args(args)
-          reload_cells() if !@cells
+          reload() if !@cells
           return @input_values[[row, col]] || ""
         end
 
@@ -173,13 +141,13 @@ module GoogleDrive
         # https://developers.google.com/google-apps/spreadsheets/#working_with_cell-based_feeds
         def numeric_value(*args)
           (row, col) = parse_cell_args(args)
-          reload_cells() if !@cells
+          reload() if !@cells
           return @numeric_values[[row, col]]
         end
-
+        
         # Row number of the bottom-most non-empty row.
         def num_rows
-          reload_cells() if !@cells
+          reload() if !@cells
           # Memoizes it because this can be bottle-neck.
           # https://github.com/gimite/google-drive-ruby/pull/49
           return @num_rows ||= @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| r }.max || 0
@@ -187,7 +155,7 @@ module GoogleDrive
 
         # Column number of the right-most non-empty column.
         def num_cols
-          reload_cells() if !@cells
+          reload() if !@cells
           # Memoizes it because this can be bottle-neck.
           # https://github.com/gimite/google-drive-ruby/pull/49
           return @num_cols ||= @input_values.select(){ |(r, c), v| !v.empty? }.map(){ |(r, c), v| c }.max || 0
@@ -195,41 +163,54 @@ module GoogleDrive
 
         # Number of rows including empty rows.
         def max_rows
-          reload_cells() if !@cells
+          reload() if !@cells
           return @max_rows
         end
 
         # Updates number of rows.
         # Note that update is not sent to the server until you call save().
         def max_rows=(rows)
-          reload_cells() if !@cells
+          reload() if !@cells
           @max_rows = rows
           @meta_modified = true
         end
 
         # Number of columns including empty columns.
         def max_cols
-          reload_cells() if !@cells
+          reload() if !@cells
           return @max_cols
         end
 
         # Updates number of columns.
         # Note that update is not sent to the server until you call save().
         def max_cols=(cols)
-          reload_cells() if !@cells
+          reload() if !@cells
           @max_cols = cols
           @meta_modified = true
+        end
+
+        # Title of the worksheet (shown as tab label in Web interface).
+        def title
+          reload() if !@title
+          return @title
+        end
+
+         # Date updated of the worksheet (shown as tab label in Web interface).
+        def updated
+          reload() if !@updated
+          return @updated
         end
 
         # Updates title of the worksheet.
         # Note that update is not sent to the server until you call save().
         def title=(title)
+          reload() if !@cells
           @title = title
           @meta_modified = true
         end
 
         def cells #:nodoc:
-          reload_cells() if !@cells
+          reload() if !@cells
           return @cells
         end
 
@@ -248,19 +229,42 @@ module GoogleDrive
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= etc. is discarded if you haven't called save().
         def reload()
-          set_worksheet_feed_entry(@session.request(:get, self.worksheet_feed_url).root)
-          reload_cells()
+          
+          doc = @session.request(:get, @cells_feed_url)
+          @max_rows = doc.css("gs|rowCount").text.to_i()
+          @max_cols = doc.css("gs|colCount").text.to_i()
+          @title = doc.css("feed > title")[0].text
+
+          @num_cols = nil
+          @num_rows = nil
+
+          @cells = {}
+          @input_values = {}
+          @numeric_values = {}
+          doc.css("feed > entry").each() do |entry|
+            cell = entry.css("gs|cell")[0]
+            row = cell["row"].to_i()
+            col = cell["col"].to_i()
+            @cells[[row, col]] = cell.inner_text
+            @input_values[[row, col]] = cell["inputValue"] || cell.inner_text
+            numeric_value = cell["numericValue"]
+            @numeric_values[[row, col]] = numeric_value ? numeric_value.to_f() : nil
+          end
+          @modified.clear()
+          @meta_modified = false
           return true
+          
         end
 
         # Saves your changes made by []=, etc. to the server.
         def save()
-
+          
           sent = false
 
           if @meta_modified
 
-            edit_url = @worksheet_feed_entry.css("link[rel='edit']")[0]["href"]
+            ws_doc = @session.request(:get, self.worksheet_feed_url)
+            edit_url = ws_doc.css("link[rel='edit']")[0]["href"]
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
@@ -270,11 +274,11 @@ module GoogleDrive
               </entry>
             EOS
 
-            result = @session.request(
+            @session.request(
                 :put, edit_url, :data => xml,
                 :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
-            set_worksheet_feed_entry(result.root)
 
+            @meta_modified = false
             sent = true
 
           end
@@ -286,7 +290,7 @@ module GoogleDrive
             cell_entries = {}
             rows = @modified.map(){ |r, c| r }
             cols = @modified.map(){ |r, c| c }
-            url = concat_url(self.cells_feed_url,
+            url = concat_url(@cells_feed_url,
                 "?return-empty=true&min-row=#{rows.min}&max-row=#{rows.max}" +
                 "&min-col=#{cols.min}&max-col=#{cols.max}")
             doc = @session.request(:get, url)
@@ -297,57 +301,59 @@ module GoogleDrive
               cell_entries[[row, col]] = entry
             end
 
-            xml = <<-EOS
-              <feed xmlns="http://www.w3.org/2005/Atom"
-                    xmlns:batch="http://schemas.google.com/gdata/batch"
-                    xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-                <id>#{h(self.cells_feed_url)}</id>
-            EOS
-            for row, col in @modified
-              value = @cells[[row, col]]
-              entry = cell_entries[[row, col]]
-              id = entry.css("id").text
-              edit_url = entry.css("link[rel='edit']")[0]["href"]
-              xml << <<-EOS
-                <entry>
-                  <batch:id>#{h(row)},#{h(col)}</batch:id>
-                  <batch:operation type="update"/>
-                  <id>#{h(id)}</id>
-                  <link rel="edit" type="application/atom+xml"
-                    href="#{h(edit_url)}"/>
-                  <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
-                </entry>
-              EOS
-            end
-            xml << <<-"EOS"
-              </feed>
-            EOS
+            # Updates cell values using batch operation.
+            # If the data is large, we split it into multiple operations, otherwise batch may fail.
+            @modified.each_slice(25) do |chunk|
 
-            batch_url = concat_url(self.cells_feed_url, "/batch")
-            result = @session.request(
-                :post,
-                batch_url,
-                :data => xml,
-                :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
-            for entry in result.css("entry")
-              interrupted = entry.css("batch|interrupted")[0]
-              if interrupted
-                raise(GoogleDrive::Error, "Update has failed: %s" %
-                  interrupted["reason"])
+              xml = <<-EOS
+                <feed xmlns="http://www.w3.org/2005/Atom"
+                      xmlns:batch="http://schemas.google.com/gdata/batch"
+                      xmlns:gs="http://schemas.google.com/spreadsheets/2006">
+                  <id>#{h(@cells_feed_url)}</id>
+              EOS
+              for row, col in chunk
+                value = @cells[[row, col]]
+                entry = cell_entries[[row, col]]
+                id = entry.css("id").text
+                edit_url = entry.css("link[rel='edit']")[0]["href"]
+                xml << <<-EOS
+                  <entry>
+                    <batch:id>#{h(row)},#{h(col)}</batch:id>
+                    <batch:operation type="update"/>
+                    <id>#{h(id)}</id>
+                    <link rel="edit" type="application/atom+xml"
+                      href="#{h(edit_url)}"/>
+                    <gs:cell row="#{h(row)}" col="#{h(col)}" inputValue="#{h(value)}"/>
+                  </entry>
+                EOS
               end
-              if !(entry.css("batch|status").first["code"] =~ /^2/)
-                raise(GoogleDrive::Error, "Updating cell %s has failed: %s" %
-                  [entry.css("id").text, entry.css("batch|status")[0]["reason"]])
+              xml << <<-"EOS"
+                </feed>
+              EOS
+
+              batch_url = concat_url(@cells_feed_url, "/batch")
+              result = @session.request(:post, batch_url, :data => xml, :header => {"Content-Type" => "application/atom+xml;charset=utf-8", "If-Match" => "*"})
+              for entry in result.css("atom|entry")
+                interrupted = entry.css("batch|interrupted")[0]
+                if interrupted
+                  raise(GoogleDriveV0::Error, "Update has failed: %s" %
+                    interrupted["reason"])
+                end
+                if !(entry.css("batch|status").first["code"] =~ /^2/)
+                  raise(GoogleDriveV0::Error, "Updating cell %s has failed: %s" %
+                    [entry.css("atom|id").text, entry.css("batch|status")[0]["reason"]])
+                end
               end
+
             end
 
             @modified.clear()
             sent = true
 
           end
-
+          
           return sent
-
+          
         end
 
         # Calls save() and reload().
@@ -371,11 +377,11 @@ module GoogleDrive
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
         # March 2012.
         #
-        # Creates table for the worksheet and returns GoogleDrive::Table.
+        # Creates table for the worksheet and returns GoogleDriveV0::Table.
         # See this document for details:
         # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
         def add_table(table_title, summary, columns, options)
-
+          
           warn(
               "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
               "will not be available after March 2012.")
@@ -402,7 +408,7 @@ module GoogleDrive
 
           result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
           return Table.new(@session, result)
-
+          
         end
 
         # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
@@ -418,12 +424,16 @@ module GoogleDrive
 
         # List feed URL of the worksheet.
         def list_feed_url
-          return @worksheet_feed_entry.css(
+          # Gets the worksheets metafeed.
+          entry = @session.request(:get, self.worksheet_feed_url)
+
+          # Gets the URL of list-based feed for the given spreadsheet.
+          return entry.css(
             "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
         end
-
+        
         # Provides access to cells using column names, assuming the first row contains column
-        # names. Returned object is GoogleDrive::List which you can use mostly as
+        # names. Returned object is GoogleDriveV0::List which you can use mostly as
         # Array of Hash.
         #
         # e.g. Assuming the first row is ["x", "y"]:
@@ -435,9 +445,9 @@ module GoogleDrive
         #
         # Note that update is not sent to the server until you call save().
         def list
-          return @list ||= Rows.new(@session, self)
+          return @list ||= List.new(self)
         end
-
+        
         # Returns a [row, col] pair for a cell name string.
         # e.g.
         #   worksheet.cell_name_to_row_col("C2")  #=> [2, 3]
@@ -464,40 +474,8 @@ module GoogleDrive
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
-
+        
       private
-
-        def set_worksheet_feed_entry(entry)
-          @worksheet_feed_entry = entry
-          @title = entry.css("title").text
-          @updated = Time.parse(entry.css("updated").text)
-          @meta_modified = false
-        end
-
-        def reload_cells()
-
-          doc = @session.request(:get, self.cells_feed_url)
-          @max_rows = doc.css("gs|rowCount").text.to_i()
-          @max_cols = doc.css("gs|colCount").text.to_i()
-
-          @num_cols = nil
-          @num_rows = nil
-
-          @cells = {}
-          @input_values = {}
-          @numeric_values = {}
-          doc.css("feed > entry").each() do |entry|
-            cell = entry.css("gs|cell")[0]
-            row = cell["row"].to_i()
-            col = cell["col"].to_i()
-            @cells[[row, col]] = cell.inner_text
-            @input_values[[row, col]] = cell["inputValue"] || cell.inner_text
-            numeric_value = cell["numericValue"]
-            @numeric_values[[row, col]] = numeric_value ? numeric_value.to_f() : nil
-          end
-          @modified.clear()
-
-        end
 
         def parse_cell_args(args)
           if args.size == 1 && args[0].is_a?(String)
@@ -514,7 +492,7 @@ module GoogleDrive
                 "Arguments must be either one String or two Integer's, but are %p" % [args])
           end
         end
-
+        
     end
-
+    
 end

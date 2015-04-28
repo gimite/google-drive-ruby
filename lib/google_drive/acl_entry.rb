@@ -15,83 +15,103 @@ module GoogleDrive
 
         include(Util)
 
-        PARAM_NAMES = [:acl, :scope_type, :scope, :with_key, :role, :title, :edit_url, :etag]  #:nodoc:
-
-        # +params+ is a Hash object with keys +:scope_type+, +:scope+ and +:role+.
-        # See scope_type and role for the document of the fields.
-        def initialize(params)
-          @params = {:role => "reader"}
-          for name, value in params
-            if !name.is_a?(Symbol)
-              raise(ArgumentError, "Key must be Symbol, but is %p" % name)
-            elsif !PARAM_NAMES.include?(name)
-              raise(ArgumentError, "Invalid key: %p" % name)
-            end
-            @params[name] = value
+        # +params_or_api_permission+ is a Hash object with keys +:type+, +:value+, +:role+ and +:withLink+.
+        # See GoogleDrive::Acl#push for description of the parameters.
+        def initialize(params_or_api_permission, acl = nil)
+          @acl = acl
+          if acl
+            @api_permission = params_or_api_permission
+            @params = nil
+            delegate_api_methods(self, @api_permission)
+          else
+            @api_permission = nil
+            @params = convert_params(params_or_api_permission)
           end
         end
 
-        attr_accessor(:params)  #:nodoc:
+        attr_reader(:acl)
+        attr_reader(:params) #:nodoc:
+        attr_accessor(:api_permission) #:nodoc:
 
-        PARAM_NAMES.each() do |name|
-          define_method(name) do
-            return @params[name]
-          end
+        # The role given to the scope. One of:
+        # - "owner": The owner.
+        # - "writer": With read/write access.
+        # - "reader": With read-only access.
+        def role
+          return @params ? @params["role"] : @api_permission.role
         end
 
-        def edit_url
-          warn(
-              "WARNING: GoogleDrive::AclEntry\#edit_url is deprecated and will be removed in the next version.")
-          return self.edit_url_internal
+        # Type of the scope. One of:
+        #
+        # - "user": value is a user's email address.
+        # - "group": value is a Google Group email address.
+        # - "domain": value is a Google Apps domain.
+        # - "anyone": Publicly shared with all users. value is +nil+.
+        def type
+          return @params ? @params["type"] : @api_permission.type
         end
 
-        def edit_url_internal #:nodoc:
-          return @params[:edit_url]
+        alias scope_type type
+
+        def additional_roles
+          return @params ? @params["additionalRoles"] : @api_permission.additional_roles
         end
+
+        def id
+          return @params ? @params["id"] : @api_permission.id
+        end
+
+        # The value of the scope. See type.
+        def value
+          return @params ? @params["value"] : @api_permission.value
+        end
+
+        alias scope value
+
+        # If +true+, the file is shared only with people who know the link.
+        def with_link
+          return @params ? @params["withLink"] : @api_permission.with_link
+        end
+
+        alias with_key with_link
 
         # Changes the role of the scope.
         #
         # e.g.
         #   spreadsheet.acl[1].role = "writer"
         def role=(role)
-          @params[:role] = role
-          @params[:acl].update_role(self)
+          if @params
+            @params["role"] = role
+          else
+            @api_permission.role = role
+            @acl.update_role(self)
+          end
         end
 
         def inspect
-          return "\#<%p scope_type=%p, scope=%p, with_key=%p, role=%p>" %
-              [self.class, @params[:scope_type], @params[:scope], @params[:with_key], @params[:role]]
+          return "\#<%p type=%p, name=%p, role=%p>" %
+              [self.class, self.type, self.name, self.role]
         end
 
-        def to_xml()  #:nodoc:
-          
-          etag_attr = self.etag ? "gd:etag='#{h(self.etag)}'" : ""
-          value_attr = self.scope ? "value='#{h(self.scope)}'" : ""
-          if self.with_key
-            role_tag = <<-EOS
-                <gAcl:withKey key='[ACL KEY]'>
-                  <gAcl:role value='#{h(self.role)}'/>
-                </gAcl:withKey>
-            EOS
-          else
-            role_tag = <<-EOS
-              <gAcl:role value='#{h(self.role)}'/>
-            EOS
+      private
+
+        # Normalizes the key to String, and converts parameters in the old version.
+        def convert_params(orig_params)
+          new_params = {}
+          for k, v in orig_params
+            k = k.to_s()
+            case k
+              when "scope_type"
+                new_params["type"] = (v == "default" ? "anyone" : v)
+              when "scope"
+                new_params["value"] = v
+              when "with_key"
+                new_params["withLink"] = v
+              else
+                new_params[k] = v
+            end
           end
-          
-          return <<-EOS
-            <entry
-                xmlns='http://www.w3.org/2005/Atom'
-                xmlns:gAcl='http://schemas.google.com/acl/2007'
-                xmlns:gd='http://schemas.google.com/g/2005'
-                #{etag_attr}>
-              <category scheme='http://schemas.google.com/g/2005#kind'
-                  term='http://schemas.google.com/acl/2007#accessRule'/>
-              #{role_tag}
-              <gAcl:scope type='#{h(self.scope_type)}' #{value_attr}/>
-            </entry>
-          EOS
-          
+          return new_params
         end
 
     end

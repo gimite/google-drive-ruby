@@ -6,7 +6,7 @@ require "uri"
 Net::HTTP.version_1_2
 
 
-module GoogleDrive
+module GoogleDriveV0
 
     class BasicFetcher #:nodoc:
         

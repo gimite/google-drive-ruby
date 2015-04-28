@@ -8,13 +8,13 @@ require "rubygems"
 require "nokogiri"
 require "oauth"
 require "oauth2"
+require "google/api_client"
 
 require "google_drive/util"
-require "google_drive/client_login_fetcher"
-require "google_drive/oauth1_fetcher"
-require "google_drive/oauth2_fetcher"
+require "google_drive/api_client_fetcher"
 require "google_drive/error"
 require "google_drive/authentication_error"
+require "google_drive/response_code_error"
 require "google_drive/spreadsheet"
 require "google_drive/worksheet"
 require "google_drive/collection"
@@ -23,142 +23,110 @@ require "google_drive/file"
 
 module GoogleDrive
 
-    # Use GoogleDrive.login or GoogleDrive.saved_session to get
+    # Use GoogleDrive.login_with_oauth or GoogleDrive.saved_session to get
     # GoogleDrive::Session object.
     class Session
 
         include(Util)
         extend(Util)
 
-        UPLOAD_CHUNK_SIZE = 512 * 1024
-        
-        # DEPRECATED: Will be removed in the next version.
-        #
-        # The same as GoogleDrive.login.
-        def self.login(mail, password, proxy = nil)
-          warn(
-              "WARNING: GoogleDrive.login is deprecated and will be removed in the next version. " +
-              "Use GoogleDrive.login_with_oauth instead.")
-          session = Session.new(nil, ClientLoginFetcher.new({}, proxy))
-          session.login(mail, password)
-          return session
-        end
-
         # The same as GoogleDrive.login_with_oauth.
-        def self.login_with_oauth(access_token, proxy = nil)
-          if proxy
-            warn(
-              "WARNING: Specifying a proxy object is deprecated and will not work in the next version. " +
-              "Set ENV[\"http_proxy\"] instead.")
-          end
-          case access_token
-            when OAuth::AccessToken
-              warn(
-                "WARNING: Authorization with OAuth1 is deprecated and will not work in the next version. " +
-                "Use OAuth2 instead.")
-              raise(GoogleDrive::Error, "proxy is not supported with OAuth1.") if proxy
-              fetcher = OAuth1Fetcher.new(access_token)
-            when OAuth2::AccessToken
-              fetcher = OAuth2Fetcher.new(access_token.token, proxy)
-            when String
-              fetcher = OAuth2Fetcher.new(access_token, proxy)
-            else
-              raise(GoogleDrive::Error,
-                  "access_token is neither String, OAuth2::Token nor OAuth::Token: %p" % access_token)
-          end
-          return Session.new(nil, fetcher)
+        def self.login_with_oauth(client_or_access_token, proxy = nil)
+          return Session.new(client_or_access_token, proxy)
         end
 
-        # The same as GoogleDrive.restore_session.
-        def self.restore_session(auth_tokens, proxy = nil)
-          warn(
-              "WARNING: GoogleDrive.restore_session is deprecated and will be removed in the next version. " +
-              "Use GoogleDrive.login_with_oauth instead.")
-          return Session.new(auth_tokens, nil, proxy)
-        end
-        
         # Creates a dummy GoogleDrive::Session object for testing.
         def self.new_dummy()
-          return Session.new(nil, Object.new())
+          return Session.new(nil)
         end
 
-        # DEPRECATED: Use GoogleDrive.restore_session instead.
-        def initialize(auth_tokens = nil, fetcher = nil, proxy = nil)
-          if fetcher
-            @fetcher = fetcher
-          else
-            @fetcher = ClientLoginFetcher.new(auth_tokens || {}, proxy)
-          end
-        end
+        def initialize(client_or_access_token, proxy = nil)
 
-        # Authenticates with given +mail+ and +password+, and updates current session object
-        # if succeeds. Raises GoogleDrive::AuthenticationError if fails.
-        # Google Apps account is supported.
-        def login(mail, password)
-          if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleDrive::Error,
-                "Cannot call login for session created by login_with_oauth.")
+          if proxy
+            raise(
+                ArgumentError,
+                "Specifying a proxy object is no longer supported. Set ENV[\"http_proxy\"] instead.")
           end
-          begin
-            @fetcher.auth_tokens = {
-              :wise => authenticate(mail, password, :wise),
-              :writely => authenticate(mail, password, :writely),
+
+          if client_or_access_token
+            api_client_params = {
+              :application_name => "google_drive Ruby library",
+              :application_version => "0.4.0",
             }
-          rescue GoogleDrive::Error => ex
-            return true if @on_auth_fail && @on_auth_fail.call()
-            raise(AuthenticationError, "Authentication failed for #{mail}: #{ex.message}")
+            case client_or_access_token
+              when Google::APIClient
+                client = client_or_access_token
+              when String
+                client = Google::APIClient.new(api_client_params)
+                client.authorization.access_token = client_or_access_token
+              when OAuth2::AccessToken
+                client = Google::APIClient.new(api_client_params)
+                client.authorization.access_token = client_or_access_token.token
+              when OAuth::AccessToken
+                raise(
+                    ArgumentError,
+                    "Passing OAuth::AccessToken to login_with_oauth is no longer supported. " +
+                    "You can use OAuth1 by passing Google::APIClient.")
+              else
+                raise(
+                    ArgumentError,
+                    ("client_or_access_token is neither Google::APIClient, " +
+                     "String nor OAuth2::AccessToken: %p") %
+                    client_or_access_token)
+            end
+            @fetcher = ApiClientFetcher.new(client)
+          else
+            @fetcher = nil
           end
-        end
 
-        # Authentication tokens.
-        def auth_tokens
-          warn(
-              "WARNING: GoogleDrive::Session\#auth_tokens is deprecated and will be removed in the next version.")
-          if !@fetcher.is_a?(ClientLoginFetcher)
-            raise(GoogleDrive::Error,
-                "Cannot call auth_tokens for session created by " +
-                "login_with_oauth.")
-          end
-          return @fetcher.auth_tokens
-        end
-
-        # Authentication token.
-        def auth_token(auth = :wise)
-          warn(
-              "WARNING: GoogleDrive::Session\#auth_token is deprecated and will be removed in the next version.")
-          return self.auth_tokens[auth]
         end
 
         # Proc or Method called when authentication has failed.
         # When this function returns +true+, it tries again.
-        def on_auth_fail
-          warn(
-              "WARNING: GoogleDrive::Session\#on_auth_fail is deprecated and will be removed in the next version.")
-          return @on_auth_fail
+        attr_accessor :on_auth_fail
+
+        def execute!(*args) #:nodoc:
+          return @fetcher.client.execute!(*args)
         end
 
-        def on_auth_fail=(func)
-          warn(
-              "WARNING: GoogleDrive::Session\#on_auth_fail is deprecated and will be removed in the next version.")
-          @on_auth_fail = func
+        # Returns the Google::APIClient object.
+        def client
+          return @fetcher.client
+        end
+
+        # Returns client.discovered_api("drive", "v2").
+        def drive
+          return @fetcher.drive
         end
 
         # Returns list of files for the user as array of GoogleDrive::File or its subclass.
-        # You can specify query parameters described at
-        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
-        #
-        # files doesn't return collections unless "showfolders" => true is specified.
+        # You can specify parameters documented at
+        # https://developers.google.com/drive/v2/reference/files/list
         #
         # e.g.
         #   session.files
-        #   session.files("title" => "hoge", "title-exact" => "true")
-        def files(params = {})
-          url = concat_url(
-              "#{DOCS_BASE_URL}?v=3", "?" + encode_query(params))
-          doc = request(:get, url, :auth => :writely)
-          return doc.css("feed > entry").map(){ |e| entry_element_to_file(e) }
+        #   session.files("q" => "title = 'hoge'")
+        #   session.files("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+        #
+        # By default, it returns the first 100 files. You can get all files by calling with a block:
+        #   session.files do |file|
+        #     p file
+        #   end
+        # Or passing "pageToken" parameter:
+        #   page_token = nil
+        #   begin
+        #     (files, page_token) = session.files("pageToken" => page_token)
+        #     p files
+        #   end while page_token
+        def files(params = {}, &block)
+          params = convert_params(params)
+          return execute_paged!(
+              :api_method => self.drive.files.list,
+              :parameters => params,
+              :converter => proc(){ |af| wrap_api_file(af) },
+              &block)
         end
-        
+
         # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
         # Returns nil if not found. If multiple files with the +title+ are found, returns
         # one of them.
@@ -169,8 +137,23 @@ module GoogleDrive
           if title.is_a?(Array)
             return self.root_collection.file_by_title(title)
           else
-            return files("title" => title, "title-exact" => "true")[0]
+            return files("q" => ["title = ?", title], "maxResults" => 1)[0]
           end
+        end
+
+        # Returns GoogleDrive::File or its subclass with a given +id+.
+        def file_by_id(id)
+          api_result = execute!(
+            :api_method => self.drive.files.get,
+            :parameters => { "fileId" => id })
+          return wrap_api_file(api_result.data)
+        end
+
+        # Returns GoogleDrive::File or its subclass with a given +url+. +url+ must be eitehr of:
+        # - URL of the page you open to access a document/spreadsheet in your browser
+        # - URL of worksheet-based feed of a spreadseet
+        def file_by_url(url)
+          return file_by_id(url_to_id(url))
         end
 
         # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
@@ -178,27 +161,31 @@ module GoogleDrive
         #
         # e.g.
         #   session.spreadsheets
-        #   session.spreadsheets("title" => "hoge")
-        #   session.spreadsheets("title" => "hoge", "title-exact" => "true")
-        def spreadsheets(params = {})
-          url = concat_url(
-              "#{DOCS_BASE_URL}/-/spreadsheet?v=3", "?" + encode_query(params))
-          doc = request(:get, url, :auth => :writely)
-          # The API may return non-spreadsheets too when title-exact is specified.
-          # Probably a bug. For workaround, only returns Spreadsheet instances.
-          return doc.css("feed > entry").
-              map(){ |e| entry_element_to_file(e) }.
-              select(){ |f| f.is_a?(Spreadsheet) }
+        #   session.spreadsheets("q" => "title = 'hoge'")
+        #   session.spreadsheets("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+        #
+        # By default, it returns the first 100 spreadsheets. See document of files method for how to get
+        # all spreadsheets.
+        def spreadsheets(params = {}, &block)
+          params = convert_params(params)
+          query = construct_and_query([
+              "mimeType = 'application/vnd.google-apps.spreadsheet'",
+              params["q"],
+          ])
+          return files(params.merge({"q" => query}), &block)
         end
 
         # Returns GoogleDrive::Spreadsheet with given +key+.
         #
         # e.g.
-        #   # http://spreadsheets.google.com/ccc?key=pz7XtlQC-PYx-jrVMJErTcg&hl=ja
-        #   session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg")
+        #   # https://docs.google.com/spreadsheets/d/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/edit
+        #   session.spreadsheet_by_key("1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0")
         def spreadsheet_by_key(key)
-          url = "https://spreadsheets.google.com/feeds/worksheets/#{key}/private/full"
-          return Spreadsheet.new(self, url)
+          file = file_by_id(key)
+          if !file.is_a?(Spreadsheet)
+            raise(GoogleDrive::Error, "The file with the ID is not a spreadsheet: %s" % key)
+          end
+          return file
         end
 
         # Returns GoogleDrive::Spreadsheet with given +url+. You must specify either of:
@@ -207,32 +194,23 @@ module GoogleDrive
         #
         # e.g.
         #   session.spreadsheet_by_url(
-        #     "https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg")
+        #     "https://docs.google.com/spreadsheets/d/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/edit")
         #   session.spreadsheet_by_url(
         #     "https://spreadsheets.google.com/feeds/" +
-        #     "worksheets/pz7XtlQC-PYx-jrVMJErTcg/private/full")
+        #     "worksheets/1L3-kvwJblyW_TvjYD-7pE-AXxw5_bkb6S_MljuIPVL0/private/full")
         def spreadsheet_by_url(url)
-          # Tries to parse it as URL of human-readable spreadsheet.
-          uri = URI.parse(url)
-          if ["spreadsheets.google.com", "docs.google.com"].include?(uri.host)
-            case uri.path
-              when /\/d\/([^\/]+)/
-                return spreadsheet_by_key($1)
-              when /\/ccc$/
-                if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
-                  return spreadsheet_by_key($1)
-                end
-            end
+          file = file_by_url(url)
+          if !file.is_a?(Spreadsheet)
+            raise(GoogleDrive::Error, "The file with the URL is not a spreadsheet: %s" % url)
           end
-          # Assumes the URL is worksheets feed URL.
-          return Spreadsheet.new(self, url)
+          return file
         end
 
         # Returns GoogleDrive::Spreadsheet with given +title+.
         # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
         # one of them.
         def spreadsheet_by_title(title)
-          return spreadsheets({"title" => title, "title-exact" => "true"})[0]
+          return spreadsheets("q" => ["title = ?", title], "maxResults" => 1)[0]
         end
         
         # Returns GoogleDrive::Worksheet with given +url+.
@@ -243,15 +221,24 @@ module GoogleDrive
         #     "http://spreadsheets.google.com/feeds/" +
         #     "cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
         def worksheet_by_url(url)
-          return Worksheet.new(self, nil, url)
+          if !(url =~
+              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$})
+            raise(GoogleDrive::Error, "URL is not a cell-based feed URL: #{url}")
+          end
+          worksheet_feed_url = "https://spreadsheets.google.com/feeds/worksheets/#{$1}/private/full/#{$2}#{$3}"
+          worksheet_feed_entry = request(:get, worksheet_feed_url)
+          return Worksheet.new(self, nil, worksheet_feed_entry)
         end
         
         # Returns the root collection.
         def root_collection
-          return Collection.new(self, Collection::ROOT_URL)
+          return @root_collection ||= file_by_id("root")
         end
         
         # Returns the top-level collections (direct children of the root collection).
+        #
+        # By default, it returns the first 100 collections. See document of files method for how to get
+        # all collections.
         def collections
           return self.root_collection.subcollections
         end
@@ -278,40 +265,26 @@ module GoogleDrive
         #     "http://docs.google.com/feeds/default/private/full/folder%3A" +
         #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
         def collection_by_url(url)
-          uri = URI.parse(url)
-          if ["docs.google.com", "drive.google.com"].include?(uri.host) &&
-              uri.fragment =~ /^folders\/(.+)$/
-            # Looks like a URL of human-readable collection page. Converts to collection feed URL.
-            url = "#{DOCS_BASE_URL}/folder%3A#{$1}"
+          file = file_by_url(url)
+          if !file.is_a?(Collection)
+            raise(GoogleDrive::Error, "The file with the URL is not a collection: %s" % url)
           end
-          return Collection.new(self, to_v3_url(url))
+          return file
         end
 
         # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
         #
         # e.g.
         #   session.create_spreadsheet("My new sheet")
-        def create_spreadsheet(
-            title = "Untitled",
-            feed_url = "https://docs.google.com/feeds/documents/private/full")
-          
-          xml = <<-"EOS"
-            <atom:entry
-                xmlns:atom="http://www.w3.org/2005/Atom"
-                xmlns:docs="http://schemas.google.com/docs/2007">
-              <atom:category
-                  scheme="http://schemas.google.com/g/2005#kind"
-                  term="http://schemas.google.com/docs/2007#spreadsheet"
-                  label="spreadsheet"/>
-              <atom:title>#{h(title)}</atom:title>
-            </atom:entry>
-          EOS
-
-          doc = request(:post, feed_url, :data => xml, :auth => :writely)
-          ss_url = doc.css(
-            "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]["href"]
-          return Spreadsheet.new(self, ss_url, title)
-          
+        def create_spreadsheet(title = "Untitled")
+          file = self.drive.files.insert.request_schema.new({
+              "title" => title,
+              "mimeType" => "application/vnd.google-apps.spreadsheet",
+          })
+          api_result = execute!(
+              :api_method => self.drive.files.insert,
+              :body_object => file)
+          return wrap_api_file(api_result.data)
         end
         
         # Uploads a file with the given +title+ and +content+.
@@ -330,7 +303,8 @@ module GoogleDrive
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
         def upload_from_string(content, title = "Untitled", params = {})
-          return upload_from_io(StringIO.new(content), title, params)
+          media = new_upload_io(StringIO.new(content), params)
+          return upload_from_media(media, title, params)
         end
         
         # Uploads a local file.
@@ -347,113 +321,89 @@ module GoogleDrive
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
         #   
         #   # Uploads a text file and converts to a Google Spreadsheet:
-        #   session.upload_from_file("/path/to/hoge.tsv", "Hoge")
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
-        #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
         def upload_from_file(path, title = nil, params = {})
           file_name = ::File.basename(path)
           params = {:file_name => file_name}.merge(params)
-          open(path, "rb") do |f|
-            return upload_from_io(f, title || file_name, params)
-          end
+          media = new_upload_io(path, params)
+          return upload_from_media(media, title || file_name, params)
         end
-        
+
         # Uploads a file. Reads content from +io+.
         # Returns a GoogleSpreadsheet::File object.
         def upload_from_io(io, title = "Untitled", params = {})
-          doc = request(:get, "#{DOCS_BASE_URL}?v=3",
-              :auth => :writely)
-          initial_url = doc.css(
-              "link[rel='http://schemas.google.com/g/2005#resumable-create-media']")[0]["href"]
-          entry = upload_raw(:post, initial_url, io, title, params)
-          return entry_element_to_file(entry)
+          media = new_upload_io(io, params)
+          return upload_from_media(media, title, params)
         end
 
-        def upload_raw(method, url, io, title = "Untitled", params = {}) #:nodoc:
-          
-          params = {:convert => true}.merge(params)
-          pos = io.pos
-          io.seek(0, IO::SEEK_END)
-          total_bytes = io.pos - pos
-          io.pos = pos
-          content_type = params[:content_type]
-          if !content_type && params[:file_name]
-            content_type = EXT_TO_CONTENT_TYPE[::File.extname(params[:file_name]).downcase]
+        # Uploads a file. Reads content from +media+.
+        # Returns a GoogleSpreadsheet::File object.
+        def upload_from_media(media, title = "Untitled", params = {})
+          file = self.drive.files.insert.request_schema.new({
+            "title" => title,
+          })
+          api_result = execute!(
+              :api_method => self.drive.files.insert,
+              :body_object => file,
+              :media => media,
+              :parameters => {
+                  "uploadType" => "multipart",
+                  "convert" => params[:convert] == false ? "false" : "true",
+              })
+          return wrap_api_file(api_result.data)
+        end
+
+        def wrap_api_file(api_file) #:nodoc:
+          case api_file.mime_type
+            when "application/vnd.google-apps.folder"
+              return Collection.new(self, api_file)
+            when "application/vnd.google-apps.spreadsheet"
+              return Spreadsheet.new(self, api_file)
+            else
+              return File.new(self, api_file)
           end
-          if !content_type
-            content_type = "application/octet-stream"
-          end
-          
-          initial_xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom" 
-                xmlns:docs="http://schemas.google.com/docs/2007">
-              <title>#{h(title)}</title>
-            </entry>
-          EOS
-          
-          default_initial_header = {
-              "Content-Type" => "application/atom+xml;charset=utf-8",
-              "X-Upload-Content-Type" => content_type,
-              "X-Upload-Content-Length" => total_bytes.to_s(),
-          }
-          initial_full_url = concat_url(url, params[:convert] ? "?convert=true" : "?convert=false")
-          initial_response = request(method, initial_full_url,
-              :header => default_initial_header.merge(params[:header] || {}),
-              :data => initial_xml,
-              :auth => :writely,
-              :response_type => :response)
-          upload_url = initial_response["location"]
-          
-          if total_bytes > 0
-            sent_bytes = 0
-            while data = io.read(UPLOAD_CHUNK_SIZE)
-              content_range = "bytes %d-%d/%d" % [
-                  sent_bytes,
-                  sent_bytes + data.bytesize - 1,
-                  total_bytes,
-              ]
-              upload_header = {
-                  "Content-Type" => content_type,
-                  "Content-Range" => content_range,
-              }
-              doc = request(
-                  :put, upload_url, :header => upload_header, :data => data, :auth => :writely)
-              sent_bytes += data.bytesize
+        end
+
+        def execute_paged!(opts, &block) #:nodoc:
+
+          if block
+
+            page_token = nil
+            begin
+              parameters = (opts[:parameters] || {}).merge({"pageToken" => page_token})
+              (items, page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+              items.each(&block)
+            end while page_token
+
+          elsif opts[:parameters] && opts[:parameters].has_key?("pageToken")
+
+            api_result = self.execute!(
+                :api_method => opts[:api_method],
+                :parameters => opts[:parameters])
+            items = api_result.data.items.map() do |item|
+              opts[:converter] ? opts[:converter].call(item) : item
             end
+            return [items, api_result.data.next_page_token]
+
           else
-            upload_header = {
-                "Content-Type" => content_type,
-            }
-            doc = request(
-                :put, upload_url, :header => upload_header, :data => "", :auth => :writely)
+
+            parameters = (opts[:parameters] || {}).merge({"pageToken" => nil})
+            (items, next_page_token) = execute_paged!(opts.merge({:parameters => parameters}))
+            return items
+
           end
-          
-          return doc.root
           
         end
         
-        def entry_element_to_file(entry) #:nodoc:
-          type, resource_id = entry.css("gd|resourceId").text.split(/:/)
-          title = entry.css("title").text
-          case type
-            when "folder"
-              return Collection.new(self, entry)
-            when "spreadsheet"
-              worksheets_feed_link = entry.css(
-                "link[rel='http://schemas.google.com/spreadsheets/2006#worksheetsfeed']")[0]
-              return Spreadsheet.new(self, worksheets_feed_link["href"], title)
-            else
-              return GoogleDrive::File.new(self, entry)
-          end
-        end
-
         def request(method, url, params = {}) #:nodoc:
           
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
           auth = params[:auth] || :wise
+          response_type = params[:response_type] || :xml
+
           if params[:header]
             extra_header = params[:header]
           elsif data
@@ -461,18 +411,16 @@ module GoogleDrive
           else
             extra_header = {}
           end
-          response_type = params[:response_type] || :xml
+          extra_header = {"GData-Version" => "3.0"}.merge(extra_header)
 
           while true
             response = @fetcher.request_raw(method, url, data, extra_header, auth)
             if response.code == "401" && @on_auth_fail && @on_auth_fail.call()
               next
             end
-            if !(response.code =~ /^[23]/)
-              raise(
-                response.code == "401" ? AuthenticationError : GoogleDrive::Error,
-                "Response code #{response.code} for #{method} #{url}: " +
-                CGI.unescapeHTML(response.body))
+            if !(response.code =~ /^2/)
+              raise((response.code == "401" ? AuthenticationError : ResponseCodeError).
+                  new(response.code, response.body, method, url))
             end
             return convert_response(response, response_type)
           end
@@ -499,22 +447,37 @@ module GoogleDrive
           end
         end
 
-        def authenticate(mail, password, auth)
-          params = {
-            "accountType" => "HOSTED_OR_GOOGLE",
-            "Email" => mail,
-            "Passwd" => password,
-            "service" => auth.to_s(),
-            "source" => "Gimite-RubyGoogleDrive-1.00",
-          }
-          header = {"Content-Type" => "application/x-www-form-urlencoded"}
-          response = request(:post,
-            "https://www.google.com/accounts/ClientLogin",
-            :data => encode_query(params),
-            :auth => :none,
-            :header => header,
-            :response_type => :raw)
-          return response.slice(/^Auth=(.*)$/, 1)
+        def url_to_id(url)
+          uri = URI.parse(url)
+          if ["spreadsheets.google.com", "docs.google.com", "drive.google.com"].include?(uri.host)
+            case uri.path
+              # Document feed.
+              when /^\/feeds\/\w+\/private\/full\/\w+%3A(.*)$/
+                return $1
+              # Worksheets feed of a spreadsheet.
+              when /^\/feeds\/worksheets\/([^\/]+)/
+                return $1
+              # Human-readable new spreadsheet/document.
+              when /\/d\/([^\/]+)/
+                return $1
+              # Human-readable folder view.
+              when /\/folderview$/
+                if (uri.query || "").split(/&/).find(){ |s| s=~ /^id=(.*)$/ }
+                  return $1
+                end
+              # Human-readable old spreadsheet.
+              when /\/ccc$/
+                if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
+                  return $1
+                end
+            end
+            case uri.fragment
+              # Human-readable collection page.
+              when /^folders\/(.+)$/
+                return $1
+            end
+          end
+          raise(GoogleDrive::Error, "The given URL is not a known Google Drive URL: %s" % url)
         end
 
     end

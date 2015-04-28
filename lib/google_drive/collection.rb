@@ -13,107 +13,97 @@ module GoogleDrive
     class Collection < GoogleDrive::File
 
         include(Util)
-        
-        ROOT_URL = "#{DOCS_BASE_URL}/folder%3Aroot"  #:nodoc:
 
         alias collection_feed_url document_feed_url
         
-        def contents_url
-          if self.root?
-            # The root collection doesn't have document feed.
-            return concat_url(ROOT_URL, "/contents")
-          else
-            return self.document_feed_entry_internal.css(
-                "content[type='application/atom+xml;type=feed']")[0]["src"]
-          end
-        end
-        
-        # Title of the collection.
-        #
-        # Set <tt>params[:reload]</tt> to true to force reloading the title.
-        def title(params = {})
-          if self.root?
-            # The root collection doesn't have document feed.
-            return nil
-          else
-            return super
-          end
-        end
-
-        def resource_id
-          return self.root? ? nil : super
-        end
-        
         # Adds the given GoogleDrive::File to the collection.
         def add(file)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
-          xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom">
-              <id>#{h(file.document_feed_url)}</id>
-            </entry>
-          EOS
-          @session.request(
-              :post, self.contents_url, :data => xml, :header => header, :auth => :writely)
+          new_child = @session.drive.children.insert.request_schema.new({
+              "id" => file.id,
+          })
+          @session.execute!(
+              :api_method => @session.drive.children.insert,
+              :body_object => new_child,
+              :parameters => {
+                  "folderId" => self.id,
+                  "childId" => file.id,
+              })
           return nil
         end
 
         # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
         def create_subcollection(title)
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
-          xml = <<-EOS
-            <entry xmlns="http://www.w3.org/2005/Atom">
-              <category scheme="http://schemas.google.com/g/2005#kind"
-                term="http://schemas.google.com/docs/2007#folder"/>
-              <title>#{h(title)}</title>
-            </entry>
-          EOS
-          doc = @session.request(
-              :post, contents_url, :data => xml, :header => header, :auth => :writely)
-          return @session.entry_element_to_file(doc)
+          file = @session.drive.files.insert.request_schema.new({
+              "title" => title,
+              "mimeType" => "application/vnd.google-apps.folder",
+              "parents" => [{"id" => self.id}],
+          })
+          api_result = @session.execute!(
+              :api_method => @session.drive.files.insert,
+              :body_object => file)
+          return @session.wrap_api_file(api_result.data)
         end
 
         # Removes the given GoogleDrive::File from the collection.
         def remove(file)
-          url = to_v3_url("#{contents_url}/#{file.resource_id}")
-          @session.request(:delete, url, :auth => :writely, :header => {"If-Match" => "*"})
+          @session.execute!(
+              :api_method => @session.drive.children.delete,
+              :parameters => {
+                  "folderId" => self.id,
+                  "childId" => file.id,
+              })
+          return nil
         end
 
         # Returns true if this is a root collection
         def root?
-          self.document_feed_url == ROOT_URL
+          return self.api_file.parents.empty?
         end
 
         # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
         #
-        # You can specify query parameters described at
-        # https://developers.google.com/google-apps/documents-list/#getting_a_list_of_documents_and_files
+        # You can specify parameters documented at
+        # https://developers.google.com/drive/v2/reference/files/list
         #
         # e.g.
         #
         #   # Gets all the files in collection, including subcollections.
         #   collection.files
-        #   
         #   # Gets only files with title "hoge".
-        #   collection.files("title" => "hoge", "title-exact" => "true")
-        def files(params = {})
-          return files_with_type(nil, params)
+        #   collection.files("q" => "title = 'hoge'")
+        #   # Same as above with a placeholder.
+        #   collection.files("q" => ["title = ?", "hoge"])
+        #
+        # By default, it returns the first 100 files. See document of GoogleDrive::Session#files method
+        # for how to get all files.
+        def files(params = {}, &block)
+          return files_with_type(nil, params, &block)
         end
 
         alias contents files
 
         # Returns all the spreadsheets in the collection.
-        def spreadsheets(params = {})
-          return files_with_type("spreadsheet", params)
+        #
+        # By default, it returns the first 100 spreadsheets. See document of GoogleDrive::Session#files method
+        # for how to get all spreadsheets.
+        def spreadsheets(params = {}, &block)
+          return files_with_type("application/vnd.google-apps.spreadsheet", params, &block)
         end
         
         # Returns all the Google Docs documents in the collection.
-        def documents(params = {})
-          return files_with_type("document", params)
+        #
+        # By default, it returns the first 100 documents. See document of GoogleDrive::Session#files method
+        # for how to get all documents.
+        def documents(params = {}, &block)
+          return files_with_type("application/vnd.google-apps.document", params, &block)
         end
         
         # Returns all its subcollections.
-        def subcollections(params = {})
-          return files_with_type("folder", params)
+        #
+        # By default, it returns the first 100 subcollections. See document of GoogleDrive::Session#files method
+        # for how to get all subcollections.
+        def subcollections(params = {}, &block)
+          return files_with_type("application/vnd.google-apps.folder", params, &block)
         end
         
         # Returns a file (can be a spreadsheet, document, subcollection or other files) in the
@@ -132,7 +122,12 @@ module GoogleDrive
         #
         # If given an Array, does a recursive subcollection traversal.
         def subcollection_by_title(title)
-          return file_by_title_with_type(title, "folder")
+          return file_by_title_with_type(title, "application/vnd.google-apps.folder")
+        end
+
+        # Returns URL of the deprecated contents feed.
+        def contents_url
+          self.document_feed_url + "/contents"
         end
         
       protected
@@ -147,19 +142,22 @@ module GoogleDrive
               return parent && parent.file_by_title_with_type(rel_path[-1], type)
             end
           else
-            return files_with_type(type, "title" => title, "title-exact" => "true")[0]
+            return files_with_type(type, "q" => ["title = ?", title], "maxResults" => 1)[0]
           end
         end
         
       private
 
-        def files_with_type(type, params = {})
-          contents_url = self.contents_url
-          contents_url = concat_url(contents_url, "/-/#{type}") if type
-          contents_url = concat_url(contents_url, "?" + encode_query(params))
-          header = {"GData-Version" => "3.0", "Content-Type" => "application/atom+xml;charset=utf-8"}
-          doc = @session.request(:get, contents_url, :header => header, :auth => :writely)
-          return doc.css("feed > entry").map(){ |e| @session.entry_element_to_file(e) }
+        def files_with_type(type, params = {}, &block)
+          params = convert_params(params)
+          query = construct_and_query([
+              ["? in parents", self.id],
+              type ? ["mimeType = ?", type] : nil,
+              params["q"],
+          ])
+          params = params.merge({"q" => query})
+          # This is faster than calling children.list and then files.get for each file.
+          return @session.files(params, &block)
         end
         
     end

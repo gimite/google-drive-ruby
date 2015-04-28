@@ -1,76 +1,84 @@
 # Author: Hiroshi Ichikawa <http://gimite.net/>
 # The license of this source is "New BSD Licence"
 
-require "rubygems"
-require "google/api_client"
 require "json"
+require "google/api_client"
 
 require "google_drive/session"
 
 
 module GoogleDrive
 
-    # Authenticates with given +mail+ and +password+, and returns GoogleDrive::Session
-    # if succeeds. Raises GoogleDrive::AuthenticationError if fails.
-    # Google Apps account is supported.
-    #
-    # +proxy+ is deprecated, and will be removed in the next version.
-    def self.login(mail, password, proxy = nil)
-      return Session.login(mail, password, proxy)
-    end
-
     # Authenticates with given OAuth2 token.
     #
-    # +access_token+ can be either OAuth2 access_token string or OAuth2::AccessToken.
-    # Specifying OAuth::AccessToken is deprecated, and will not work in the next version.
+    # +access_token+ can be either OAuth2 access_token string, or OAuth2::AccessToken.
     #
-    # +proxy+ is deprecated, and will be removed in the next version.
+    # OAuth2 code example for Web apps:
     #
-    # OAuth2 code example:
-    #
-    #   client = OAuth2::Client.new(
-    #       your_client_id, your_client_secret,
-    #       :site => "https://accounts.google.com",
-    #       :token_url => "/o/oauth2/token",
-    #       :authorize_url => "/o/oauth2/auth")
-    #   auth_url = client.auth_code.authorize_url(
-    #       :redirect_uri => "http://example.com/",
-    #       :scope =>
-    #           "https://docs.google.com/feeds/ " +
-    #           "https://docs.googleusercontent.com/ " +
-    #           "https://spreadsheets.google.com/feeds/")
+    #   require "rubygems"
+    #   require "google/api_client"
+    #   client = Google::APIClient.new
+    #   auth = client.authorization
+    #   # Follow "Create a client ID and client secret" in
+    #   # https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret.
+    #   auth.client_id = "YOUR CLIENT ID"
+    #   auth.client_secret = "YOUR CLIENT SECRET"
+    #   auth.scope =
+    #       "https://www.googleapis.com/auth/drive " +
+    #       "https://spreadsheets.google.com/feeds/"
+    #   auth.redirect_uri = "http://example.com/redirect"
+    #   auth_url = auth.authorization_uri
     #   # Redirect the user to auth_url and get authorization code from redirect URL.
-    #   auth_token = client.auth_code.get_token(
-    #       authorization_code, :redirect_uri => "http://example.com/")
-    #   session = GoogleDrive.login_with_oauth(auth_token.token)
+    #   auth.code = authorization_code
+    #   auth.fetch_access_token!
+    #   session = GoogleDrive.login_with_oauth(auth.access_token)
     #
-    # Or, from existing refresh token:
+    # auth.access_token expires in 1 hour. If you want to restore a session afterwards, you can store
+    # auth.refresh_token somewhere after auth.fetch_access_token! above, and use this code:
     #
-    #   auth_token = OAuth2::AccessToken.from_hash(client,
-    #       {:refresh_token => refresh_token, :expires_at => expires_at})
-    #   auth_token = auth_token.refresh!
-    #   session = GoogleDrive.login_with_oauth(auth_token.token)
+    #   require "rubygems"
+    #   require "google/api_client"
+    #   client = Google::APIClient.new
+    #   auth = client.authorization
+    #   # Follow "Create a client ID and client secret" in
+    #   # https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret.
+    #   auth.client_id = "YOUR CLIENT ID"
+    #   auth.client_secret = "YOUR CLIENT SECRET"
+    #   auth.scope =
+    #       "https://www.googleapis.com/auth/drive " +
+    #       "https://spreadsheets.google.com/feeds/"
+    #   auth.redirect_uri = "http://example.com/redirect"
+    #   auth.refresh_token = refresh_token
+    #   auth.fetch_access_token!
+    #   session = GoogleDrive.login_with_oauth(auth.access_token)
     #
-    # If your app is not a Web app, use "urn:ietf:wg:oauth:2.0:oob" as redirect_url. Then
-    # authorization code is shown after authorization.
+    # OAuth2 code example for command-line apps:
     #
-    # See these documents for details:
+    #   require "rubygems"
+    #   require "google/api_client"
+    #   client = Google::APIClient.new
+    #   auth = client.authorization
+    #   # Follow "Create a client ID and client secret" in
+    #   # https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret.
+    #   auth.client_id = "YOUR CLIENT ID"
+    #   auth.client_secret = "YOUR CLIENT SECRET"
+    #   auth.scope =
+    #       "https://www.googleapis.com/auth/drive " +
+    #       "https://spreadsheets.google.com/feeds/"
+    #   auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+    #   print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
+    #   print("2. Enter the authorization code shown in the page: ")
+    #   auth.code = $stdin.gets.chomp
+    #   auth.fetch_access_token!
+    #   session = GoogleDrive.login_with_oauth(auth.access_token)
     #
-    # - https://github.com/intridea/oauth2
-    # - http://code.google.com/apis/accounts/docs/OAuth2.html
-    # - http://oauth.rubyforge.org/
-    # - http://code.google.com/apis/accounts/docs/OAuth.html
-    def self.login_with_oauth(access_token, proxy = nil)
-      return Session.login_with_oauth(access_token, proxy)
+    # See this document for details:
+    #
+    # - https://developers.google.com/drive/web/about-auth
+    def self.login_with_oauth(client_or_access_token, proxy = nil)
+      return Session.new(client_or_access_token, proxy)
     end
 
-    # Restores session using return value of auth_tokens method of previous session.
-    #
-    # See GoogleDrive.login for description of parameter +proxy+.
-    def self.restore_session(auth_tokens, proxy = nil)
-      return Session.restore_session(auth_tokens, proxy)
-    end
-    
     # Restores GoogleDrive::Session from +path+ and returns it.
     # If +path+ doesn't exist or authentication has failed, prompts the user to authorize the access,
     # stores the session to +path+ and returns it.
@@ -111,16 +119,14 @@ module GoogleDrive
 
       client = Google::APIClient.new(
           :application_name => "google_drive Ruby library",
-          :application_version => "0.3.11"
+          :application_version => "0.4.0"
       )
       auth = client.authorization
       auth.client_id = client_id
       auth.client_secret = client_secret
       auth.scope =
           "https://www.googleapis.com/auth/drive " +
-          "https://spreadsheets.google.com/feeds/ " +
-          "https://docs.google.com/feeds/ " +
-          "https://docs.googleusercontent.com/"
+          "https://spreadsheets.google.com/feeds/"
       auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
 
       if token_data
@@ -141,8 +147,8 @@ module GoogleDrive
 
       end
 
-      return GoogleDrive.login_with_oauth(auth.access_token)
+      return GoogleDrive.login_with_oauth(client)
 
     end
-
+    
 end

@@ -5,7 +5,7 @@ require "rubygems"
 require "oauth"
 
 
-module GoogleDrive
+module GoogleDriveV0
 
     class OAuth1Fetcher #:nodoc:
         

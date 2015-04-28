@@ -3,6 +3,13 @@ This is a Ruby 1.9/2.0 library to read/write files/spreadsheets in Google Drive/
 NOTE: This is NOT a library to create Google Drive App.
 
 
+= Incompatibility introduced in ver. 1.0.0
+
+Ver. 1.0.0 is not 100% backward compatible with 0.3.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.login_with_oauth instead, as in the example code below.
+
+I recommend to switch to the new API. But if you somehow want to continue using the old API, you can keep using it by requiring "google_drive_v0" instead of "google_drive" and use GoogleDriveV0 class instead of GoogleDrive class. It should continue working at least until April 20, 2015 when Google stops support of Documents List API.
+
+
 = How to install
 
   $ sudo gem install google_drive
@@ -10,15 +17,31 @@ NOTE: This is NOT a library to create Google Drive App.
 
 = How to use
 
+First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
+
 Example to read/write files in Google Drive:
 
   require "rubygems"
+  require "google/api_client"
   require "google_drive"
-  
-  # Logs in.
-  # You can also use OAuth. See document of
-  # GoogleDrive.login_with_oauth for details.
-  session = GoogleDrive.login("username@gmail.com", "mypassword")
+
+  # Authorizes with OAuth and gets an access token.
+  client = Google::APIClient.new
+  auth = client.authorization
+  auth.client_id = "YOUR CLIENT ID"
+  auth.client_secret = "YOUR CLIENT SECRET"
+  auth.scope =
+      "https://www.googleapis.com/auth/drive " +
+      "https://spreadsheets.google.com/feeds/"
+  auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+  print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
+  print("2. Enter the authorization code shown in the page: ")
+  auth.code = $stdin.gets.chomp
+  auth.fetch_access_token!
+  access_token = auth.access_token
+
+  # Creates a session.
+  session = GoogleDrive.login_with_oauth(access_token)
   
   # Gets list of remote files.
   for file in session.files
@@ -38,12 +61,13 @@ Example to read/write files in Google Drive:
 Example to read/write spreadsheets:
   
   require "rubygems"
+  require "google/api_client"
   require "google_drive"
+
+  # Same as the code above to get access_token...
   
-  # Logs in.
-  # You can also use OAuth. See document of
-  # GoogleDrive.login_with_oauth for details.
-  session = GoogleDrive.login("username@gmail.com", "mypassword")
+  # Creates a session.
+  session = GoogleDrive.login_with_oauth(access_token)
   
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
@@ -83,7 +107,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.8.x, 1.9.x and 2.0.x. Checked with Ruby 1.8.7, 1.9.3 and 2.0.0.
+Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3.
 
 
 = Author
