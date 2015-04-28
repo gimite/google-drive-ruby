@@ -9,7 +9,7 @@ require "google_drive/util"
 require "google_drive/error"
 require "google_drive/table"
 require "google_drive/list"
-
+require "google_drive/rows"
 
 module GoogleDrive
 
