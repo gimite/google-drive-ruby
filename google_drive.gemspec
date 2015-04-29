@@ -1,8 +1,8 @@
 Gem::Specification.new do |s|
 
   s.name = "google_drive"
-  s.version = "1.0.0"
-  s.authors = ["Hiroshi Ichikawa"]
+  s.version = "1.0.2"
+  s.authors = ["Hiroshi Ichikawa", 'Guy Boertje', 'Rob Murray']
   s.email = ["gimite+github@gmail.com"]
   s.summary = "A library to read/write files/spreadsheets in Google Drive/Docs."
   s.description = "A library to read/write files/spreadsheets in Google Drive/Docs."

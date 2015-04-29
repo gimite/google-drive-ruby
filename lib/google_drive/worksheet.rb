@@ -42,22 +42,21 @@ module GoogleDrive
         # Time object which represents the time the worksheet was last updated.
         attr_reader(:updated)
 
-        # URL of cell-based feed of the worksheet.
-        def cells_feed_url
-          return @worksheet_feed_entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]["href"]
-        end
+        #######
+        # URLS
+        # see set_worksheet_feed_entry method
 
         # URL of worksheet feed URL of the worksheet.
-        def worksheet_feed_url
-          return @worksheet_feed_entry.css("link[rel='self']")[0]["href"]
-        end
+        attr_reader :worksheet_feed_url
+
+        # URL of cell-based feed of the worksheet.
+        attr_reader :cells_feed_url
+
+        # URL of list-based feed of the worksheet.
+        attr_reader :list_feed_url
 
         # URL to export the worksheet as CSV.
-        def csv_export_url
-          return @worksheet_feed_entry.css(
-              "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']")[0]["href"]
-        end
+        attr_reader :csv_export_url
 
         # Exports the worksheet as String in CSV format.
         def export_as_string()
@@ -85,7 +84,7 @@ module GoogleDrive
         # GoogleDrive::Spreadsheet which this worksheet belongs to.
         def spreadsheet
           if !@spreadsheet
-            if !(self.worksheet_feed_url =~ %r{https?://spreadsheets\.google\.com/feeds/worksheets/(.*)/(.*)$})
+            if !(self.worksheet_feed_url =~ %r{https?://spreadsheets.google.com/feeds/worksheets/(.*)/(.*)$})
               raise(GoogleDrive::Error,
                   "Worksheet feed URL is in unknown format: #{self.worksheet_feed_url}")
             end
@@ -260,7 +259,8 @@ module GoogleDrive
 
           if @meta_modified
 
-            edit_url = @worksheet_feed_entry.css("link[rel='edit']")[0]["href"]
+            # edit_url = @worksheet_feed_entry.css("link[rel='edit']")[0]["href"]
+            edit_url = url_entry("link[rel='edit']")
             xml = <<-"EOS"
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
@@ -416,12 +416,6 @@ module GoogleDrive
           return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
         end
 
-        # List feed URL of the worksheet.
-        def list_feed_url
-          return @worksheet_feed_entry.css(
-            "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
-        end
-
         # Provides access to cells using column names, assuming the first row contains column
         # names. Returned object is GoogleDrive::List which you can use mostly as
         # Array of Hash.
@@ -467,10 +461,34 @@ module GoogleDrive
 
       private
 
+        def text_entry(key)
+          node = @worksheet_feed_entry.css(key)
+          return '' unless node #raise?
+          node.text
+        end
+
+        def url_entry(key, attrib = 'href')
+          node = @worksheet_feed_entry.css(key)
+          return '' unless node #raise?
+          first = node[0]
+          return '' unless first
+          first[attrib]
+        end
+
         def set_worksheet_feed_entry(entry)
           @worksheet_feed_entry = entry
-          @title = entry.css("title").text
-          @updated = Time.parse(entry.css("updated").text)
+          @title = text_entry("title")
+          @updated = Time.parse(text_entry("updated"))
+          @worksheet_feed_url = url_entry("link[rel='self']")
+          @cells_feed_url = url_entry(
+                "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")
+
+          # in v1 there was a link for the list feed
+          # v2 and v3 has the url in content tag src attribute
+          @list_feed_url = url_entry('content', 'src')
+          @csv_export_url = url_entry(
+                "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']")
+
           @meta_modified = false
         end
 
