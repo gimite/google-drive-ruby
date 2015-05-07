@@ -19,7 +19,7 @@ I recommend to switch to the new API. But if you somehow want to continue using 
 
 First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
 
-Example to read/write files in Google Drive:
+Example to read/write files in Google Drive via OAuth
 
   require "rubygems"
   require "google/api_client"
@@ -30,9 +30,10 @@ Example to read/write files in Google Drive:
   auth = client.authorization
   auth.client_id = "YOUR CLIENT ID"
   auth.client_secret = "YOUR CLIENT SECRET"
-  auth.scope =
-      "https://www.googleapis.com/auth/drive " +
-      "https://spreadsheets.google.com/feeds/"
+  auth.scope = [
+    "https://www.googleapis.com/auth/drive ",
+    "https://spreadsheets.google.com/feeds/"
+  ]
   auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
   print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
   print("2. Enter the authorization code shown in the page: ")
