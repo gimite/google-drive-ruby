@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
   s.add_dependency("oauth", [">= 0.3.6"])
   s.add_dependency("oauth2", [">= 0.5.0"])
   s.add_dependency("google-api-client", [">= 0.7.0"])
+  s.add_dependency("minitest", [">= 5.1.0"])
   s.add_development_dependency("rake", [">= 0.8.0"])
 
 end
