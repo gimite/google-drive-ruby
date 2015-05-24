@@ -7,7 +7,6 @@ require "uri"
 
 require "google_drive/util"
 require "google_drive/error"
-require "google_drive/table"
 require "google_drive/list"
 
 
@@ -366,54 +365,6 @@ module GoogleDrive
         # Returns true if you have changes made by []= which haven't been saved.
         def dirty?
           return !@modified.empty?
-        end
-
-        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
-        # March 2012.
-        #
-        # Creates table for the worksheet and returns GoogleDrive::Table.
-        # See this document for details:
-        # http://code.google.com/intl/en/apis/spreadsheets/docs/3.0/developers_guide_protocol.html#TableFeeds
-        def add_table(table_title, summary, columns, options)
-          
-          warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
-              "will not be available after March 2012.")
-          default_options = { :header_row => 1, :num_rows => 0, :start_row => 2}
-          options = default_options.merge(options)
-
-          column_xml = ""
-          columns.each() do |index, name|
-            column_xml += "<gs:column index='#{h(index)}' name='#{h(name)}'/>\n"
-          end
-
-          xml = <<-"EOS"
-            <entry xmlns="http://www.w3.org/2005/Atom"
-              xmlns:gs="http://schemas.google.com/spreadsheets/2006">
-              <title type='text'>#{h(table_title)}</title>
-              <summary type='text'>#{h(summary)}</summary>
-              <gs:worksheet name='#{h(self.title)}' />
-              <gs:header row='#{options[:header_row]}' />
-              <gs:data numRows='#{options[:num_rows]}' startRow='#{options[:start_row]}'>
-                #{column_xml}
-              </gs:data>
-            </entry>
-          EOS
-
-          result = @session.request(:post, self.spreadsheet.tables_feed_url, :data => xml)
-          return Table.new(@session, result)
-          
-        end
-
-        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
-        # March 2012.
-        #
-        # Returns list of tables for the workwheet.
-        def tables
-          warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
-              "will not be available after March 2012.")
-          return self.spreadsheet.tables.select(){ |t| t.worksheet_title == self.title }
         end
 
         # List feed URL of the worksheet.

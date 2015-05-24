@@ -6,7 +6,6 @@ require "time"
 require "google_drive/util"
 require "google_drive/error"
 require "google_drive/worksheet"
-require "google_drive/table"
 require "google_drive/acl"
 require "google_drive/file"
 
@@ -43,17 +42,6 @@ module GoogleDrive
           return "https://spreadsheets.google.com/feeds/spreadsheets/private/full/" + self.id
         end
         
-        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
-        # March 2012.
-        #
-        # Tables feed URL of the spreadsheet.
-        def tables_feed_url
-          warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
-              "will not be available after March 2012.")
-          return "https://spreadsheets.google.com/feeds/%s/tables" % self.id
-        end
-
         # Returns worksheets of the spreadsheet as array of GoogleDrive::Worksheet.
         def worksheets
           doc = @session.request(:get, self.worksheets_feed_url)
@@ -95,18 +83,6 @@ module GoogleDrive
           return Worksheet.new(@session, self, doc.root)
         end
 
-        # DEPRECATED: Table and Record feeds are deprecated and they will not be available after
-        # March 2012.
-        #
-        # Returns list of tables in the spreadsheet.
-        def tables
-          warn(
-              "DEPRECATED: Google Spreadsheet Table and Record feeds are deprecated and they " +
-              "will not be available after March 2012.")
-          doc = @session.request(:get, self.tables_feed_url)
-          return doc.css("entry").map(){ |e| Table.new(@session, e) }.freeze()
-        end
-        
     end
     
 end
