@@ -22,7 +22,7 @@ module GoogleDrive
           if acl
             @api_permission = params_or_api_permission
             @params = nil
-            delegate_api_methods(self, @api_permission, [:value])
+            delegate_api_methods(self, @api_permission, ["value"])
           else
             @api_permission = nil
             @params = convert_params(params_or_api_permission)
@@ -63,7 +63,18 @@ module GoogleDrive
 
         # The value of the scope. See type.
         def value
-          return @params ? @params["value"] : value_from_api_permission
+          if @params
+            return @params["value"]
+          else
+            case @api_permission.type
+              when "user", "group"
+                return @api_permission.email_address
+              when "domain"
+                return @api_permission.domain
+              else
+                return nil
+            end
+          end
         end
 
         alias scope value
@@ -113,15 +124,6 @@ module GoogleDrive
           end
           return new_params
         end
-
-        def value_from_api_permission
-          case @api_permission.type
-            when "user", "group" then @api_permission.emailAddress
-            when "domain" then @api_permission.domain
-            else nil
-          end
-        end
-
 
     end
 

@@ -274,9 +274,16 @@ class TestGoogleDrive < Minitest::Test
       file.acl.push({:scope_type => "anyone", :with_key => true, :role => "reader"})
       acl = file.acl(:reload => true)
       assert_equal(2, acl.size)
+
+      assert_equal("user", acl[0].scope_type)
+      assert(!acl[0].with_key)
+      assert_equal("owner", acl[0].role)
+      assert(acl[0].value)
+
       assert_equal("anyone", acl[1].scope_type)
       assert(acl[1].with_key)
       assert_equal("reader", acl[1].role)
+      assert_nil(acl[1].value)
 
       acl[1].role = "writer"
       assert_equal("writer", acl[1].role)
