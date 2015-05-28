@@ -56,7 +56,7 @@ module GoogleDrive
           api_result = @session.execute!(
               :api_method => @session.drive.permissions.insert,
               :body_object => new_permission,
-              :parameters => { "fileId" => @file.id })
+              :parameters => { "fileId" => @file.id, "sendNotificationEmails" => "false" })
           new_entry = AclEntry.new(api_result.data, self)
           @entries.push(new_entry)
           return new_entry
