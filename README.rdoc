@@ -17,7 +17,7 @@ I recommend to switch to the new API. But if you somehow want to continue using 
 
 = How to use
 
-First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
+First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a 'installed application' client ID and client secret for OAuth.
 
 Example to read/write files in Google Drive:
 
