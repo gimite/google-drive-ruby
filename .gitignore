@@ -1,7 +1,10 @@
-experiment
+exp
 doc
+vendor
+.bundle
 test/account.yaml
 *~
 *.gem
 .rvmrc
 Gemfile.lock
+.idea
