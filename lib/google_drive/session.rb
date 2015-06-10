@@ -460,6 +460,8 @@ module GoogleDrive
               # Human-readable new spreadsheet/document.
               when /\/d\/([^\/]+)/
                 return $1
+              when /\/drive\/([^\/]+)/
+                return uri.path[/([^\/]+)$/]
               # Human-readable folder view.
               when /\/folderview$/
                 if (uri.query || "").split(/&/).find(){ |s| s=~ /^id=(.*)$/ }
