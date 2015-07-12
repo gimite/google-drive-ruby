@@ -21,7 +21,6 @@ First, follow "Create a client ID and client secret" in {this page}[https://deve
 
 Example to read/write files in Google Drive:
 
-  require "rubygems"
   require "google/api_client"
   require "google_drive"
 
@@ -31,8 +30,8 @@ Example to read/write files in Google Drive:
   auth.client_id = "YOUR CLIENT ID"
   auth.client_secret = "YOUR CLIENT SECRET"
   auth.scope = [
-      "https://www.googleapis.com/auth/drive",
-      "https://spreadsheets.google.com/feeds/"
+    "https://www.googleapis.com/auth/drive",
+    "https://spreadsheets.google.com/feeds/"
   ]
   auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
   print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
@@ -43,58 +42,57 @@ Example to read/write files in Google Drive:
 
   # Creates a session.
   session = GoogleDrive.login_with_oauth(access_token)
-  
+
   # Gets list of remote files.
-  for file in session.files
+  session.files.each do |file|
     p file.title
   end
-  
+
   # Uploads a local file.
-  session.upload_from_file("/path/to/hello.txt", "hello.txt", :convert => false)
-  
+  session.upload_from_file("/path/to/hello.txt", "hello.txt", convert: false)
+
   # Downloads to a local file.
   file = session.file_by_title("hello.txt")
   file.download_to_file("/path/to/hello.txt")
-  
+
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
 
 Example to read/write spreadsheets:
-  
-  require "rubygems"
+
   require "google/api_client"
   require "google_drive"
 
   # Same as the code above to get access_token...
-  
+
   # Creates a session.
   session = GoogleDrive.login_with_oauth(access_token)
-  
+
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
   ws = session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg").worksheets[0]
-  
+
   # Gets content of A2 cell.
   p ws[2, 1]  #==> "hoge"
-  
+
   # Changes content of cells.
   # Changes are not sent to the server until you call ws.save().
   ws[2, 1] = "foo"
   ws[2, 2] = "bar"
-  ws.save()
-  
+  ws.save
+
   # Dumps all cells.
-  for row in 1..ws.num_rows
-    for col in 1..ws.num_cols
+  (1..ws.num_rows).each do |row|
+    (1..ws.num_cols).each do |col|
       p ws[row, col]
     end
   end
-  
+
   # Yet another way to do so.
   p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
-  
+
   # Reloads the worksheet to get changes by other clients.
-  ws.reload()
+  ws.reload
 
 API document: http://gimite.net/doc/google-drive-ruby/
 
