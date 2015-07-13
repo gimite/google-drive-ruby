@@ -108,12 +108,11 @@ module GoogleDrive
             @fetcher.client.execute!(*args)
           rescue Google::APIClient::ClientError => e
             if @current_auth_attempts < @max_reauth_attempts
-              request = e.result.request
               response = e.result.response
               if response.status == 401 && client.authorization.respond_to?(:refresh_token)
                 begin
                   @current_auth_attempts += 1
-                  resp = request.authorization.fetch_access_token!
+                  resp = client.authorization.fetch_access_token!
                   post_authorize(resp)
                   @current_auth_attempts = 0
                 rescue Signet::AuthorizationError
