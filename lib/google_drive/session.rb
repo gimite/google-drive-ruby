@@ -73,8 +73,7 @@ module GoogleDrive
                 authentication_params = AUTH_DEFAULTS.merge(client_or_access_token[:authentication])
                 api_options = client_or_access_token[:application] || api_client_params
                 api_options.merge!({auto_refresh_token: false}) if block_given?
-                client = Google::APIClient.new(api_options)
-                client.authorization = Signet::OAuth2::Client.new(authentication_params)
+                client = Google::APIClient.new(api_options.merge(authorization: Signet::OAuth2::Client.new(authentication_params)))
                 resp = client.authorization.fetch_access_token!
                 @auth_callback = auth_callback if block_given?
                 post_authorize(resp)
