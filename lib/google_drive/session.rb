@@ -105,7 +105,7 @@ module GoogleDrive
 
         def execute!(*args) #:nodoc:
           begin
-            @fetcher.client.execute!(*args)
+            client.execute!(*args)
           rescue Google::APIClient::ClientError => e
             if @current_auth_attempts < @max_reauth_attempts
               response = e.result.response
