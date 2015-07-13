@@ -116,6 +116,7 @@ module GoogleDrive
         def []=(*args)
           (row, col) = parse_cell_args(args[0...-1])
           value = args[-1].to_s()
+          value.gsub!(/(?!\n)[[:cntrl:]]/, '')
           reload_cells() if !@cells
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
