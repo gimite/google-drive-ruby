@@ -30,17 +30,9 @@ module GoogleDrive
         include(Util)
         extend(Util)
 
-        AUTH_DEFAULTS = {
-                          token_credential_uri: 'https://accounts.google.com/o/oauth2/token',
-                          audience: 'https://accounts.google.com/o/oauth2/token',
-                          scope: 'https://spreadsheets.google.com/feeds/ https://docs.google.com/feeds/ https://www.googleapis.com/auth/drive https://docs.googleusercontent.com/',
-                          access_type: 'offline' ,
-                          approval_prompt: 'force',
-                        }
-
         # The same as GoogleDrive.login_with_oauth.
-        def self.login_with_oauth(client_or_access_token, proxy = nil, reauth_attempts = 0, &block)
-          return Session.new(client_or_access_token, proxy, reauth_attempts, &block)
+        def self.login_with_oauth(client_or_access_token, proxy = nil)
+          return Session.new(client_or_access_token, proxy)
         end
 
         # Creates a dummy GoogleDrive::Session object for testing.
@@ -48,9 +40,8 @@ module GoogleDrive
           return Session.new(nil)
         end
 
-        def initialize(client_or_access_token, proxy = nil, reauth_attempts = 0, &auth_callback)
-          @max_reauth_attempts = reauth_attempts
-          @current_auth_attempts = 0
+        def initialize(client_or_access_token, proxy = nil)
+
           if proxy
             raise(
                 ArgumentError,
@@ -68,15 +59,6 @@ module GoogleDrive
               when String
                 client = Google::APIClient.new(api_client_params)
                 client.authorization.access_token = client_or_access_token
-              when Hash
-                raise(ArgumentError, "Authentication settings must be passed in") unless client_or_access_token.key?(:authentication)
-                authentication_params = AUTH_DEFAULTS.merge(client_or_access_token[:authentication])
-                api_options = client_or_access_token[:application] || api_client_params
-                api_options.merge!({auto_refresh_token: false}) if block_given?
-                client = Google::APIClient.new(api_options.merge(authorization: Signet::OAuth2::Client.new(authentication_params)))
-                resp = client.authorization.fetch_access_token!
-                @auth_callback = auth_callback if block_given?
-                post_authorize(resp)
               when OAuth2::AccessToken
                 client = Google::APIClient.new(api_client_params)
                 client.authorization.access_token = client_or_access_token.token
@@ -104,26 +86,7 @@ module GoogleDrive
         attr_accessor :on_auth_fail
 
         def execute!(*args) #:nodoc:
-          begin
-            client.execute!(*args)
-          rescue Google::APIClient::ClientError => e
-            if @current_auth_attempts < @max_reauth_attempts
-              response = e.result.response
-              if response.status == 401 && client.authorization.respond_to?(:refresh_token)
-                begin
-                  @current_auth_attempts += 1
-                  resp = client.authorization.fetch_access_token!
-                  post_authorize(resp)
-                  @current_auth_attempts = 0
-                rescue Signet::AuthorizationError
-                  # Ignore since we want the original error
-                end
-                execute!(*args)
-              end
-            else
-              raise
-            end
-          end
+          return @fetcher.client.execute!(*args)
         end
 
         # Returns the Google::APIClient object.
@@ -134,11 +97,6 @@ module GoogleDrive
         # Returns client.discovered_api("drive", "v2").
         def drive
           return @fetcher.drive
-        end
-
-        # :nodoc:
-        def post_authorize(response)
-          @auth_callback.call(response) if @auth_callback
         end
 
         # Returns list of files for the user as array of GoogleDrive::File or its subclass.
@@ -254,7 +212,7 @@ module GoogleDrive
         def spreadsheet_by_title(title)
           return spreadsheets("q" => ["title = ?", title], "maxResults" => 1)[0]
         end
-
+        
         # Returns GoogleDrive::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
@@ -271,12 +229,12 @@ module GoogleDrive
           worksheet_feed_entry = request(:get, worksheet_feed_url)
           return Worksheet.new(self, nil, worksheet_feed_entry)
         end
-
+        
         # Returns the root collection.
         def root_collection
           return @root_collection ||= file_by_id("root")
         end
-
+        
         # Returns the top-level collections (direct children of the root collection).
         #
         # By default, it returns the first 100 collections. See document of files method for how to get
@@ -284,7 +242,7 @@ module GoogleDrive
         def collections
           return self.root_collection.subcollections
         end
-
+        
         # Returns a top-level collection whose title exactly matches +title+ as
         # GoogleDrive::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
@@ -292,7 +250,7 @@ module GoogleDrive
         def collection_by_title(title)
           return self.root_collection.subcollection_by_title(title)
         end
-
+        
         # Returns GoogleDrive::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
@@ -328,7 +286,7 @@ module GoogleDrive
               :body_object => file)
           return wrap_api_file(api_result.data)
         end
-
+        
         # Uploads a file with the given +title+ and +content+.
         # Returns a GoogleSpreadsheet::File object.
         #
@@ -336,11 +294,11 @@ module GoogleDrive
         #   # Uploads and converts to a Google Docs document:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain")
-        #
+        #   
         #   # Uploads without conversion:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain", :convert => false)
-        #
+        #   
         #   # Uploads and converts to a Google Spreadsheet:
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
@@ -348,20 +306,20 @@ module GoogleDrive
           media = new_upload_io(StringIO.new(content), params)
           return upload_from_media(media, title, params)
         end
-
+        
         # Uploads a local file.
         # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
         #   # Uploads a text file and converts to a Google Docs document:
         #   session.upload_from_file("/path/to/hoge.txt")
-        #
+        #   
         #   # Uploads without conversion:
         #   session.upload_from_file("/path/to/hoge.txt", "Hoge", :convert => false)
-        #
+        #   
         #   # Uploads with explicit content type:
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
-        #
+        #   
         #   # Uploads a text file and converts to a Google Spreadsheet:
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
@@ -435,11 +393,11 @@ module GoogleDrive
             return items
 
           end
-
+          
         end
-
+        
         def request(method, url, params = {}) #:nodoc:
-
+          
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
@@ -466,9 +424,9 @@ module GoogleDrive
             end
             return convert_response(response, response_type)
           end
-
+          
         end
-
+        
         def inspect
           return "#<%p:0x%x>" % [self.class, self.object_id]
         end
