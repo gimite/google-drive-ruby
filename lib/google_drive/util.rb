@@ -153,14 +153,8 @@ module GoogleDrive
           return new_params
         end
 
-        def singleton_class(obj)
-          class << obj
-            return self
-          end
-        end
-
         def delegate_api_methods(obj, api_obj, exceptions = [])
-          sc = singleton_class(obj)
+          sc = obj.singleton_class
           names = api_obj.class.keys.keys - exceptions.map(&:to_s)
           names.each() do |name|
             sc.__send__(:define_method, name) do
