@@ -340,7 +340,8 @@ module GoogleDrive
         # Uploads a file. Reads content from +media+.
         # Returns a GoogleSpreadsheet::File object.
         def upload_from_media(media, title = "Untitled", params = {})
-          request_schema_params = params.delete(:request_schema).merge("title" => title)
+          request_schema_params = { "title" => title }
+          request_schema_params.merge!(params.delete(:request_schema))
           file = self.drive.files.insert.request_schema.new(request_schema_params)
           api_result = execute!(
               :api_method => self.drive.files.insert,
