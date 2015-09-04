@@ -75,8 +75,8 @@ module GoogleDrive
     # See this document for details:
     #
     # - https://developers.google.com/drive/web/about-auth
-    def self.login_with_oauth(client_or_access_token, proxy = nil)
-      return Session.new(client_or_access_token, proxy)
+    def self.login_with_oauth(client_or_access_token, proxy = nil, reauth_attempts = 0, &block)
+      return Session.new(client_or_access_token, proxy, reauth_attempts, &block)
     end
 
     # Restores GoogleDrive::Session from +path+ and returns it.
@@ -151,5 +151,5 @@ module GoogleDrive
       return GoogleDrive.login_with_oauth(client)
 
     end
-    
+
 end
