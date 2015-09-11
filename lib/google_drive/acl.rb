@@ -47,16 +47,20 @@ module GoogleDrive
         #   # Anyone who knows the link can read.
         #   spreadsheet.acl.push(
         #       {:type => "anyone", :withLink => true, :role => "reader"})
+        #   # Set ACL without sending notification emails
+        #   spreadsheet.acl.push(
+        #       {:type => "user", :value => "example2@gmail.com", :role => "reader"},
+        #       {:sendNotificationEmails => false})
         #
         # See here for parameter detais:
         # https://developers.google.com/drive/v2/reference/permissions/insert
-        def push(params_or_entry)
+        def push(params_or_entry, options = {})
           entry = params_or_entry.is_a?(AclEntry) ? params_or_entry : AclEntry.new(params_or_entry)
           new_permission = @session.drive.permissions.insert.request_schema.new(entry.params)
           api_result = @session.execute!(
               :api_method => @session.drive.permissions.insert,
               :body_object => new_permission,
-              :parameters => { "fileId" => @file.id })
+              :parameters => options.merge({ "fileId" => @file.id }))
           new_entry = AclEntry.new(api_result.data, self)
           @entries.push(new_entry)
           return new_entry
