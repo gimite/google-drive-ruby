@@ -57,6 +57,25 @@ Example to read/write files in Google Drive:
 
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
+  
+Example to read/write file in Google Drive with token that was stored in a local file (just request access authorization once)
+  CREDENTIALS_PATH = File.join(Dir.pwd, 'stored_token.json')
+  session = GoogleDrive.saved_session(CREDENTIALS_PATH, nil, CLIENT_ID, CLIENT_SECRET)
+  session.files.each do |file|
+    p file.title
+  end
+  
+Example to authorize by Refesh Token (offline mode - https://developers.google.com/drive/web/auth/web-server), used in Web Server that cannot log in Google Account by a web browser
+
+  REFRESH_TOKEN = "YOUR REFRESH TOKEN" # Can be get from file stored_token.json above
+  client = Google::APIClient.new
+  auth = client.authorization
+  auth.client_id = CLIENT_ID
+  auth.client_secret = CLIENT_SECRET
+  auth.scope = SCOPE
+  auth.refresh_token = REFRESH_TOKEN
+  auth.fetch_access_token!
+  session = GoogleDrive.login_with_oauth(auth.access_token)
 
 Example to read/write spreadsheets:
 
@@ -70,6 +89,7 @@ Example to read/write spreadsheets:
 
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
+  # Or https://docs.google.com/a/someone.com/spreadsheets/d/pz7XtlQC-PYx-jrVMJErTcg/edit?usp=drive_web
   ws = session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg").worksheets[0]
 
   # Gets content of A2 cell.
@@ -106,7 +126,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3.
+Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3 and 2.2.2.
 
 
 = Author
