@@ -33,6 +33,13 @@ module GoogleDrive
         # :scope_type, :scope and :role. See GoogleDrive::AclEntry#scope_type and
         # GoogleDrive::AclEntry#role for the document of the fields.
         #
+        # Also you can pass the second hash argument +options+, which specifies
+        # optional query parameters for the API.
+        # Possible keys of +options+ are,
+        # * :emailMessage  -- A custom message to include in notification emails
+        # * :sendNotificationEmails  -- Whether to send notification emails
+        #   when sharing to users or groups.
+        #
         # NOTE: This sends email to the new people.
         #
         # e.g.
