@@ -25,7 +25,7 @@ Example to read/write files in Google Drive, the method "saved_session" will pro
   require "google_drive"
 
   # Creates a session.
-  CREDENTIALS_PATH = File.join(Dir.pwd, 'stored_token.json')
+  CREDENTIALS_PATH = './stored_token.json'
   session = GoogleDrive.saved_session(CREDENTIALS_PATH, nil, CLIENT_ID, CLIENT_SECRET)
 
   # Gets list of remote files.
