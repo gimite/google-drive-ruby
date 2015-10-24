@@ -19,29 +19,14 @@ I recommend to switch to the new API. But if you somehow want to continue using 
 
 First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
 
-Example to read/write files in Google Drive:
+Example to read/write files in Google Drive, the method "saved_session" will prompt the credential via command line for the first time and save it for later usages:
 
   require "google/api_client"
   require "google_drive"
 
-  # Authorizes with OAuth and gets an access token.
-  client = Google::APIClient.new
-  auth = client.authorization
-  auth.client_id = "YOUR CLIENT ID"
-  auth.client_secret = "YOUR CLIENT SECRET"
-  auth.scope = [
-    "https://www.googleapis.com/auth/drive",
-    "https://spreadsheets.google.com/feeds/"
-  ]
-  auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
-  print("1. Open this page:\n%s\n\n" % auth.authorization_uri)
-  print("2. Enter the authorization code shown in the page: ")
-  auth.code = $stdin.gets.chomp
-  auth.fetch_access_token!
-  access_token = auth.access_token
-
   # Creates a session.
-  session = GoogleDrive.login_with_oauth(access_token)
+  CREDENTIALS_PATH = './stored_token.json'
+  session = GoogleDrive.saved_session(CREDENTIALS_PATH, nil, CLIENT_ID, CLIENT_SECRET)
 
   # Gets list of remote files.
   session.files.each do |file|
@@ -57,6 +42,10 @@ Example to read/write files in Google Drive:
 
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
+  
+Example to authorize by Refesh Token ({offline mode}[https://developers.google.com/drive/web/auth/web-server]), used in Web Server that cannot log in Google Account by a web browser:
+
+http://gimite.net/doc/google-drive-ruby/GoogleDrive.html#method-c-login_with_oauth
 
 Example to read/write spreadsheets:
 
@@ -70,6 +59,7 @@ Example to read/write spreadsheets:
 
   # First worksheet of
   # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
+  # Or https://docs.google.com/a/someone.com/spreadsheets/d/pz7XtlQC-PYx-jrVMJErTcg/edit?usp=drive_web
   ws = session.spreadsheet_by_key("pz7XtlQC-PYx-jrVMJErTcg").worksheets[0]
 
   # Gets content of A2 cell.
@@ -106,7 +96,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3.
+Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3 and 2.2.2.
 
 
 = Author
