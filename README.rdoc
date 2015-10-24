@@ -3,11 +3,11 @@ This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
 NOTE: This is NOT a library to create Google Drive App.
 
 
-= Incompatibility introduced in ver. 1.0.0
+= Migration from 0.3.x or before to ver. 1.0.x
 
-Ver. 1.0.0 is not 100% backward compatible with 0.3.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.login_with_oauth instead, as in the example code below.
+Ver. 0.3.x and the versions before no longer works, because the API used was deprecated and shut down. You need to migrate to ver. 1.0.x.
 
-I recommend to switch to the new API. But if you somehow want to continue using the old API, you can keep using it by requiring "google_drive_v0" instead of "google_drive" and use GoogleDriveV0 class instead of GoogleDrive class. It should continue working at least until April 20, 2015 when Google stops support of Documents List API.
+Ver. 1.0.x is not 100% backward compatible with 0.3.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.saved_session or GoogleDrive.login_with_oauth instead, as in the example code below.
 
 
 = How to install
@@ -17,16 +17,24 @@ I recommend to switch to the new API. But if you somehow want to continue using 
 
 = How to use
 
-First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth.
+First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth. Set "Application type" to "Other" in the form to create a client ID if you use GoogleDrive.saved_session method as in the example below.
 
-Example to read/write files in Google Drive, the method "saved_session" will prompt the credential via command line for the first time and save it for later usages:
+Example to read/write files in Google Drive:
 
   require "google/api_client"
   require "google_drive"
 
-  # Creates a session.
-  CREDENTIALS_PATH = './stored_token.json'
-  session = GoogleDrive.saved_session(CREDENTIALS_PATH, nil, CLIENT_ID, CLIENT_SECRET)
+  # The client ID and client secret you obtained in the step above.
+  CLIENT_ID = ...
+  CLIENT_SECRET = ...
+
+  # Creates a session. This will prompt the credential via command line for the
+  # first time and save it to ./stored_token.json file for later usages.
+  #
+  # If you are developing a Web app, and you want to ask the user to log in in
+  # the Web app instead of via command line, follow the example code in:
+  # http://gimite.net/doc/google-drive-ruby/GoogleDrive.html#method-c-login_with_oauth
+  session = GoogleDrive.saved_session("./stored_token.json", nil, CLIENT_ID, CLIENT_SECRET)
 
   # Gets list of remote files.
   session.files.each do |file|
@@ -43,10 +51,6 @@ Example to read/write files in Google Drive, the method "saved_session" will pro
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
   
-Example to authorize by Refesh Token ({offline mode}[https://developers.google.com/drive/web/auth/web-server]), used in Web Server that cannot log in Google Account by a web browser:
-
-http://gimite.net/doc/google-drive-ruby/GoogleDrive.html#method-c-login_with_oauth
-
 Example to read/write spreadsheets:
 
   require "google/api_client"
@@ -96,7 +100,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3 and 2.2.2.
+Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3.
 
 
 = Author
