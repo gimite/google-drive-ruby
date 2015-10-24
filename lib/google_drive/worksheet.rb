@@ -306,7 +306,12 @@ module GoogleDrive
               value = @cells[[row, col]]
               entry = cell_entries[[row, col]]
               id = entry.css("id").text
-              edit_url = entry.css("link[rel='edit']")[0]["href"]
+              edit_link = entry.css("link[rel='edit']")[0]
+              if !edit_link
+                raise(GoogleDrive::Error,
+                    "The user doesn't have write permission to the spreadsheet: %p" % self.spreadsheet)
+              end
+              edit_url = edit_link["href"]
               xml << <<-EOS
                 <entry>
                   <batch:id>#{h(row)},#{h(col)}</batch:id>
