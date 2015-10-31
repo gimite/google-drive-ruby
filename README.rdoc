@@ -1,4 +1,4 @@
-This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
+This is a Ruby library to read/write/edit files/spreadsheets in Google Drive/Docs.
 
 NOTE: This is NOT a library to create Google Drive App.
 
