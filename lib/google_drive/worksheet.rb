@@ -172,6 +172,12 @@ module GoogleDrive
           return doc.css("entry").map(){ |e| ListFeed.new(@session, self, e) }.freeze
         end
 
+        # adds a new row in existing spreadsheet
+        def add_row(row)
+          update_cells(num_rows+1, 1, [row])
+          save()
+        end
+
         # Returns the numeric value of the cell. Arguments must be either
         # (row number, column number) or cell name. Top-left cell is [1, 1].
         #
