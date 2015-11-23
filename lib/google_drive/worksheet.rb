@@ -8,6 +8,7 @@ require "uri"
 require "google_drive/util"
 require "google_drive/error"
 require "google_drive/list"
+require "google_drive/list_feed"
 
 
 module GoogleDrive
@@ -19,7 +20,7 @@ module GoogleDrive
         include(Util)
 
         def initialize(session, spreadsheet, worksheet_feed_entry) #:nodoc:
-          
+
           @session = session
           @spreadsheet = spreadsheet
           set_worksheet_feed_entry(worksheet_feed_entry)
@@ -29,7 +30,7 @@ module GoogleDrive
           @numeric_values = nil
           @modified = Set.new()
           @list = nil
-          
+
         end
 
         # Nokogiri::XML::Element object of the <entry> element in a worksheets feed.
@@ -105,7 +106,7 @@ module GoogleDrive
         end
 
         # Updates content of the cell.
-        # Arguments in the bracket must be either (row number, column number) or cell name. 
+        # Arguments in the bracket must be either (row number, column number) or cell name.
         # Note that update is not sent to the server until you call save().
         # Top-left cell is [1, 1].
         #
@@ -157,6 +158,20 @@ module GoogleDrive
           return @input_values[[row, col]] || ""
         end
 
+        # Returns the list of ListFeed Object which contains feed for each row entry.
+        def list_feeds(filter = "")
+          url_with_filter = self.list_feed_url
+          url_with_filter += "?sq=#{filter}" if filter
+
+          doc = @session.request(:get, url_with_filter)
+          if doc.root.name != "feed"
+            raise(GoogleDrive::Error,
+                "%s doesn't look like a list feed URL because its root is not <feed>." %
+                self.list_feed_url)
+          end
+          return doc.css("entry").map(){ |e| ListFeed.new(@session, self, e) }.freeze
+        end
+
         # Returns the numeric value of the cell. Arguments must be either
         # (row number, column number) or cell name. Top-left cell is [1, 1].
         #
@@ -175,7 +190,7 @@ module GoogleDrive
           reload_cells() if !@cells
           return @numeric_values[[row, col]]
         end
-        
+
         # Row number of the bottom-most non-empty row.
         def num_rows
           reload_cells() if !@cells
@@ -254,7 +269,7 @@ module GoogleDrive
 
         # Saves your changes made by []=, etc. to the server.
         def save()
-          
+
           sent = false
 
           if @meta_modified
@@ -349,9 +364,9 @@ module GoogleDrive
             sent = true
 
           end
-          
+
           return sent
-          
+
         end
 
         # Calls save() and reload().
@@ -374,10 +389,9 @@ module GoogleDrive
 
         # List feed URL of the worksheet.
         def list_feed_url
-          return @worksheet_feed_entry.css(
-            "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]["href"]
+          return @worksheet_feed_entry.css("content").attr("src").value
         end
-        
+
         # Provides access to cells using column names, assuming the first row contains column
         # names. Returned object is GoogleDrive::List which you can use mostly as
         # Array of Hash.
@@ -393,7 +407,7 @@ module GoogleDrive
         def list
           return @list ||= List.new(self)
         end
-        
+
         # Returns a [row, col] pair for a cell name string.
         # e.g.
         #   worksheet.cell_name_to_row_col("C2")  #=> [2, 3]
@@ -420,7 +434,7 @@ module GoogleDrive
           fields[:title] = @title if @title
           return "\#<%p %s>" % [self.class, fields.map(){ |k, v| "%s=%p" % [k, v] }.join(", ")]
         end
-        
+
       private
 
         def set_worksheet_feed_entry(entry)
@@ -431,7 +445,7 @@ module GoogleDrive
         end
 
         def reload_cells()
-          
+
           doc = @session.request(:get, self.cells_feed_url)
           @max_rows = doc.css("gs|rowCount").text.to_i()
           @max_cols = doc.css("gs|colCount").text.to_i()
@@ -470,7 +484,7 @@ module GoogleDrive
                 "Arguments must be either one String or two Integer's, but are %p" % [args])
           end
         end
-        
+
     end
-    
+
 end

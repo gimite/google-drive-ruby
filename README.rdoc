@@ -50,7 +50,7 @@ Example to read/write files in Google Drive:
 
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
-  
+
 Example to read/write spreadsheets:
 
   require "google/api_client"
@@ -86,6 +86,24 @@ Example to read/write spreadsheets:
   p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
 
   # Reloads the worksheet to get changes by other clients.
+  ws.reload
+
+Example to delete a row in worksheet:
+
+  require "google/api_client"
+  require "google_drive"
+
+  # Same as the code above to get session...
+
+  spreadsheet  = session.spreadsheet_by_key(WORKSHEET_ID)
+  ws           = spreadsheet.worksheets[0]
+
+  # gets row feeds based on query. argument is optional and used for filter.
+  row_feeds    = ws.list_feeds('month=2')
+
+  # Deletes a row
+  row_feeds[0].delete
+
   ws.reload
 
 API document: http://gimite.net/doc/google-drive-ruby/
