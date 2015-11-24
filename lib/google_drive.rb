@@ -5,7 +5,7 @@ require "json"
 require "google/api_client"
 
 require "google_drive/session"
-
+require "shared/config"
 
 module GoogleDrive
 
@@ -86,7 +86,8 @@ module GoogleDrive
     # +path+ defaults to ENV["HOME"] + "/.ruby_google_drive.token".
     #
     # You can specify your own OAuth +client_id+ and +client_secret+. Otherwise the default one is used.
-    def self.saved_session(path = nil, proxy = nil, client_id = nil, client_secret = nil)
+    def self.saved_session(path = nil, proxy = nil)
+      config = Config.new
 
       if proxy
         raise(
@@ -94,25 +95,15 @@ module GoogleDrive
             "Specifying a proxy object is no longer supported. Set ENV[\"http_proxy\"] instead.")
       end
 
-      if !client_id && !client_secret
-        client_id = "452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.apps.googleusercontent.com"
-        client_secret = "1U3-Krii5x1oLPrwD5zgn-ry"
-      elsif !client_id || !client_secret
+      if !config.client_id && !config.client_secret
+        config.client_id = "452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.apps.googleusercontent.com"
+        config.client_secret = "1U3-Krii5x1oLPrwD5zgn-ry"
+      elsif !config.client_id || !config.client_secret
         raise(ArgumentError, "client_id and client_secret must be both specified or both omitted")
       end
 
-      path ||= ENV["HOME"] + "/.ruby_google_drive.token"
-      if ::File.exist?(path)
-        lines = ::File.readlines(path)
-        case lines.size
-          when 1
-            token_data = JSON.parse(lines[0].chomp())
-          when 2
-            # Old format.
-            token_data = nil
-          else
-            raise(ArgumentError, "Not a token file: %s" % path)
-        end
+      if config.access_token_exists?
+        token_data = config.access_token
       else
         token_data = nil
       end
@@ -122,34 +113,24 @@ module GoogleDrive
           :application_version => "0.4.0"
       )
       auth = client.authorization
-      auth.client_id = client_id
-      auth.client_secret = client_secret
-      auth.scope = [
-          "https://www.googleapis.com/auth/drive",
-          "https://spreadsheets.google.com/feeds/"
-      ]
-      auth.redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+      auth.client_id = config.client_id
+      auth.client_secret = config.client_secret
+      auth.scope = config.scope.join(' ')
+      auth.redirect_uri = config.redirect_uris.first
 
-      if token_data
-
-        auth.refresh_token = token_data["refresh_token"]
+      unless token_data.nil?
+        auth.refresh_token = token_data
         auth.fetch_access_token!()
-
       else
-
         $stderr.print("\n1. Open this page:\n%s\n\n" % auth.authorization_uri)
         $stderr.print("2. Enter the authorization code shown in the page: ")
         auth.code = $stdin.gets().chomp()
         auth.fetch_access_token!()
-        token_data = {"refresh_token" => auth.refresh_token}
-        open(path, "w", 0600) do |f|
-          f.puts(JSON.dump(token_data))
-        end
-
+        config.access_token = auth.refresh_token
       end
 
-      return GoogleDrive.login_with_oauth(client)
+      config.save
 
+      return GoogleDrive.login_with_oauth(client)
     end
-    
 end
