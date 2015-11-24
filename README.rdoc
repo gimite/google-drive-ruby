@@ -25,16 +25,15 @@ Example to read/write files in Google Drive:
   require "google_drive"
 
   # The client ID and client secret you obtained in the step above.
-  CLIENT_ID = ...
-  CLIENT_SECRET = ...
+  Keep them in a config file, see an example in the repository.
 
   # Creates a session. This will prompt the credential via command line for the
-  # first time and save it to ./stored_token.json file for later usages.
+  # first time and save it to ./config.json file for later usages.
   #
   # If you are developing a Web app, and you want to ask the user to log in in
   # the Web app instead of via command line, follow the example code in:
   # http://gimite.net/doc/google-drive-ruby/GoogleDrive.html#method-c-login_with_oauth
-  session = GoogleDrive.saved_session("./stored_token.json", nil, CLIENT_ID, CLIENT_SECRET)
+  session = GoogleDrive.saved_session("./config.json", nil)
 
   # Gets list of remote files.
   session.files.each do |file|
@@ -50,7 +49,7 @@ Example to read/write files in Google Drive:
 
   # Updates content of the remote file.
   file.update_from_file("/path/to/hello.txt")
-  
+
 Example to read/write spreadsheets:
 
   require "google/api_client"
