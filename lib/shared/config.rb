@@ -1,5 +1,4 @@
 require 'json'
-require 'pry'
 
 require_relative 'errors/file_not_found'
 
