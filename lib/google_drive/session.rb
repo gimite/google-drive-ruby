@@ -19,6 +19,7 @@ require "google_drive/spreadsheet"
 require "google_drive/worksheet"
 require "google_drive/collection"
 require "google_drive/file"
+require "google_drive/config"
 
 
 module GoogleDrive
@@ -212,7 +213,7 @@ module GoogleDrive
         def spreadsheet_by_title(title)
           return spreadsheets("q" => ["title = ?", title], "maxResults" => 1)[0]
         end
-        
+
         # Returns GoogleDrive::Worksheet with given +url+.
         # You must specify URL of cell-based feed of the worksheet.
         #
@@ -229,12 +230,12 @@ module GoogleDrive
           worksheet_feed_entry = request(:get, worksheet_feed_url)
           return Worksheet.new(self, nil, worksheet_feed_entry)
         end
-        
+
         # Returns the root collection.
         def root_collection
           return @root_collection ||= file_by_id("root")
         end
-        
+
         # Returns the top-level collections (direct children of the root collection).
         #
         # By default, it returns the first 100 collections. See document of files method for how to get
@@ -242,7 +243,7 @@ module GoogleDrive
         def collections
           return self.root_collection.subcollections
         end
-        
+
         # Returns a top-level collection whose title exactly matches +title+ as
         # GoogleDrive::Collection.
         # Returns nil if not found. If multiple collections with the +title+ are found, returns
@@ -250,7 +251,7 @@ module GoogleDrive
         def collection_by_title(title)
           return self.root_collection.subcollection_by_title(title)
         end
-        
+
         # Returns GoogleDrive::Collection with given +url+.
         # You must specify either of:
         # - URL of the page you get when you go to https://docs.google.com/ with your browser and
@@ -286,7 +287,7 @@ module GoogleDrive
               :body_object => file)
           return wrap_api_file(api_result.data)
         end
-        
+
         # Uploads a file with the given +title+ and +content+.
         # Returns a GoogleSpreadsheet::File object.
         #
@@ -294,11 +295,11 @@ module GoogleDrive
         #   # Uploads and converts to a Google Docs document:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain")
-        #   
+        #
         #   # Uploads without conversion:
         #   session.upload_from_string(
         #       "Hello world.", "Hello", :content_type => "text/plain", :convert => false)
-        #   
+        #
         #   # Uploads and converts to a Google Spreadsheet:
         #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
         #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
@@ -306,20 +307,20 @@ module GoogleDrive
           media = new_upload_io(StringIO.new(content), params)
           return upload_from_media(media, title, params)
         end
-        
+
         # Uploads a local file.
         # Returns a GoogleSpreadsheet::File object.
         #
         # e.g.
         #   # Uploads a text file and converts to a Google Docs document:
         #   session.upload_from_file("/path/to/hoge.txt")
-        #   
+        #
         #   # Uploads without conversion:
         #   session.upload_from_file("/path/to/hoge.txt", "Hoge", :convert => false)
-        #   
+        #
         #   # Uploads with explicit content type:
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
-        #   
+        #
         #   # Uploads a text file and converts to a Google Spreadsheet:
         #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
         #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
@@ -393,11 +394,11 @@ module GoogleDrive
             return items
 
           end
-          
+
         end
-        
+
         def request(method, url, params = {}) #:nodoc:
-          
+
           # Always uses HTTPS.
           url = url.gsub(%r{^http://}, "https://")
           data = params[:data]
@@ -424,9 +425,9 @@ module GoogleDrive
             end
             return convert_response(response, response_type)
           end
-          
+
         end
-        
+
         def inspect
           return "#<%p:0x%x>" % [self.class, self.object_id]
         end

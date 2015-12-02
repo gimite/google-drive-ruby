@@ -3,12 +3,12 @@ require 'json'
 module GoogleDrive
   class Config
     #:nodoc:
-    attr_accessor :client_id, :client_secret, :scope, :refresh_token, :con
+    attr_accessor :client_id, :client_secret, :scope, :refresh_token, :config_path
 
     Fields = %w(client_id client_secret scope refresh_token).freeze
 
     def initialize(config_path)
-      @config_path = config_path
+      @config_path = ::File.expand_path(config_path)
     end
 
     def call
@@ -16,7 +16,7 @@ module GoogleDrive
     end
 
     def save
-      ::File.open(file_path, 'w') { |file| file.write(prepare_json) }
+      ::File.open(config_path, 'w') { |file| file.write(prepare_json) }
     end
 
     private
