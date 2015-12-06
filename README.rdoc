@@ -20,13 +20,6 @@ Ver. 1.0.x is not 100% backward compatible with 0.3.x. Some methods have been re
 First, follow "Create a client ID and client secret" in {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret for OAuth. Set "Application type" to "Other" in the form to create a client ID if you use GoogleDrive.saved_session method as in the example below.
 
 
-Create config.json file which contains the generated client ID and client secret, which looks like this:
-
-  {
-    "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
-    "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx",
-  }
-
 Example to read/write files in Google Drive:
 
   require "google/api_client"
@@ -35,12 +28,21 @@ Example to read/write files in Google Drive:
 
 
   # Creates a session. This will prompt the credential via command line for the
-  # first time and save it to ./config.json file for later usages.
+  # first time and save it to ruby_google_drive.token file for later usages.
   #
   # If you are developing a Web app, and you want to ask the user to log in in
   # the Web app instead of via command line, follow the example code in:
   # http://gimite.net/doc/google-drive-ruby/GoogleDrive.html#method-c-login_with_oauth
-  session = GoogleDrive.saved_session("./config.json")
+  session = GoogleDrive.saved_session("./.ruby_google_drive.token", nil, CLIENT_ID, CLIENT_SECRET)
+
+  # or create .ruby_google_drive.token file which contains the generated client ID and client secret, which looks like this:
+
+  # {
+  #    "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+  #    "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx",
+  # }
+  # and then
+  session = GoogleDrive.saved_session("./.ruby_google_drive.token")
 
   # where first argument is a path to your config file with credentials.
 
