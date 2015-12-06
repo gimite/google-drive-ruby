@@ -84,16 +84,20 @@ module GoogleDrive
     # +path+ defaults to ENV["HOME"] + "/.ruby_google_drive.token".
     #
     # You can specify your own OAuth +client_id+ and +client_secret+. Otherwise the default one is used.
-    def self.saved_session(path = './.config.json', proxy = nil, client_id = nil, client_secret = nil)
-      config = Config.new(path)
+    def self.saved_session(path = '/.ruby_google_drive.token', proxy = nil, client_id = nil, client_secret = nil)
+      config = Config.new(ENV['HOME'] + path)
 
-      if client_id.nil? || client_secret.nil?
-        config.call
-      else
+      config.load_config_file
+      config.refresh_token ||= ''
+      config.scope ||= ['https://www.googleapis.com/auth/drive',
+                        'https://spreadsheets.google.com/feeds/']
+
+      if !client_id.nil? && !client_secret.nil?
         config.client_id = client_id
         config.client_secret = client_secret
-        config.save
       end
+
+      config.save
 
       if proxy
         raise(
@@ -101,7 +105,9 @@ module GoogleDrive
             'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.')
       end
 
-      token_data = config.refresh_token
+      refresh_token = config.refresh_token
+
+      fail InvalidCredentials unless config.valid?
 
       client = Google::APIClient.new(
         :application_name => 'google_drive Ruby library',
@@ -111,12 +117,11 @@ module GoogleDrive
       auth = client.authorization
       auth.client_id = config.client_id
       auth.client_secret = config.client_secret
-      auth.scope = config.scope ||
-        ['https://www.googleapis.com/auth/drive', 'https://spreadsheets.google.com/feeds/']
+      auth.scope = config.scope
       auth.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
 
-      unless token_data.empty?
-        auth.refresh_token = token_data
+      if !refresh_token.nil? && !refresh_token.empty?
+        auth.refresh_token = refresh_token
         auth.fetch_access_token!
       else
         $stderr.print("\n1. Open this page:\n%s\n\n" % auth.authorization_uri)
@@ -128,6 +133,6 @@ module GoogleDrive
 
       config.save
 
-      GoogleDrive.login_with_oauth(client)
+      return GoogleDrive.login_with_oauth(client)
     end
 end
