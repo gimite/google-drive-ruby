@@ -5,7 +5,4 @@ module GoogleDrive
     # Raised on errors in this library.
     class Error < RuntimeError
     end
-
-    class InvalidCredentials < Error
-    end
 end

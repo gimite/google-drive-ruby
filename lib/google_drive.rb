@@ -77,27 +77,53 @@ module GoogleDrive
       return Session.new(client_or_access_token, proxy)
     end
 
-    # Restores GoogleDrive::Session from +path+ and returns it.
-    # If +path+ doesn't exist or authentication has failed, prompts the user to authorize the access,
-    # stores the session to +path+ and returns it.
+    # Returns GoogleDrive::Session constructed from a config JSON file at +path+.
+    #
+    # Follow the following steps to use this method:
+    #
+    # First, follow "Create a client ID and client secret" in
+    # {this page}[https://developers.google.com/drive/web/auth/web-server] to get a client ID
+    # and client secret for OAuth. Set "Application type" to "Other" in the form to create a
+    # client ID if you use GoogleDrive.saved_session method as in the example below.
+    #
+    # Next, create a file config.json which contains the client ID and client secret you got
+    # above, which looks like:
+    #
+    #   {
+    #     "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+    #     "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
+    #   }
+    #
+    # Then you can construct a GoogleDrive::Session by:
+    #
+    #   session = GoogleDrive.saved_session("config.json")
+    #
+    # This will prompt the credential via command line for the first time and save it to
+    # config.json file for later usages.
     #
     # +path+ defaults to ENV["HOME"] + "/.ruby_google_drive.token".
     #
-    # You can specify your own OAuth +client_id+ and +client_secret+. Otherwise the default one is used.
-    def self.saved_session(path = '/.ruby_google_drive.token', proxy = nil, client_id = nil, client_secret = nil)
-      config = Config.new(ENV['HOME'] + path)
+    # If the file doesn't exist or client ID/secret are not given in the file, the default client
+    # ID/secret embedded in the library is used.
+    def self.saved_session(
+        path = ENV['HOME'] + '/.ruby_google_drive.token', proxy = nil, client_id = nil, client_secret = nil)
+      config = Config.new(path)
 
-      config.load_config_file
-      config.refresh_token ||= ''
-      config.scope ||= ['https://www.googleapis.com/auth/drive',
-                        'https://spreadsheets.google.com/feeds/']
+      config.scope ||= [
+          'https://www.googleapis.com/auth/drive',
+          'https://spreadsheets.google.com/feeds/',
+      ]
 
-      if !client_id.nil? && !client_secret.nil?
+      if client_id && client_secret
         config.client_id = client_id
         config.client_secret = client_secret
       end
-
-      config.save
+      if !config.client_id && !config.client_secret
+        config.client_id = "452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.apps.googleusercontent.com"
+        config.client_secret = "1U3-Krii5x1oLPrwD5zgn-ry"
+      elsif !config.client_id || !config.client_secret
+        raise(ArgumentError, "client_id and client_secret must be both specified or both omitted")
+      end
 
       if proxy
         raise(
@@ -106,8 +132,6 @@ module GoogleDrive
       end
 
       refresh_token = config.refresh_token
-
-      fail InvalidCredentials unless config.valid?
 
       client = Google::APIClient.new(
         :application_name => 'google_drive Ruby library',
@@ -120,8 +144,8 @@ module GoogleDrive
       auth.scope = config.scope
       auth.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
 
-      if !refresh_token.nil? && !refresh_token.empty?
-        auth.refresh_token = refresh_token
+      if config.refresh_token
+        auth.refresh_token = config.refresh_token
         auth.fetch_access_token!
       else
         $stderr.print("\n1. Open this page:\n%s\n\n" % auth.authorization_uri)
