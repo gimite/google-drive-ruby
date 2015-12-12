@@ -106,8 +106,8 @@ module GoogleDrive
     # If the file doesn't exist or client ID/secret are not given in the file, the default client
     # ID/secret embedded in the library is used.
     def self.saved_session(
-        path = ENV['HOME'] + '/.ruby_google_drive.token', proxy = nil, client_id = nil, client_secret = nil)
-      config = Config.new(path)
+        path = nil, proxy = nil, client_id = nil, client_secret = nil)
+      config = Config.new(path || ENV['HOME'] + '/.ruby_google_drive.token')
 
       config.scope ||= [
           'https://www.googleapis.com/auth/drive',
