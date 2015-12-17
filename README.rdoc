@@ -86,8 +86,7 @@ Example to read/write spreadsheets:
   # Reloads the worksheet to get changes by other clients.
   ws.reload
 
-API document: http://gimite.net/doc/google-drive-ruby/
-
+API document: http://www.rubydoc.info/gems/google_drive
 
 = Source code
 
@@ -98,7 +97,7 @@ The license of this source is "New BSD Licence"
 
 = Supported environments
 
-Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.1.3.
+Ruby 1.9.x or later. Checked with Ruby 1.9.3 and 2.2.1.
 
 
 = Author
