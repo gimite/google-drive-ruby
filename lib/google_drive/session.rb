@@ -124,7 +124,7 @@ module GoogleDrive
       return execute_paged!(
           :api_method => self.drive.files.list,
           :parameters => params,
-          :converter => proc() { |af| wrap_api_file(af) },
+          :converter => proc(){ |af| wrap_api_file(af) },
           &block)
     end
 
@@ -146,7 +146,7 @@ module GoogleDrive
     def file_by_id(id)
       api_result = execute!(
           :api_method => self.drive.files.get,
-          :parameters => {"fileId" => id})
+          :parameters => { "fileId" => id })
       return wrap_api_file(api_result.data)
     end
 
@@ -465,12 +465,12 @@ module GoogleDrive
             return $1
           # Human-readable old folder view.
           when /\/folderview$/
-            if (uri.query || "").split(/&/).find() { |s| s=~ /^id=(.*)$/ }
+            if (uri.query || "").split(/&/).find(){ |s| s=~ /^id=(.*)$/ }
               return $1
             end
           # Human-readable old spreadsheet.
           when /\/ccc$/
-            if (uri.query || "").split(/&/).find() { |s| s=~ /^key=(.*)$/ }
+            if (uri.query || "").split(/&/).find(){ |s| s=~ /^key=(.*)$/ }
               return $1
             end
         end
