@@ -17,8 +17,8 @@ module GoogleDrive
     #   require "google/api_client"
     #   client = Google::APIClient.new
     #   auth = client.authorization
-    #   # Follow "Create a client ID and client secret" in
-    #   # https://developers.google.com/drive/web/auth/web-server] to get a client ID and client secret.
+    #   # Follow Step 1 and 2 of “Authorizing requests with OAuth 2.0” in
+    #   # https://developers.google.com/drive/v3/web/about-auth to get a client ID and client secret.
     #   auth.client_id = "YOUR CLIENT ID"
     #   auth.client_secret = "YOUR CLIENT SECRET"
     #   auth.scope =
