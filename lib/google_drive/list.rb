@@ -102,7 +102,7 @@ module GoogleDrive
         end
 
         def input_value(index, key) #:nodoc:
-          return @worksheet.numeric_value(index + 2, key_to_col(key))
+          return @worksheet.input_value(index + 2, key_to_col(key))
         end
 
         def set(index, key, value) #:nodoc:
