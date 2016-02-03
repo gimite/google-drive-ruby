@@ -24,5 +24,6 @@ Gem::Specification.new do |s|
   s.add_dependency("google-api-client", [">= 0.7.0", "< 0.9"])
   s.add_development_dependency("test-unit", [">= 3.0.0"])
   s.add_development_dependency("rake", [">= 0.8.0"])
+  s.add_development_dependency("rspec-mocks", [">= 3.4.0"])
 
 end

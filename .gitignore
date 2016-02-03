@@ -8,3 +8,4 @@ test/account.yaml
 .rvmrc
 Gemfile.lock
 .idea
+/tmp/
