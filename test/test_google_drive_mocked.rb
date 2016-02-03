@@ -67,11 +67,8 @@ class TestGoogleDriveMocked < Test::Unit::TestCase
     FileUtils.cp(src_path, CONFIG_FILEPATH)
 
     auth = expect_mocked_google_client_to_return_auth_object
-    retrieved_refresh_token = "my-retrieved-refresh"
-    expect(auth).to receive(:refresh_token).and_return(retrieved_refresh_token)
-    expect(auth).to receive(:authorization_uri).and_return('something')
-    allow(STDIN).to receive(:gets) { 'some-code' }
-    expect(auth).to receive(:code=).and_return('some-code')
+    refresh_token = "my-retrieved-refresh"
+    expect_auth_to_provide_refresh_token(auth, refresh_token)
 
     swallow_stderr do
       GoogleDrive.saved_session(CONFIG_FILEPATH)
@@ -79,9 +76,16 @@ class TestGoogleDriveMocked < Test::Unit::TestCase
     assert_file_contains(CONFIG_FILEPATH,
         client_id: "some client id",
         client_secret: "some client secret",
-        refresh_token: retrieved_refresh_token,
+        refresh_token: refresh_token,
     )
 
+  end
+
+  def expect_auth_to_provide_refresh_token(auth, retrieved_refresh_token)
+    expect(auth).to receive(:refresh_token).and_return(retrieved_refresh_token)
+    expect(auth).to receive(:authorization_uri).and_return('something')
+    allow(STDIN).to receive(:gets) { 'some-code' }
+    expect(auth).to receive(:code=).and_return('some-code')
   end
 
   def test_works_with_explicit_path_with_refresh_token()
@@ -99,6 +103,37 @@ class TestGoogleDriveMocked < Test::Unit::TestCase
         refresh_token: configs_refresh_token,
     )
 
+  end
+
+  def test_works_with_explicit_config_with_refresh()
+    config = double("some config object", client_id: 'some id', client_secret: 'client secret')
+    allow(config).to receive(:scope)
+    allow(config).to receive(:scope=)
+    allow(config).to receive(:refresh_token).and_return('a refresh token')
+    allow(config).to receive(:save)
+
+    auth = expect_mocked_google_client_to_return_auth_object
+    configs_refresh_token = "already-refresh"
+    expect(auth).to receive(:refresh_token=).and_return(configs_refresh_token)
+
+    GoogleDrive.saved_session(config)
+  end
+
+  def test_works_with_explicit_config_without_refresh()
+    config = double("some config object", client_id: 'some id', client_secret: 'client secret')
+    allow(config).to receive(:scope)
+    allow(config).to receive(:scope=)
+    allow(config).to receive(:refresh_token).and_return(nil)
+
+    auth = expect_mocked_google_client_to_return_auth_object
+    refresh_token = "my-retrieved-refresh"
+    expect_auth_to_provide_refresh_token(auth, refresh_token)
+
+    expect(config).to receive(:refresh_token=).with(refresh_token)
+    expect(config).to receive(:save)
+    swallow_stderr do
+      GoogleDrive.saved_session(config)
+    end
   end
 
   def assert_file_contains(path, values)
