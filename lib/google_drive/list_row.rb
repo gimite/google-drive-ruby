@@ -68,10 +68,10 @@ module GoogleDrive
           end
         end
 
-        def to_hash(as_input_value = false)
+        def to_hash()
           result = {}
           for key in @list.keys
-            result[key] = ( as_input_value ? input_value(key)  : self[key] )
+            result[key] = self[key]
           end
           return result
         end
