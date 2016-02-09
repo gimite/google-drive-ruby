@@ -15,18 +15,18 @@ module GoogleDrive
     # feed, not list feed. In this way, we can easily provide consistent API as
     # GoogleDrive::Worksheet using save()/reload().
     class List
-        
+
         include(Enumerable)
-        
+
         def initialize(worksheet) #:nodoc:
           @worksheet = worksheet
         end
-        
+
         # Number of non-empty rows in the worksheet excluding the first row.
         def size
           return @worksheet.num_rows - 1
         end
-        
+
         # Returns Hash-like object (GoogleDrive::ListRow) for the row with the
         # index. Keys of the object are colum names (the first row).
         # The second row has index 0.
@@ -36,7 +36,7 @@ module GoogleDrive
         def [](index)
           return ListRow.new(self, index)
         end
-        
+
         # Updates the row with the index with the given Hash object.
         # Keys of +hash+ are colum names (the first row).
         # The second row has index 0.
@@ -46,7 +46,7 @@ module GoogleDrive
         def []=(index, hash)
           self[index].replace(hash)
         end
-        
+
         # Iterates over Hash-like object (GoogleDrive::ListRow) for each row
         # (except for the first row).
         # Keys of the object are colum names (the first row).
@@ -55,13 +55,13 @@ module GoogleDrive
             yield(self[i])
           end
         end
-        
+
         # Column names i.e. the contents of the first row.
         # Duplicates are removed.
         def keys
           return (1..@worksheet.num_cols).map(){ |i| @worksheet[1, i] }.uniq()
         end
-        
+
         # Updates column names i.e. the contents of the first row.
         #
         # Note that update is not sent to the server until
@@ -74,7 +74,7 @@ module GoogleDrive
             @worksheet[1, i] = ""
           end
         end
-        
+
         # Adds a new row to the bottom.
         # Keys of +hash+ are colum names (the first row).
         # Returns GoogleDrive::ListRow for the new row.
@@ -86,34 +86,38 @@ module GoogleDrive
           row.update(hash)
           return row
         end
-        
+
         # Returns all rows (except for the first row) as Array of Hash.
         # Keys of Hash objects are colum names (the first row).
         def to_hash_array()
           return self.map(){ |r| r.to_hash() }
         end
-        
+
         def get(index, key) #:nodoc:
           return @worksheet[index + 2, key_to_col(key)]
         end
-        
+
         def numeric_value(index, key) #:nodoc:
           return @worksheet.numeric_value(index + 2, key_to_col(key))
         end
-        
+
+        def input_value(index, key) #:nodoc:
+          return @worksheet.input_value(index + 2, key_to_col(key))
+        end
+
         def set(index, key, value) #:nodoc:
           @worksheet[index + 2, key_to_col(key)] = value
         end
-        
+
       private
-        
+
         def key_to_col(key)
           key = key.to_s()
           col = (1..@worksheet.num_cols).find(){ |c| @worksheet[1, c] == key }
           raise(GoogleDrive::Error, "Column doesn't exist: %p" % key) if !col
           return col
         end
-        
+
     end
-    
+
 end
