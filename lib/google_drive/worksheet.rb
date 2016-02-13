@@ -244,6 +244,64 @@ module GoogleDrive
           return result.freeze()
         end
 
+        # Inserts rows.
+        #
+        # e.g.
+        #   # Inserts 2 empty rows before row 3.
+        #   worksheet.insert_rows(3, 2)
+        #   # Inserts 2 rows with values before row 3.
+        #   worksheet.insert_rows(3, [["a, "b"], ["c, "d"]])
+        #
+        # Note that this method is implemented by shifting all cells below the row.
+        # Its behavior is different from inserting rows on the web interface if the
+        # worksheet contains inter-cell reference.
+        def insert_rows(row_num, rows)
+
+          if rows.is_a?(Integer)
+            rows = Array.new(rows, [])
+          end
+
+          # Shifts all cells below the row.
+          self.max_rows += rows.size
+          r = self.num_rows
+          while r >= row_num
+            for c in 1..self.num_cols
+              self[r + rows.size, c] = self[r, c]
+            end
+            r -= 1
+          end
+
+          # Fills in the inserted rows.
+          num_cols = self.num_cols
+          rows.each_with_index() do |row, r|
+            for c in 0...[row.size, num_cols].max
+              self[row_num + r, 1 + c] = row[c] || ""
+            end
+          end
+
+        end
+
+        # Deletes rows.
+        #
+        # e.g.
+        #   # Deletes 2 rows starting from row 3 (i.e., deletes row 3 and 4).
+        #   worksheet.delete_rows(3, 2)
+        #
+        # Note that this method is implemented by shifting all cells below the row.
+        # Its behavior is different from deleting rows on the web interface if the
+        # worksheet contains inter-cell reference.
+        def delete_rows(row_num, rows)
+          if row_num + rows - 1 > self.max_rows
+            raise(ArgumentError, "The row number is out of range")
+          end
+          for r in row_num..(self.max_rows - rows)
+            for c in 1..self.num_cols
+              self[r, c] = self[r + rows, c]
+            end
+          end
+          self.max_rows -= rows
+        end
+
         # Reloads content of the worksheets from the server.
         # Note that changes you made by []= etc. is discarded if you haven't called save().
         def reload()
