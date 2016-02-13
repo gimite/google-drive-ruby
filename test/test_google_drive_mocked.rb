@@ -1,3 +1,4 @@
+# The license of this source is "New BSD Licence"
 $LOAD_PATH.unshift(File.dirname(__FILE__) + "/../lib")
 require "yaml"
 
