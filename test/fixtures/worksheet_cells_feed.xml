@@ -1,0 +1,27 @@
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:openSearch="http://a9.com/-/spec/opensearch/1.1/"
+      xmlns:gs="http://schemas.google.com/spreadsheets/2006"
+      xmlns:gd="http://schemas.google.com/g/2005"
+      gd:etag='W/"D0cERnk-eip7ImA9WBBXGEg."'>
+  <id>https://spreadsheets.google.com/feeds/cells/key/worksheetId/private/full</id>
+  <updated>2006-11-17T18:27:32.543Z</updated>
+  <title type="text">Sheet1</title>
+  <link rel="alternate" type="text/html"
+        href="https://spreadsheets.google.com/ccc?key=key"/>
+  <link rel="http://schemas.google.com/g/2005#feed" type="application/atom+xml"
+        href="https://spreadsheets.google.com/feeds/cells/key/worksheetId/private/full"/>
+  <link rel="http://schemas.google.com/g/2005#post" type="application/atom+xml"
+  <link rel="http://schemas.google.com/g/2005#batch" type="application/atom+xml"
+        href="https://spreadsheets.google.com/feeds/cells/key/worksheetId/private/full/batch"/>
+  href="https://spreadsheets.google.com/feeds/cells/key/worksheetId/private/full"/>
+  <link rel="self" type="application/atom+xml"
+        href="https://spreadsheets.google.com/feeds/cells/key/worksheetId/private/full"/>
+  <author>
+    <name>Fitzwilliam Darcy</name>
+    <email>fitz@gmail.com</email>
+  </author>
+  <openSearch:startIndex>1</openSearch:startIndex>
+  <openSearch:itemsPerPage>36</openSearch:itemsPerPage>
+  <gs:rowCount>100</gs:rowCount>
+  <gs:colCount>20</gs:colCount>
+</feed>
