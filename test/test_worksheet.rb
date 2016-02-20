@@ -66,7 +66,7 @@ class TestWorksheet < Test::Unit::TestCase
 
   def test_that_cell_assignment_raises_an_error_with_bad_characters
     worksheet = GoogleDrive::Worksheet.new(mocked_session, mocked_spreadsheet, worksheet_feed_entry)
-    assert_raise GoogleDrive::Error do
+    assert_raise ArgumentError do
       worksheet[1,1]= "some text\u001A面白い"
     end
   end

@@ -115,7 +115,8 @@ module GoogleDrive
         #   worksheet[1, 3] = "=A1+B1"
         def []=(*args)
           (row, col) = parse_cell_args(args[0...-1])
-          value = value_for_cell(args[-1])
+          value = args[-1].to_s()
+          validate_cell_value(value)
           reload_cells() if !@cells
           @cells[[row, col]] = value
           @input_values[[row, col]] = value
@@ -129,12 +130,6 @@ module GoogleDrive
           else
             @num_rows = row if row > num_rows
             @num_cols = col if col > num_cols
-          end
-        end
-
-        def value_for_cell(given_value)
-          given_value.to_s.tap do |value|
-            fail GoogleDrive::Error, "Contains invalid character for xml" if value.include?("\u001A")
           end
         end
 
@@ -535,6 +530,12 @@ module GoogleDrive
           end
         end
         
+        def validate_cell_value(value)
+          if value.include?("\x1a")
+            raise(ArgumentError, "Contains invalid character \\x1a for xml: %p" % value)
+          end
+        end
+
     end
     
 end
