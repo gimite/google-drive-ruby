@@ -311,6 +311,40 @@ module GoogleDrive
           return true
         end
 
+        # Inserts a new row to the end of list-based feed.
+        # +new_row+ is a hash where the keys are same as the
+        # header rows in the spreadsheet.
+        #
+        # Note: There is no need to save the worksheet after insert,
+        # but the worksheet data is not automatically updated for you.
+        # You may want to reload the worksheet after insert(s).
+        #
+        # e.g.
+        #   worksheet.insert!({ name: "John Doe", birthyear: 1312 })
+        #   worksheet.reload()
+        def insert!(new_row)
+          ws_doc = @session.request(:get, self.list_feed_url, { response_type: :xml })
+
+          post_url = ws_doc.css("link[rel='http://schemas.google.com/g/2005#post']")[0]["href"]
+          xml = <<-EOS
+            <entry xmlns='http://www.w3.org/2005/Atom'
+              xmlns:gsx='http://schemas.google.com/spreadsheets/2006/extended'>
+          EOS
+
+          new_row.each do |key, value|
+            xml << <<-EOS
+              <gsx:#{key}>#{value}</gsx:#{key}>
+            EOS
+          end
+
+          xml << "</entry>"
+
+          @session.request(
+              :post, post_url, :data => xml,
+              :header => {"Content-Type" => "application/atom+xml;charset=utf-8"})
+
+        end
+
         # Saves your changes made by []=, etc. to the server.
         def save()
           
