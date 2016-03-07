@@ -361,6 +361,8 @@ module GoogleDrive
               return Collection.new(self, api_file)
             when "application/vnd.google-apps.spreadsheet"
               return Spreadsheet.new(self, api_file)
+            when "application/vnd.google-apps.form"
+              return Spreadsheet.new(self, api_file)
             else
               return File.new(self, api_file)
           end
