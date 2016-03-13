@@ -6,6 +6,7 @@ require "bundler/setup"
 require "highline"
 require "test/unit"
 
+ENV['SSL_CERT_FILE'] = Gem.loaded_specs['google-api-client'].full_gem_path+'/lib/cacerts.pem'
 require "google_drive"
 
 
@@ -231,17 +232,23 @@ class TestGoogleDrive < Test::Unit::TestCase
       collection.add(file)
       root.remove(file)
 
+      # Copy file to collection
+      file.copy(test_file2_title, collection)
+
       # Checks if file exists in collection.
       assert{ root.files("title" => test_file_title, "title-exact" => "true").empty? }
-      tfile = collection.file_by_title(test_file_title)
-      assert{ tfile != nil }
-      assert{ tfile.title == test_file_title }
-      tfiles = collection.files("title" => test_file_title, "title-exact" => "true")
-      assert{ tfiles.size == 1 }
-      assert{ tfiles[0].title == test_file_title }
-      tfile = session.file_by_title([test_collection_title, test_file_title])
-      assert{ tfile != nil }
-      assert{ tfile.title == test_file_title }
+      [test_file_title, test_file2_title].each do |file_title|
+        tfile = collection.file_by_title(file_title)
+        assert{ tfile != nil }
+        assert{ tfile.title == file_title }
+        tfiles = collection.files("title" => file_title, "title-exact" => "true")
+        assert{ tfiles.size == 1 }
+        assert{ tfiles[0].title == file_title }
+        tfile = session.file_by_title([test_collection_title, file_title])
+        assert{ tfile != nil }
+        assert{ tfile.title == file_title }
+      end
+
 
       # Deletes files.
       delete_test_file(file, true)
