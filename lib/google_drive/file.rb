@@ -244,23 +244,26 @@ module GoogleDrive
               :parameters => {"fileId" => self.id})
           @api_file = api_result.data
         end
-        
         alias title= rename
 
         # Creates copy of this file with the given title.
-        def copy(title)
-          copied_file = @session.drive.files.copy.request_schema.new({
-              "title" => title,
-          })
+        def copy(title, collection = nil)
+          copied_file_params = {title: title}
+          if collection
+            copied_file_params[:parents] = [{id: collection.id}]
+          end
+          copied_file = @session.drive.files.copy.request_schema.new(copied_file_params)
           api_result = @session.execute!(
-              :api_method => @session.drive.files.copy,
-              :body_object => copied_file,
-              :parameters => {"fileId" => self.id})
-          return @session.wrap_api_file(api_result.data)
+              api_method: @session.drive.files.copy,
+              body_object: copied_file,
+              parameters: {
+                fileId: self.id,
+              }
+          )
+          @session.wrap_api_file(api_result.data)
         end
 
         alias duplicate copy
-        
         # Returns GoogleDrive::Acl object for the file.
         #
         # With the object, you can see and modify people who can access the file.
