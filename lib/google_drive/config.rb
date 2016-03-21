@@ -4,34 +4,32 @@
 require 'json'
 
 module GoogleDrive
-    class Config #:nodoc:
+  class Config #:nodoc:
+    FIELDS = %w(client_id client_secret scope refresh_token).freeze
+    attr_accessor(*FIELDS)
 
-        FIELDS = %w(client_id client_secret scope refresh_token).freeze
-        attr_accessor(*FIELDS)
-
-        def initialize(config_path)
-          @config_path = config_path
-          if ::File.exist?(config_path)
-            JSON.parse(::File.read(config_path)).each do |key, value|
-              instance_variable_set("@#{key}", value) if FIELDS.include?(key)
-            end
-          end
+    def initialize(config_path)
+      @config_path = config_path
+      if ::File.exist?(config_path)
+        JSON.parse(::File.read(config_path)).each do |key, value|
+          instance_variable_set("@#{key}", value) if FIELDS.include?(key)
         end
-
-        def save
-          ::File.open(@config_path, 'w', 0600) { |f| f.write(to_json()) }
-        end
-
-      private
-
-        def to_json
-          hash = {}
-          FIELDS.each do |field|
-            value = __send__(field)
-            hash[field] = value if value
-          end
-          return JSON.pretty_generate(hash)
-        end
-
+      end
     end
+
+    def save
+      ::File.open(@config_path, 'w', 0600) { |f| f.write(to_json) }
+    end
+
+    private
+
+    def to_json
+      hash = {}
+      FIELDS.each do |field|
+        value = __send__(field)
+        hash[field] = value if value
+      end
+      JSON.pretty_generate(hash)
+    end
+  end
 end
