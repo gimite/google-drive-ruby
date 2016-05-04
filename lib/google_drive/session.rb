@@ -8,7 +8,7 @@ require 'rubygems'
 require 'nokogiri'
 require 'oauth'
 require 'oauth2'
-require 'google/api_client'
+require 'googleauth'
 
 require 'google_drive/util'
 require 'google_drive/api_client_fetcher'
@@ -29,8 +29,8 @@ module GoogleDrive
     extend(Util)
 
     # The same as GoogleDrive.login_with_oauth.
-    def self.login_with_oauth(client_or_access_token, proxy = nil)
-      Session.new(client_or_access_token, proxy)
+    def self.login_with_oauth(credentials_or_access_token, proxy = nil)
+      Session.new(credentials_or_access_token, proxy)
     end
 
     # Creates a dummy GoogleDrive::Session object for testing.
@@ -38,40 +38,29 @@ module GoogleDrive
       Session.new(nil)
     end
 
-    def initialize(client_or_access_token, proxy = nil)
+    def initialize(credentials_or_access_token, proxy = nil)
       if proxy
         fail(
           ArgumentError,
           "Specifying a proxy object is no longer supported. Set ENV[\"http_proxy\"] instead.")
       end
 
-      if client_or_access_token
-        api_client_params = {
-          application_name:    'google_drive Ruby library',
-          application_version: '0.4.0'
-        }
-        case client_or_access_token
-        when Google::APIClient
-          client = client_or_access_token
+      if credentials_or_access_token
+        case credentials_or_access_token
         when String
-          client                            = Google::APIClient.new(api_client_params)
-          client.authorization.access_token = client_or_access_token
+          credentials = Google::Auth::UserRefreshCredentials.new(
+            access_token: credentials_or_access_token)
         when OAuth2::AccessToken
-          client                            = Google::APIClient.new(api_client_params)
-          client.authorization.access_token = client_or_access_token.token
+          credentials = Google::Auth::UserRefreshCredentials.new(
+            access_token: credentials_or_access_token.token)
         when OAuth::AccessToken
           fail(
             ArgumentError,
-            'Passing OAuth::AccessToken to login_with_oauth is no longer supported. ' \
-          'You can use OAuth1 by passing Google::APIClient.')
+            'OAuth1 is no longer supported. Use OAuth2 instead.')
         else
-          fail(
-            ArgumentError,
-            ('client_or_access_token is neither Google::APIClient, ' \
-           'String nor OAuth2::AccessToken: %p') %
-              client_or_access_token)
+          credentials = credentials_or_access_token
         end
-        @fetcher = ApiClientFetcher.new(client)
+        @fetcher = ApiClientFetcher.new(credentials)
       else
         @fetcher = nil
       end
@@ -81,28 +70,19 @@ module GoogleDrive
     # When this function returns +true+, it tries again.
     attr_accessor :on_auth_fail
 
-    def execute!(*args) #:nodoc:
-      @fetcher.client.execute!(*args)
-    end
-
-    # Returns the Google::APIClient object.
-    def client
-      @fetcher.client
-    end
-
-    # Returns client.discovered_api("drive", "v2").
+    # Returns an instance of Google::Apis::DriveV3::DriveService.
     def drive
       @fetcher.drive
     end
 
     # Returns list of files for the user as array of GoogleDrive::File or its subclass.
     # You can specify parameters documented at
-    # https://developers.google.com/drive/v2/reference/files/list
+    # https://developers.google.com/drive/v3/web/search-parameters
     #
     # e.g.
     #   session.files
-    #   session.files("q" => "title = 'hoge'")
-    #   session.files("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+    #   session.files(q: "name = 'hoge'")
+    #   session.files(q: ["name = ?", "hoge"])  # Same as above with a placeholder
     #
     # By default, it returns the first 100 files. You can get all files by calling with a block:
     #   session.files do |file|
@@ -111,15 +91,16 @@ module GoogleDrive
     # Or passing "pageToken" parameter:
     #   page_token = nil
     #   begin
-    #     (files, page_token) = session.files("pageToken" => page_token)
+    #     (files, page_token) = session.files(page_token: page_token)
     #     p files
     #   end while page_token
     def files(params = {}, &block)
       params = convert_params(params)
       execute_paged!(
-        api_method: drive.files.list,
-        parameters: params,
-        converter:  proc { |af| wrap_api_file(af) },
+        method: self.drive.method(:list_files),
+        parameters: {fields: '*'}.merge(params),
+        items_method_name: :files,
+        converter: proc { |af| wrap_api_file(af) },
         &block)
     end
 
@@ -133,16 +114,14 @@ module GoogleDrive
       if title.is_a?(Array)
         root_collection.file_by_title(title)
       else
-        files('q' => ['title = ?', title], maxResults: 1)[0]
+        files(q: ['name = ?', title], page_size: 1)[0]
       end
     end
 
     # Returns GoogleDrive::File or its subclass with a given +id+.
     def file_by_id(id)
-      api_result = execute!(
-        api_method: drive.files.get,
-        parameters: { fileId: id })
-      wrap_api_file(api_result.data)
+      api_file = self.drive.get_file(id, fields: '*')
+      wrap_api_file(api_file)
     end
 
     # Returns GoogleDrive::File or its subclass with a given +url+. +url+ must be eitehr of:
@@ -153,12 +132,13 @@ module GoogleDrive
     end
 
     # Returns list of spreadsheets for the user as array of GoogleDrive::Spreadsheet.
-    # You can specify query parameters e.g. "title", "title-exact".
+    # You can specify parameters documented at
+    # https://developers.google.com/drive/v3/web/search-parameters
     #
     # e.g.
     #   session.spreadsheets
-    #   session.spreadsheets("q" => "title = 'hoge'")
-    #   session.spreadsheets("q" => ["title = ?", "hoge"])  # Same as above with a placeholder
+    #   session.spreadsheets(q: "name = 'hoge'")
+    #   session.spreadsheets(q: ["name = ?", "hoge"])  # Same as above with a placeholder
     #
     # By default, it returns the first 100 spreadsheets. See document of files method for how to get
     # all spreadsheets.
@@ -166,9 +146,9 @@ module GoogleDrive
       params = convert_params(params)
       query  = construct_and_query([
         "mimeType = 'application/vnd.google-apps.spreadsheet'",
-        params['q']
+        params[:q]
       ])
-      files(params.merge('q' => query), &block)
+      files(params.merge(q: query), &block)
     end
 
     # Returns GoogleDrive::Spreadsheet with given +key+.
@@ -206,7 +186,7 @@ module GoogleDrive
     # Returns nil if not found. If multiple spreadsheets with the +title+ are found, returns
     # one of them.
     def spreadsheet_by_title(title)
-      spreadsheets('q' => ['title = ?', title], maxResults: 1)[0]
+      spreadsheets(q: ['name = ?', title], page_size: 1)[0]
     end
 
     # Returns GoogleDrive::Worksheet with given +url+.
@@ -221,7 +201,8 @@ module GoogleDrive
              %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$}
         fail(GoogleDrive::Error, "URL is not a cell-based feed URL: #{url}")
       end
-      worksheet_feed_url   = "https://spreadsheets.google.com/feeds/worksheets/#{Regexp.last_match(1)}/private/full/#{Regexp.last_match(2)}#{Regexp.last_match(3)}"
+      worksheet_feed_url = "https://spreadsheets.google.com/feeds/worksheets/" +
+        "#{Regexp.last_match(1)}/private/full/#{Regexp.last_match(2)}#{Regexp.last_match(3)}"
       worksheet_feed_entry = request(:get, worksheet_feed_url)
       Worksheet.new(self, nil, worksheet_feed_entry)
     end
@@ -235,8 +216,8 @@ module GoogleDrive
     #
     # By default, it returns the first 100 collections. See document of files method for how to get
     # all collections.
-    def collections
-      root_collection.subcollections
+    def collections(params = {}, &block)
+      root_collection.subcollections(params, &block)
     end
 
     # Returns a top-level collection whose title exactly matches +title+ as
@@ -273,15 +254,12 @@ module GoogleDrive
     # e.g.
     #   session.create_spreadsheet("My new sheet")
     def create_spreadsheet(title = 'Untitled')
-      file = drive.files.insert.request_schema.new(
-        title:    title,
-        mimeType: 'application/vnd.google-apps.spreadsheet'
-      )
-      api_result = execute!(
-        api_method:  drive.files.insert,
-        body_object: file
-      )
-      wrap_api_file(api_result.data)
+      file_metadata = {
+        name:    title,
+        mime_type: 'application/vnd.google-apps.spreadsheet'
+      }
+      file = self.drive.create_file(file_metadata, fields: '*')
+      wrap_api_file(file)
     end
 
     # Uploads a file with the given +title+ and +content+.
@@ -300,8 +278,7 @@ module GoogleDrive
     #   session.upload_from_string("hoge\tfoo\n", "Hoge", :content_type => "text/tab-separated-values")
     #   session.upload_from_string("hoge,foo\n", "Hoge", :content_type => "text/tsv")
     def upload_from_string(content, title = 'Untitled', params = {})
-      media = new_upload_io(StringIO.new(content), params)
-      upload_from_media(media, title, params)
+      upload_from_source(StringIO.new(content), title, params)
     end
 
     # Uploads a local file.
@@ -321,32 +298,21 @@ module GoogleDrive
     #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
     def upload_from_file(path, title = nil, params = {})
+      # TODO: Add a feature to upload to a folder.
       file_name = ::File.basename(path)
-      params    = { file_name: file_name }.merge(params)
-      media     = new_upload_io(path, params)
-      upload_from_media(media, title || file_name, params)
+      default_content_type =
+        EXT_TO_CONTENT_TYPE[::File.extname(file_name).downcase] ||
+        'application/octet-stream'
+      upload_from_source(
+        path,
+        title || file_name,
+        {content_type: default_content_type}.merge(params))
     end
 
     # Uploads a file. Reads content from +io+.
     # Returns a GoogleSpreadsheet::File object.
     def upload_from_io(io, title = 'Untitled', params = {})
-      media = new_upload_io(io, params)
-      upload_from_media(media, title, params)
-    end
-
-    # Uploads a file. Reads content from +media+.
-    # Returns a GoogleSpreadsheet::File object.
-    def upload_from_media(media, title = 'Untitled', params = {})
-      file       = drive.files.insert.request_schema.new(title: title)
-      api_result = execute!(
-        api_method:  drive.files.insert,
-        body_object: file,
-        media:       media,
-        parameters:  {
-          uploadType: 'multipart',
-          convert: params[:convert] ? 'true' : 'false'
-        })
-      wrap_api_file(api_result.data)
+      upload_from_source(io, title, params)
     end
 
     def wrap_api_file(api_file) #:nodoc:
@@ -365,23 +331,21 @@ module GoogleDrive
 
         page_token = nil
         begin
-          parameters          = (opts[:parameters] || {}).merge('pageToken' => page_token)
+          parameters          = (opts[:parameters] || {}).merge({page_token: page_token})
           (items, page_token) = execute_paged!(opts.merge(parameters: parameters))
           items.each(&block)
         end while page_token
 
-      elsif opts[:parameters] && opts[:parameters].key?('pageToken')
+      elsif opts[:parameters] && opts[:parameters].key?(:page_token)
 
-        api_result = self.execute!(
-          api_method: opts[:api_method],
-          parameters: opts[:parameters])
-        items      = api_result.data.items.map do |item|
+        response = opts[:method].call(opts[:parameters])
+        items    = response.__send__(opts[:items_method_name]).map do |item|
           opts[:converter] ? opts[:converter].call(item) : item
         end
-        return [items, api_result.data.next_page_token]
+        return [items, response.next_page_token]
 
       else
-        parameters               = (opts[:parameters] || {}).merge('pageToken' => nil)
+        parameters               = (opts[:parameters] || {}).merge({page_token: nil})
         (items, next_page_token) = execute_paged!(opts.merge(parameters: parameters))
         items
       end
@@ -419,6 +383,30 @@ module GoogleDrive
     end
 
     private
+
+    def upload_from_source(source, title, params = {})
+      api_params = {
+        upload_source: source,
+        content_type: 'application/octet-stream',
+        fields: '*',
+      }
+      for k, v in params
+        if ![:convert, :convert_mime_type].include?(k)
+          api_params[k] = v
+        end
+      end
+
+      file_metadata = { name: title }
+      content_type = api_params[:content_type]
+      if params[:convert_mime_type]
+        file_metadata[:mime_type] = params[:convert_mime_type]
+      elsif params.fetch(:convert, true) && IMPORTABLE_CONTENT_TYPE_MAP.key?(content_type)
+        file_metadata[:mime_type] = IMPORTABLE_CONTENT_TYPE_MAP[content_type]
+      end
+
+      file = self.drive.create_file(file_metadata, api_params)
+      wrap_api_file(file)
+    end
 
     def convert_response(response, response_type)
       case response_type

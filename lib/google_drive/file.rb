@@ -15,7 +15,7 @@ module GoogleDrive
   # get this object.
   #
   # In addition to the methods below, properties defined here are also available as attributes:
-  # https://developers.google.com/drive/v2/reference/files#resource
+  # https://developers.google.com/drive/v3/reference/files#resource
   #
   # e.g.,
   #   file.mime_type  # ==> "text/plain"
@@ -27,18 +27,15 @@ module GoogleDrive
       @session = session
       @api_file = api_file
       @acl = nil
-      delegate_api_methods(self, @api_file, ['title'])
+      delegate_api_methods(self, @api_file, [:title])
     end
 
-    # Wrapped Google::APIClient::Schema::Drive::V2::File object.
+    # Wrapped Google::APIClient::Schema::Drive::V3::File object.
     attr_reader(:api_file)
 
     # Reloads file metadata such as title and acl.
     def reload_metadata
-      api_result = @session.execute!(
-        api_method: @session.drive.files.get,
-        parameters: { fileId: id })
-      @api_file = api_result.data
+      @api_file = @session.drive.get_file(id, fields: '*')
       @acl = Acl.new(@session, self) if @acl
     end
 
@@ -65,22 +62,21 @@ module GoogleDrive
     # Title of the file.
     def title(params = {})
       reload_metadata if params[:reload]
-      api_file.title
+      api_file.name
     end
 
     # URL to view/edit the file in a Web browser.
     #
     # e.g. "https://docs.google.com/file/d/xxxx/edit"
     def human_url
-      alternate_link
+      api_file.web_view_link
     end
 
     # Content types you can specify in methods download_to_file, download_to_string,
     # download_to_io .
     #
     # This returns zero or one file type. You may be able to download the file in other formats using
-    # export_as_file, export_as_string, or export_to_io. Use export_links method to get available formats
-    # in these methods.
+    # export_as_file, export_as_string, or export_to_io.
     def available_content_types
       api_file.download_url ? [api_file.mime_type] : []
     end
@@ -90,9 +86,7 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_as_file.
     def download_to_file(path, params = {})
-      open(path, 'wb') do |f|
-        download_to_io(f, params)
-      end
+      @session.drive.get_file(id, download_dest: path)
     end
 
     # Downloads the file and returns as a String.
@@ -108,12 +102,7 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_to_io.
     def download_to_io(io, _params = {})
-      unless api_file.download_url
-        fail(GoogleDrive::Error, 'Downloading is not supported for this file.')
-      end
-      # TODO: Use streaming if possible.
-      api_result = @session.execute!(uri: api_file.download_url)
-      io.write(api_result.body)
+      @session.drive.get_file(id, download_dest: io)
     end
 
     # Export the file to +path+ in content type +format+.
@@ -134,9 +123,7 @@ module GoogleDrive
                path)
         end
       end
-      open(path, 'wb') do |f|
-        export_to_io(f, format)
-      end
+      export_to_dest(path, format)
     end
 
     # Export the file as String in content type +format+.
@@ -147,7 +134,7 @@ module GoogleDrive
     # If you want to download the file in the original format, use download_to_string instead.
     def export_as_string(format)
       sio = StringIO.new
-      export_to_io(sio, format)
+      export_to_dest(sio, format)
       sio.string
     end
 
@@ -155,23 +142,7 @@ module GoogleDrive
     #
     # If you want to download the file in the original format, use download_to_io instead.
     def export_to_io(io, format)
-      mime_type = EXT_TO_CONTENT_TYPE['.' + format] || format
-      unless export_links
-        fail(
-          GoogleDrive::Error,
-          "This file doesn't support exporting. You may still download the file in the " \
-          'original format using download_to_file, download_to_string or download_to_io.')
-      end
-      export_url = export_links[mime_type]
-      unless export_url
-        fail(
-          GoogleDrive::Error,
-          "This file doesn't support export with mime type %p. Supported mime types: %p" %
-              [mime_type, export_links.to_hash.keys])
-      end
-      # TODO: Use streaming if possible.
-      api_result = @session.execute!(uri: export_url)
-      io.write(api_result.body)
+      export_to_dest(io, format)
     end
 
     # Updates the file with +content+.
@@ -179,8 +150,7 @@ module GoogleDrive
     # e.g.
     #   file.update_from_string("Good bye, world.")
     def update_from_string(content, params = {})
-      media = new_upload_io(StringIO.new(content), params)
-      update_from_media(media, params)
+      update_from_io(StringIO.new(content), params)
     end
 
     # Updates the file with the content of the local file.
@@ -188,64 +158,43 @@ module GoogleDrive
     # e.g.
     #   file.update_from_file("/path/to/hoge.txt")
     def update_from_file(path, params = {})
-      file_name = ::File.basename(path)
-      params = { file_name: file_name }.merge(params)
-      media = new_upload_io(path, params)
-      update_from_media(media, params)
+      # Somehow it doesn't work if I specify the file name directly as upload_source.
+      open(path, 'rb') do |f|
+        update_from_io(f, params)
+      end
+      nil
     end
 
     # Reads content from +io+ and updates the file with the content.
     def update_from_io(io, params = {})
-      media = new_upload_io(io, params)
-      update_from_media(media, params)
-    end
-
-    # Reads content from +media+ and updates the file with the content.
-    def update_from_media(media, _params = {})
-      api_result = @session.execute!(
-        api_method: @session.drive.files.update,
-        media: media,
-        parameters: {
-          fileId: id,
-          uploadType: 'media'
-        })
-      @session.wrap_api_file(api_result.data)
+      params = { upload_source: io }.merge(params)
+      @session.drive.update_file(id, nil, params)
+      nil
     end
 
     # If +permanent+ is +false+, moves the file to the trash.
     # If +permanent+ is +true+, deletes the file permanently.
     def delete(permanent = false)
       if permanent
-        @session.execute!(
-          api_method: @session.drive.files.delete,
-          parameters: { fileId: id })
+        @session.drive.delete_file(id)
       else
-        @session.execute!(
-          api_method: @session.drive.files.trash,
-          parameters: { fileId: id })
+        @session.drive.update_file(id, { trashed: true }, {})
       end
       nil
     end
 
     # Renames title of the file.
     def rename(title)
-      api_result = @session.execute!(
-        api_method: @session.drive.files.patch,
-        body_object: { title: title },
-        parameters: { fileId: id })
-      @api_file = api_result.data
+      @session.drive.update_file(id, { name: title }, {})
+      nil
     end
 
     alias_method :title=, :rename
 
     # Creates copy of this file with the given title.
     def copy(title)
-      copied_file = @session.drive.files.copy.request_schema.new('title' => title)
-      api_result = @session.execute!(
-        api_method: @session.drive.files.copy,
-        body_object: copied_file,
-        parameters: { fileId: id })
-      @session.wrap_api_file(api_result.data)
+      api_file = @session.drive.copy_file(id, { name: title }, {})
+      @session.wrap_api_file(api_file)
     end
 
     alias_method :duplicate, :copy
@@ -258,16 +207,16 @@ module GoogleDrive
     # e.g.
     #   # Dumps people who have access:
     #   for entry in file.acl
-    #     p [entry.scope_type, entry.scope, entry.role]
+    #     p [entry.type, entry.email_address, entry.role]
     #     # => e.g. ["user", "example1@gmail.com", "owner"]
     #   end
     #
     #   # Shares the file with new people:
     #   # NOTE: This sends email to the new people.
     #   file.acl.push(
-    #       {:type => "user", :value => "example2@gmail.com", :role => "reader"})
+    #       {type: "user", email_address: "example2@gmail.com", role: "reader"})
     #   file.acl.push(
-    #       {:type => "user", :value => "example3@gmail.com", :role => "writer"})
+    #       {type: "user", email_address: "example3@gmail.com", role: "writer"})
     #
     #   # Changes the role of a person:
     #   file.acl[1].role = "writer"
@@ -281,6 +230,14 @@ module GoogleDrive
 
     def inspect
       "\#<%p id=%p title=%p>" % [self.class, id, title]
+    end
+
+    private
+
+    def export_to_dest(dest, format)
+      mime_type = EXT_TO_CONTENT_TYPE['.' + format] || format
+      @session.drive.export_file(id, mime_type, download_dest: dest)
+      nil
     end
   end
 end

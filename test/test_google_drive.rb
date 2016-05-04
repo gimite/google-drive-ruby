@@ -149,7 +149,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[3, 1] == '7' }
 
     delete_test_file(ss)
-    assert { session.spreadsheets('q' => ['title = ? and trashed = false', ss_title]).empty? }
+    assert { session.spreadsheets(q: ['name = ? and trashed = false', ss_title]).empty? }
     delete_test_file(ss_copy, true)
     assert do
       !session.spreadsheets('title' => ss_copy_title, 'title-exact' => 'true')

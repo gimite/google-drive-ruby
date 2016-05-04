@@ -15,43 +15,29 @@ module GoogleDrive
 
     # Adds the given GoogleDrive::File to the collection.
     def add(file)
-      new_child = @session.drive.children.insert.request_schema.new('id' => file.id)
-      @session.execute!(
-        api_method:  @session.drive.children.insert,
-        body_object: new_child,
-        parameters:  {
-          folderId: id,
-          childId:  file.id
-        })
+      @session.drive.update_file(file.id, add_parents: self.id, fields: '')
       nil
-    end
-
-    # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
-    def create_subcollection(title)
-      file       = @session.drive.files.insert.request_schema.new(
-        'title'    => title,
-        'mimeType' => 'application/vnd.google-apps.folder',
-        'parents'  => [{ id: id }])
-      api_result = @session.execute!(
-        api_method:  @session.drive.files.insert,
-        body_object: file)
-      @session.wrap_api_file(api_result.data)
     end
 
     # Removes the given GoogleDrive::File from the collection.
     def remove(file)
-      @session.execute!(
-        api_method: @session.drive.children.delete,
-        parameters: {
-          folderId: id,
-          childId: file.id
-        })
-      nil
+      @session.drive.update_file(file.id, remove_parents: self.id, fields: '')
+    end
+
+    # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
+    def create_subcollection(title)
+      file_metadata = {
+        name: title,
+        mime_type: 'application/vnd.google-apps.folder',
+        parents: [self.id],
+      }
+      file = @session.drive.create_file(file_metadata, fields: '*')
+      @session.wrap_api_file(file)
     end
 
     # Returns true if this is a root collection
     def root?
-      api_file.parents.empty?
+      !api_file.parents || api_file.parents.empty?
     end
 
     # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
@@ -136,7 +122,7 @@ module GoogleDrive
           return parent && parent.file_by_title_with_type(rel_path[-1], type)
         end
       else
-        files_with_type(type, 'q' => ['title = ?', title], maxResults: 1)[0]
+        files_with_type(type, q: ['name = ?', title], page_size: 1)[0]
       end
     end
 
@@ -147,9 +133,9 @@ module GoogleDrive
       query  = construct_and_query([
         ['? in parents', id],
         type ? ['mimeType = ?', type] : nil,
-        params['q']
+        params[:q]
       ])
-      params = params.merge('q' => query)
+      params = params.merge(q: query)
       # This is faster than calling children.list and then files.get for each file.
       @session.files(params, &block)
     end

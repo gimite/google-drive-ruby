@@ -55,8 +55,7 @@ module GoogleDrive
 
     # Exports the worksheet as String in CSV format.
     def export_as_string
-      api_result = @session.execute!(uri: csv_export_url)
-      api_result.body
+      @session.request(:get, csv_export_url, response_type: :raw)
     end
 
     # Exports the worksheet to +path+ in CSV format.

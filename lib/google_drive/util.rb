@@ -3,8 +3,6 @@
 
 require 'cgi'
 
-require 'google/api_client'
-
 module GoogleDrive
   module Util #:nodoc:
     EXT_TO_CONTENT_TYPE = {
@@ -28,6 +26,53 @@ module GoogleDrive
       '.html' => 'text/html',
       '.zip' => 'application/zip',
       '.swf' => 'application/x-shockwave-flash'
+    }
+
+    IMPORTABLE_CONTENT_TYPE_MAP = {
+      'application/x-vnd.oasis.opendocument.presentation' => 'application/vnd.google-apps.presentation',
+      'text/tab-separated-values' => 'application/vnd.google-apps.spreadsheet',
+      'image/jpeg' => 'application/vnd.google-apps.document',
+      'image/bmp' => 'application/vnd.google-apps.document',
+      'image/gif' => 'application/vnd.google-apps.document',
+      'application/vnd.ms-excel.sheet.macroenabled.12' => 'application/vnd.google-apps.spreadsheet',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.template' => 'application/vnd.google-apps.document',
+      'application/vnd.ms-powerpoint.presentation.macroenabled.12' => 'application/vnd.google-apps.presentation',
+      'application/vnd.ms-word.template.macroenabled.12' => 'application/vnd.google-apps.document',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'application/vnd.google-apps.document',
+      'image/pjpeg' => 'application/vnd.google-apps.document',
+      'application/vnd.google-apps.script+text/plain' => 'application/vnd.google-apps.script',
+      'application/vnd.ms-excel' => 'application/vnd.google-apps.spreadsheet',
+      'application/vnd.sun.xml.writer' => 'application/vnd.google-apps.document',
+      'application/vnd.ms-word.document.macroenabled.12' => 'application/vnd.google-apps.document',
+      'application/vnd.ms-powerpoint.slideshow.macroenabled.12' => 'application/vnd.google-apps.presentation',
+      'text/rtf' => 'application/vnd.google-apps.document',
+      'text/plain' => 'application/vnd.google-apps.document',
+      'application/vnd.oasis.opendocument.spreadsheet' => 'application/vnd.google-apps.spreadsheet',
+      'application/x-vnd.oasis.opendocument.spreadsheet' => 'application/vnd.google-apps.spreadsheet',
+      'image/png' => 'application/vnd.google-apps.document',
+      'application/x-vnd.oasis.opendocument.text' => 'application/vnd.google-apps.document',
+      'application/msword' => 'application/vnd.google-apps.document',
+      'application/pdf' => 'application/vnd.google-apps.document',
+      'application/json' => 'application/vnd.google-apps.script',
+      'application/x-msmetafile' => 'application/vnd.google-apps.drawing',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.template' => 'application/vnd.google-apps.spreadsheet',
+      'application/vnd.ms-powerpoint' => 'application/vnd.google-apps.presentation',
+      'application/vnd.ms-excel.template.macroenabled.12' => 'application/vnd.google-apps.spreadsheet',
+      'image/x-bmp' => 'application/vnd.google-apps.document',
+      'application/rtf' => 'application/vnd.google-apps.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.template' => 'application/vnd.google-apps.presentation',
+      'image/x-png' => 'application/vnd.google-apps.document',
+      'text/html' => 'application/vnd.google-apps.document',
+      'application/vnd.oasis.opendocument.text' => 'application/vnd.google-apps.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'application/vnd.google-apps.presentation',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'application/vnd.google-apps.spreadsheet',
+      'application/vnd.google-apps.script+json' => 'application/vnd.google-apps.script',
+      'application/vnd.openxmlformats-officedocument.presentationml.slideshow' => 'application/vnd.google-apps.presentation',
+      'application/vnd.ms-powerpoint.template.macroenabled.12' => 'application/vnd.google-apps.presentation',
+      'text/csv' => 'application/vnd.google-apps.spreadsheet',
+      'application/vnd.oasis.opendocument.presentation' => 'application/vnd.google-apps.presentation',
+      'image/jpg' => 'application/vnd.google-apps.document',
+      'text/richtext' => 'application/vnd.google-apps.document',
     }
 
     module_function
@@ -95,18 +140,20 @@ module GoogleDrive
       params.each do |k, v|
         str_params[k.to_s] = v
       end
+
       old_terms = []
       new_params = {}
       str_params.each do |k, v|
         case k
         when 'q'
-          new_params['q'] = construct_query(v)
-          # Parameters in the old API.
+          new_params[:q] = construct_query(v)
+
+        # Parameters in the old API.
         when 'title'
           if str_params['title-exact'].to_s == 'true'
-            old_terms.push(['title = ?', v])
+            old_terms.push(['name = ?', v])
           else
-            old_terms.push(['title contains ?', v])
+            old_terms.push(['name contains ?', v])
           end
         when 'title-exact'
         # Skips it. It is handled above.
@@ -133,16 +180,24 @@ module GoogleDrive
         when 'ocr', 'targetLanguage', 'sourceLanguage'
           fail(ArgumentError, "'%s' parameter is no longer supported." % k)
         else
-          new_params[k] = v
+          # e.g., 'pageToken' -> :page_token
+          new_key = k.
+              gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+              gsub(/([a-z\d])([A-Z])/,'\1_\2').
+              downcase.
+              intern
+          new_params[new_key] = v
         end
       end
+
       unless old_terms.empty?
-        if new_params.key?('q')
+        if new_params.key?(:q)
           fail(ArgumentError, "Cannot specify both 'q' parameter and old query parameters.")
         else
-          new_params['q'] = construct_and_query(old_terms)
+          new_params[:q] = construct_and_query(old_terms)
         end
       end
+
       new_params
     end
 
@@ -154,20 +209,14 @@ module GoogleDrive
 
     def delegate_api_methods(obj, api_obj, exceptions = [])
       sc = get_singleton_class(obj)
-      names = api_obj.class.keys.keys - exceptions.map(&:to_s)
+      names = api_obj.public_methods(false) - exceptions
       names.each do |name|
-        sc.__send__(:define_method, name) do
-          api_obj.__send__(name)
+        if !(name.to_s =~ /=$/)
+          sc.__send__(:define_method, name) do
+            api_obj.__send__(name)
+          end
         end
       end
-    end
-
-    def new_upload_io(path_or_io, params)
-      content_type =
-          params[:content_type] ||
-          (params[:file_name] ? EXT_TO_CONTENT_TYPE[::File.extname(params[:file_name]).downcase] : nil) ||
-          'application/octet-stream'
-      Google::APIClient::UploadIO.new(path_or_io, content_type)
     end
   end
 end

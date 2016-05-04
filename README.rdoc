@@ -3,11 +3,9 @@ This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
 NOTE: This is NOT a library to create Google Drive App.
 
 
-= Migration from 0.3.x or before to ver. 1.0.x
+= Migration from ver. 0.x.x / 1.x.x to to ver. 2.x.x
 
-Ver. 0.3.x and the versions before no longer works, because the API used was deprecated and shut down. You need to migrate to ver. 1.0.x.
-
-Ver. 1.0.x is not 100% backward compatible with 0.3.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.saved_session or GoogleDrive.login_with_oauth instead, as in the example code below.
+There are some incompatible API changes. See [MIGRATING.md](https://github.com/gimite/google-drive-ruby/blob/master/MIGRATING.md).
 
 
 = How to install

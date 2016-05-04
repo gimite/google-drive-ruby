@@ -3,43 +3,31 @@
 
 require 'net/https'
 require 'uri'
+require 'google/apis/drive_v3'
 Net::HTTP.version_1_2
 
 module GoogleDrive
   class ApiClientFetcher
     class Response
-      def initialize(client_response)
-        @client_response = client_response
+      def initialize(code, body)
+        @code = code
+        @body = body
       end
 
-      def code
-        @client_response.status.to_s
-      end
-
-      def body
-        @client_response.body
-      end
-
-      attr_reader(:client_response)
+      attr_reader(:code, :body)
     end
 
-    def initialize(client)
-      @client = client
-      # Sets virtually infinite default timeout because some operations (e.g., uploading
-      # a large files/spreadsheets) can take very long.
-      @client.connection.options[:timeout] ||= 100_000_000
-      @drive = @client.discovered_api('drive', 'v2')
+    def initialize(authorization)
+      @drive = Google::Apis::DriveV3::DriveService.new
+      @drive.authorization = authorization
     end
 
-    attr_reader(:client, :drive)
+    attr_reader(:drive)
 
     def request_raw(method, url, data, extra_header, _auth)
-      client_response = @client.execute(
-        http_method: method,
-        uri: url,
-        body: data,
-        headers: extra_header)
-      Response.new(client_response)
+      options = Google::Apis::RequestOptions.default.merge(header: extra_header)
+      body = @drive.http(method, url, body: data, options: options)
+      Response.new('200', body)
     end
   end
 end
