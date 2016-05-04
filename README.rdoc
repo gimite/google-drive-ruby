@@ -5,7 +5,7 @@ NOTE: This is NOT a library to create Google Drive App.
 
 = Migration from ver. 0.x.x / 1.x.x to to ver. 2.x.x
 
-There are some incompatible API changes. See {MIGRATING.md}(https://github.com/gimite/google-drive-ruby/blob/master/MIGRATING.md).
+There are some incompatible API changes. See {MIGRATING.md}[https://github.com/gimite/google-drive-ruby/blob/master/MIGRATING.md].
 
 
 = How to install
