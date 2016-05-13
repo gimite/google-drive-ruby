@@ -95,7 +95,7 @@ module GoogleDrive
     #   worksheet["A2"]  #=> "hoge"
     def [](*args)
       (row, col) = parse_cell_args(args)
-      cells[[row, col]] || []
+      cells[[row, col]] || ''
     end
 
     # Updates content of the cell.
@@ -222,10 +222,10 @@ module GoogleDrive
       @meta_modified = true
     end
 
-    def cells #:nodoc:
-      reload_cells unless @cells
-      @cells
-    end
+    # def cells #:nodoc:
+    #   reload_cells unless @cells
+    #   @cells
+    # end
 
     # An array of spreadsheet rows. Each row contains an array of
     # columns. Note that resulting array is 0-origin so:
