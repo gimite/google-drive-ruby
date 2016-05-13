@@ -95,7 +95,7 @@ module GoogleDrive
     #   worksheet["A2"]  #=> "hoge"
     def [](*args)
       (row, col) = parse_cell_args(args)
-      cells[[row, col]] || ''
+      cells[[row, col]] || []
     end
 
     # Updates content of the cell.
