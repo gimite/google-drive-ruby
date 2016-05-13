@@ -224,7 +224,7 @@ module GoogleDrive
 
     def cells #:nodoc:
       reload_cells unless @cells
-      cells = @cells
+      @cells
     end
 
     # An array of spreadsheet rows. Each row contains an array of
