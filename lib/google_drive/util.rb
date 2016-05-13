@@ -22,7 +22,7 @@ module GoogleDrive
       '.png' => 'image/png',
       '.ppt' => 'application/vnd.ms-powerpoint',
       '.pps' => 'application/vnd.ms-powerpoint',
-      '.pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      '.pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       '.htm' => 'text/html',
       '.html' => 'text/html',
       '.zip' => 'application/zip',
