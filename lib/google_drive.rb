@@ -35,7 +35,7 @@ module GoogleDrive
   #
   #   require "googleauth"
   #   
-  #   credentials = Google::Auth::UserRefreshCredentials.new(
+  #   auth = Google::Auth::UserRefreshCredentials.new(
   #     client_id: "YOUR CLIENT ID",
   #     client_secret: "YOUR CLIENT SECRET",
   #     scope: [
