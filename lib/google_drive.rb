@@ -30,8 +30,8 @@ module GoogleDrive
   #   credentials.fetch_access_token!
   #   session = GoogleDrive.login_with_oauth(credentials)
   #
-  # auth.access_token expires in 1 hour. If you want to restore a session afterwards, you can store
-  # auth.refresh_token somewhere after auth.fetch_access_token! above, and use this code:
+  # credentials.access_token expires in 1 hour. If you want to restore a session afterwards, you can store
+  # credentials.refresh_token somewhere after auth.fetch_access_token! above, and use this code:
   #
   #   require "googleauth"
   #   
@@ -43,9 +43,9 @@ module GoogleDrive
   #       "https://spreadsheets.google.com/feeds/",
   #     ],
   #     redirect_uri: "http://example.com/redirect")
-  #   auth.refresh_token = refresh_token
-  #   auth.fetch_access_token!
-  #   session = GoogleDrive.login_with_oauth(auth.access_token)
+  #   credentials.refresh_token = refresh_token
+  #   credentials.fetch_access_token!
+  #   session = GoogleDrive.login_with_oauth(credentials.access_token)
   #
   # For command-line apps, it would be easier to use saved_session method instead.
   def self.login_with_oauth(client_or_access_token, proxy = nil)
