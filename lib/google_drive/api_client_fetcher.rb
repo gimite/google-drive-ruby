@@ -20,12 +20,16 @@ module GoogleDrive
     def initialize(authorization)
       @drive = Google::Apis::DriveV3::DriveService.new
       @drive.authorization = authorization
+      # Make the timeout virtually infinite because some of the operations (e.g., uploading a large file)
+      # can take very long.
+      @drive.request_options.timeout_sec = 100_000_000
+      @drive.request_options.open_timeout_sec = 100_000_000
     end
 
     attr_reader(:drive)
 
     def request_raw(method, url, data, extra_header, _auth)
-      options = Google::Apis::RequestOptions.default.merge(header: extra_header)
+      options = @drive.request_options.merge(header: extra_header)
       body = @drive.http(method, url, body: data, options: options)
       Response.new('200', body)
     end
