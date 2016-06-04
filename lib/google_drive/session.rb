@@ -293,11 +293,13 @@ module GoogleDrive
     #
     #   # Uploads with explicit content type:
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
+    #   # Uploads file to existing drive folder(Note: It doesn't create new folder on drive):
+    #   session.upload_from_file("/path/to/hoge", "Hoge", :remote_folder_name => "DriveFolder")
     #
     #   # Uploads a text file and converts to a Google Spreadsheet:
     #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
-    def upload_from_file(path, title = nil, params = {})
+    def upload_from_file(path, title = nil, params = {}, remote_folder_name:nil)
       # TODO: Add a feature to upload to a folder.
       file_name = ::File.basename(path)
       default_content_type =
@@ -306,7 +308,7 @@ module GoogleDrive
       upload_from_source(
         path,
         title || file_name,
-        {content_type: default_content_type}.merge(params))
+        {content_type: default_content_type}.merge(params), remote_folder_name: remote_folder_name)
     end
 
     # Uploads a file. Reads content from +io+.
@@ -384,7 +386,7 @@ module GoogleDrive
 
     private
 
-    def upload_from_source(source, title, params = {})
+    def upload_from_source(source, title, params = {}, remote_folder_name:nil)
       api_params = {
         upload_source: source,
         content_type: 'application/octet-stream',
@@ -403,7 +405,14 @@ module GoogleDrive
       elsif params.fetch(:convert, true) && IMPORTABLE_CONTENT_TYPE_MAP.key?(content_type)
         file_metadata[:mime_type] = IMPORTABLE_CONTENT_TYPE_MAP[content_type]
       end
-
+      if remote_folder_name
+        remote_folder = collection_by_title(remote_folder_name)
+        if remote_folder
+          file_metadata[:parents] = [remote_folder.id]
+        else
+          $stderr.print("Couldn't find remote folder. Saving file to root\n")
+        end
+      end
       file = self.drive.create_file(file_metadata, api_params)
       wrap_api_file(file)
     end
