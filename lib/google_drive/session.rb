@@ -294,12 +294,12 @@ module GoogleDrive
     #   # Uploads with explicit content type:
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/plain")
     #   # Uploads file to existing drive folder(Note: It doesn't create new folder on drive):
-    #   session.upload_from_file("/path/to/hoge", "Hoge", :remote_folder_name => "DriveFolder")
+    #   session.upload_from_file("/path/to/hoge", "Hoge", "DriveFolder", :convert => false)
     #
     #   # Uploads a text file and converts to a Google Spreadsheet:
     #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
-    def upload_from_file(path, title = nil, params = {}, remote_folder_name:nil)
+    def upload_from_file(path, title = nil, remote_folder_name = nil, params = {})
       # TODO: Add a feature to upload to a folder.
       file_name = ::File.basename(path)
       default_content_type =
