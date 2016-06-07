@@ -60,6 +60,21 @@ module GoogleDrive
       files_with_type(nil, params, &block)
     end
 
+    def upload_from_file(path, title = nil, params = {})
+      params[:parents] = [self.id]
+      @session.upload_from_file(path, title, params)
+    end
+
+    def upload_from_io(io, title = 'Untitled', params = {})
+      params[:parents] = [self.id]
+      @session.upload_from_io(io, title, params)
+    end
+
+    def upload_from_string(content, title = 'Untitled', params = {})
+      params[:parents] = [self.id]
+      @session.upload_from_string(StringIO.new(content), title, params)
+    end
+
     alias_method :contents, :files
 
     # Returns all the spreadsheets in the collection.

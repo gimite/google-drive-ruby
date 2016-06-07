@@ -391,7 +391,7 @@ module GoogleDrive
         fields: '*',
       }
       for k, v in params
-        if ![:convert, :convert_mime_type].include?(k)
+        if ![:convert, :convert_mime_type, :parents].include?(k)
           api_params[k] = v
         end
       end
@@ -402,6 +402,8 @@ module GoogleDrive
         file_metadata[:mime_type] = params[:convert_mime_type]
       elsif params.fetch(:convert, true) && IMPORTABLE_CONTENT_TYPE_MAP.key?(content_type)
         file_metadata[:mime_type] = IMPORTABLE_CONTENT_TYPE_MAP[content_type]
+      elsif params[:parents]
+        file_metadata[:parents] = params[:parents]
       end
 
       file = self.drive.create_file(file_metadata, api_params)
