@@ -402,7 +402,8 @@ module GoogleDrive
         file_metadata[:mime_type] = params[:convert_mime_type]
       elsif params.fetch(:convert, true) && IMPORTABLE_CONTENT_TYPE_MAP.key?(content_type)
         file_metadata[:mime_type] = IMPORTABLE_CONTENT_TYPE_MAP[content_type]
-      elsif params[:parents]
+      end
+      if params[:parents]
         file_metadata[:parents] = params[:parents]
       end
 

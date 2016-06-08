@@ -62,20 +62,20 @@ module GoogleDrive
 
     # Same as Session#upload_from_file. It uploads file to current collection
     def upload_from_file(path, title = nil, params = {})
-      params[:parents] = [self.id]
+      params = {parents: [self.id]}.merge(params)
       @session.upload_from_file(path, title, params)
     end
 
     # Same as Session#upload_from_io. It uploads file to current collection
     def upload_from_io(io, title = 'Untitled', params = {})
-      params[:parents] = [self.id]
+      params = {parents: [self.id]}.merge(params)
       @session.upload_from_io(io, title, params)
     end
 
     # Same as Session#upload_from_string. It uploads file to current collection
     def upload_from_string(content, title = 'Untitled', params = {})
-      params[:parents] = [self.id]
-      @session.upload_from_string(StringIO.new(content), title, params)
+      params = {parents: [self.id]}.merge(params)
+      @session.upload_from_string(content, title, params)
     end
 
     alias_method :contents, :files
