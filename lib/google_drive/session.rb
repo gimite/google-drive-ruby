@@ -310,7 +310,7 @@ module GoogleDrive
     end
 
     # Uploads a file. Reads content from +io+.
-    # Returns a GoogleSpreadsheet::File object.
+    # Returns a GoogleDrive::File object.
     def upload_from_io(io, title = 'Untitled', params = {})
       upload_from_source(io, title, params)
     end
