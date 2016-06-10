@@ -17,7 +17,7 @@ There are some incompatible API changes. See {MIGRATING.md}[https://github.com/g
 
 First, follow Step 1 and 2 of "Authorizing requests with OAuth 2.0" in {this page}[https://developers.google.com/drive/v3/web/about-auth] to get a client ID and client secret for OAuth. Set "Application type" to "Other" in the form to create a client ID if you use GoogleDrive.saved_session method as in the example below.
 
-Next, create a file config.json which contains the client ID and crient secret you got above, which looks like:
+Next, create a file config.json which contains the client ID and client secret you got above, which looks like:
 
   {
     "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
