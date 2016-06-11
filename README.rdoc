@@ -10,8 +10,21 @@ There are some incompatible API changes. See {MIGRATING.md}[https://github.com/g
 
 = How to install
 
-  $ sudo gem install google_drive
+Add this line to your application's Gemfile:
 
+  gem 'google_drive'
+
+And then execute:
+
+  $ bundle
+
+Or install it yourself as:
+
+  $ gem install google_drive
+
+If you need system wide installation, execute below:
+
+  $ sudo gem install google_drive
 
 = How to use
 
