@@ -10,11 +10,8 @@ Gem::Specification.new do |s|
   s.license = 'BSD-3-Clause'
   s.required_ruby_version = '>= 2.0.0'
 
-  s.files = ['README.rdoc'] + Dir['lib/**/*']
+  s.files = ['README.md'] + Dir['lib/**/*']
   s.require_paths = ['lib']
-  s.has_rdoc = true
-  s.extra_rdoc_files = ['README.rdoc'] + Dir['doc_src/**/*']
-  s.rdoc_options = ['--main', 'README.rdoc']
 
   s.add_dependency('nokogiri', ['>= 1.5.3', '< 2.0.0'])
   s.add_dependency('oauth', ['>= 0.3.6', '< 1.0.0'])
