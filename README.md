@@ -3,14 +3,14 @@ This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
 NOTE: This is NOT a library to create Google Drive App.
 
 
-# Migration from ver. 0.x.x / 1.x.x to to ver. 2.x.x
+### Migration from ver. 0.x.x / 1.x.x to to ver. 2.x.x
 
 There are some incompatible API changes. See
 [MIGRATING.md](https://github.com/gimite/google-drive-ruby/blob/master/MIGRATI
 NG.md).
 
 
-# How to install
+## How to install
 
 Add this line to your application's Gemfile:
 
@@ -36,7 +36,7 @@ If you need system wide installation, execute below:
 $ sudo gem install google_drive
 ```
 
-# How to use
+## How to use
 
 First, follow Step 1 and 2 of "Authorizing requests with OAuth 2.0" in [this
 page](https://developers.google.com/drive/v3/web/about-auth) to get a client
@@ -54,7 +54,7 @@ you got above, which looks like:
 }
 ```
 
-Example to read/write files in Google Drive:
+### Example to read/write files in Google Drive:
 
 ```ruby
 require "google_drive"
@@ -79,7 +79,7 @@ file.download_to_file("/path/to/hello.txt")
 file.update_from_file("/path/to/hello.txt")
 ```
 
-Example to read/write spreadsheets:
+### Example to read/write spreadsheets:
 
 ```ruby
 require "google_drive"
@@ -116,18 +116,20 @@ p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
 ws.reload
 ```
 
-API document: http://www.rubydoc.info/gems/google_drive
+## Full API documentation
 
-# Source code
+http://www.rubydoc.info/gems/google_drive
+
+## Source code
 
 http://github.com/gimite/google-drive-ruby
 
 The license of this source is "New BSD Licence"
 
-# Supported environments
+### Supported environments
 
 Ruby 2.0.0 or later. Checked with Ruby 2.3.0.
 
-# Author
+## Author
 
 Hiroshi Ichikawa - http://gimite.net/en/index.php?Contact
