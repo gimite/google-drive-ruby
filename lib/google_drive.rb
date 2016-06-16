@@ -48,6 +48,22 @@ module GoogleDrive
   #   session = GoogleDrive.login_with_oauth(credentials.access_token)
   #
   # For command-line apps, it would be easier to use saved_session method instead.
+  #
+  # To use service account authentication:
+  #
+  #  1. Go to the Credentials tab for your project in the Google API console: https://console.developers.google.com/apis/credentials
+  #  2. Create a service account key, and download the keys as JSON.  (This address ends in iam.gserviceaccount.com.)
+  #  3. Share the Drive folders or files with the client_email address in the JSON you downloaded.
+  #  3. Set a GOOGLE_CLIENT_EMAIL environmental variable based on the client_email.
+  #  4. Set a GOOGLE_PRIVATE_KEY environmental variable based on the private_key in the JSON.  Be careful to preserve newlines.
+  #  5. Create a GoogleDrive session from these environmental variables:
+  #
+  # session = GoogleDrive.login_with_oauth(Google::Auth::ServiceAccountCredentials.from_env(
+  #   'https://www.googleapis.com/auth/drive'
+  # ))
+  # The scope can be adjusted to be as broad or specific as necessary.
+  # The full list of scopes is available here: https://developers.google.com/drive/v2/web/scopes.
+  #
   def self.login_with_oauth(client_or_access_token, proxy = nil)
     Session.new(client_or_access_token, proxy)
   end

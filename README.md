@@ -54,6 +54,11 @@ you got above, which looks like:
 }
 ```
 
+Note that when using the OAuth flow, the client will be able to access all files
+belonging to the the user who generated the token. To set permissions more
+specifically, you may want to consider using a service account.  [See full docs 
+in the login_with_oauth method.](https://github.com/gimite/google-drive-ruby/blob/lib/google_drive.rb)
+
 ### Example to read/write files in Google Drive:
 
 ```ruby
