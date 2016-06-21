@@ -190,19 +190,28 @@ module GoogleDrive
     end
 
     # Returns GoogleDrive::Worksheet with given +url+.
-    # You must specify URL of cell-based feed of the worksheet.
+    # You must specify URL of either worksheet feed or cell-based feed of the worksheet.
     #
-    # e.g.
+    # e.g.:
+    #   # Worksheet feed URL
     #   session.worksheet_by_url(
-    #     "http://spreadsheets.google.com/feeds/" +
-    #     "cells/pz7XtlQC-PYxNmbBVgyiNWg/od6/private/full")
+    #     "https://spreadsheets.google.com/feeds/worksheets/" +
+    #     "1smypkyAz4STrKO4Zkos5Z4UPUJKvvgIza32LnlQ7OGw/private/full/od7")
+    #   # Cell-based feed URL
+    #   session.worksheet_by_url(
+    #     "https://spreadsheets.google.com/feeds/cells/" +
+    #     "1smypkyAz4STrKO4Zkos5Z4UPUJKvvgIza32LnlQ7OGw/od7/private/full")
     def worksheet_by_url(url)
-      unless url =~
-             %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$}
-        fail(GoogleDrive::Error, "URL is not a cell-based feed URL: #{url}")
+      case url
+      when %r{^https?://spreadsheets.google.com/feeds/worksheets/.*/.*/full/.*$}
+        worksheet_feed_url = url
+      when %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$}
+        worksheet_feed_url = "https://spreadsheets.google.com/feeds/worksheets/" +
+          "#{Regexp.last_match(1)}/private/full/#{Regexp.last_match(2)}#{Regexp.last_match(3)}"
+      else
+        fail(GoogleDrive::Error, "URL is neither a worksheet feed URL nor a cell-based feed URL: #{url}")
       end
-      worksheet_feed_url = "https://spreadsheets.google.com/feeds/worksheets/" +
-        "#{Regexp.last_match(1)}/private/full/#{Regexp.last_match(2)}#{Regexp.last_match(3)}"
+
       worksheet_feed_entry = request(:get, worksheet_feed_url)
       Worksheet.new(self, nil, worksheet_feed_entry)
     end
