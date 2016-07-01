@@ -47,9 +47,9 @@ module GoogleDrive
         if credentials_or_access_token.is_a?(String)
           credentials = Google::Auth::UserRefreshCredentials.new(
             access_token: credentials_or_access_token)
-        # Equivalent of credentials_or_access_token.is_a?(OAuth2::Token),
+        # Equivalent of credentials_or_access_token.is_a?(OAuth2::AccessToken),
         # without adding dependency to "oauth2" library.
-        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == "OAuth2::Token" }
+        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == "OAuth2::AccessToken" }
           credentials = Google::Auth::UserRefreshCredentials.new(
             access_token: credentials_or_access_token.token)
         else
