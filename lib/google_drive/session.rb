@@ -40,7 +40,7 @@ module GoogleDrive
       if proxy
         fail(
           ArgumentError,
-          "Specifying a proxy object is no longer supported. Set ENV[\"http_proxy\"] instead.")
+          'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.')
       end
 
       if credentials_or_access_token
@@ -49,7 +49,7 @@ module GoogleDrive
             access_token: credentials_or_access_token)
         # Equivalent of credentials_or_access_token.is_a?(OAuth2::AccessToken),
         # without adding dependency to "oauth2" library.
-        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == "OAuth2::AccessToken" }
+        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == 'OAuth2::AccessToken' }
           credentials = Google::Auth::UserRefreshCredentials.new(
             access_token: credentials_or_access_token.token)
         else
@@ -332,16 +332,15 @@ module GoogleDrive
 
     def execute_paged!(opts, &block) #:nodoc:
       if block
-
         page_token = nil
-        begin
+        loop do
           parameters          = (opts[:parameters] || {}).merge({page_token: page_token})
           (items, page_token) = execute_paged!(opts.merge(parameters: parameters))
           items.each(&block)
-        end while page_token
+          break unless page_token
+        end
 
       elsif opts[:parameters] && opts[:parameters].key?(:page_token)
-
         response = opts[:method].call(opts[:parameters])
         items    = response.__send__(opts[:items_method_name]).map do |item|
           opts[:converter] ? opts[:converter].call(item) : item
@@ -349,8 +348,8 @@ module GoogleDrive
         return [items, response.next_page_token]
 
       else
-        parameters               = (opts[:parameters] || {}).merge({page_token: nil})
-        (items, next_page_token) = execute_paged!(opts.merge(parameters: parameters))
+        parameters = (opts[:parameters] || {}).merge({page_token: nil})
+        (items, _) = execute_paged!(opts.merge(parameters: parameters))
         items
       end
     end

@@ -149,6 +149,28 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[2, 2] == '6' }
     assert { ws[3, 1] == '7' }
 
+    ws.insert_rows(2, 3)
+    assert { ws[1, 1] == '1' }
+    assert { ws[2, 1] == '' }
+    assert { ws[3, 1] == '' }
+    assert { ws[4, 1] == '' }
+    assert { ws[5, 1] == '5' }
+    assert { ws[6, 1] == '7' }
+
+    ws.delete_rows(2, 3)
+    assert { ws[1, 1] == '1' }
+    assert { ws[2, 1] == '5' }
+    assert { ws[3, 1] == '7' }
+
+    ws.insert_rows(2, [%w(9 10), %w(11 12)])
+    assert { ws[1, 1] == '1' }
+    assert { ws[2, 1] == '9' }
+    assert { ws[2, 2] == '10' }
+    assert { ws[3, 1] == '11' }
+    assert { ws[3, 2] == '12' }
+    assert { ws[4, 1] == '5' }
+    assert { ws[5, 1] == '7' }
+
     delete_test_file(ss)
     assert { session.spreadsheets(q: ['name = ? and trashed = false', ss_title]).empty? }
     delete_test_file(ss_copy, true)

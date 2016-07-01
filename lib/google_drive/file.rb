@@ -86,7 +86,7 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_as_file.
     def download_to_file(path, params = {})
-      @session.drive.get_file(id, download_dest: path)
+      @session.drive.get_file(id, {download_dest: path}.merge(params))
     end
 
     # Downloads the file and returns as a String.
@@ -101,8 +101,8 @@ module GoogleDrive
     # Downloads the file and writes it to +io+.
     #
     # To export the file in other formats, use export_to_io.
-    def download_to_io(io, _params = {})
-      @session.drive.get_file(id, download_dest: io)
+    def download_to_io(io, params = {})
+      @session.drive.get_file(id, {download_dest: io}.merge(params))
     end
 
     # Export the file to +path+ in content type +format+.

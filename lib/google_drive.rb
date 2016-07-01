@@ -107,14 +107,15 @@ module GoogleDrive
   #   save
   def self.saved_session(
       path_or_config = nil, proxy = nil, client_id = nil, client_secret = nil)
-    config = case path_or_config
-             when String
-               Config.new(path_or_config)
-             when nil
-               Config.new(ENV['HOME'] + '/.ruby_google_drive.token')
-             else
-               path_or_config
-    end
+    config =
+      case path_or_config
+      when String
+        Config.new(path_or_config)
+      when nil
+        Config.new(ENV['HOME'] + '/.ruby_google_drive.token')
+      else
+        path_or_config
+      end
 
     config.scope ||= [
       'https://www.googleapis.com/auth/drive',
@@ -137,8 +138,6 @@ module GoogleDrive
         ArgumentError,
         'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.')
     end
-
-    refresh_token = config.refresh_token
 
     credentials = Google::Auth::UserRefreshCredentials.new(
       client_id: config.client_id,

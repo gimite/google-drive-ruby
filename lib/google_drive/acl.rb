@@ -63,7 +63,7 @@ module GoogleDrive
     # https://developers.google.com/drive/v3/reference/permissions/create
     def push(params_or_entry, options = {})
       entry = params_or_entry.is_a?(AclEntry) ? params_or_entry : AclEntry.new(params_or_entry)
-      api_permission = @session.drive.create_permission(@file.id, entry.params, fields: '*')
+      api_permission = @session.drive.create_permission(@file.id, entry.params, {fields: '*'}.merge(options))
       new_entry = AclEntry.new(api_permission, self)
       @entries.push(new_entry)
       new_entry

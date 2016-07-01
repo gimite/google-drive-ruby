@@ -255,18 +255,16 @@ module GoogleDrive
 
       # Shifts all cells below the row.
       self.max_rows += rows.size
-      r = num_rows
-      while r >= row_num
-        for c in 1..num_cols
+      num_rows.downto(row_num) do |r|
+        (1..num_cols).each do |c|
           self[r + rows.size, c] = self[r, c]
         end
-        r -= 1
       end
 
       # Fills in the inserted rows.
       num_cols = self.num_cols
       rows.each_with_index do |row, r|
-        for c in 0...[row.size, num_cols].max
+        (0...[row.size, num_cols].max).each do |c|
           self[row_num + r, 1 + c] = row[c] || ''
         end
       end
