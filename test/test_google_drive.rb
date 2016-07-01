@@ -63,6 +63,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[1, 1].encoding == Encoding::UTF_8 }
 
     assert { ss.export_as_string('csv') == '3,5,8,13' }
+    assert { ss.available_content_types.empty? }
 
     ss2 = session.spreadsheet_by_key(ss.key)
     assert { ss2.title == ss_title }
@@ -197,6 +198,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     file = session.upload_from_file(test_file_path, test_file_title, convert: false)
     assert { file.is_a?(GoogleDrive::File) }
     assert { file.title == test_file_title }
+    assert { file.available_content_types == ["text/plain"] }
     assert { file.download_to_string == File.read(test_file_path) }
 
     # Updates the content of the file.

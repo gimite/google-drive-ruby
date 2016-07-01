@@ -78,7 +78,7 @@ module GoogleDrive
     # This returns zero or one file type. You may be able to download the file in other formats using
     # export_as_file, export_as_string, or export_to_io.
     def available_content_types
-      api_file.download_url ? [api_file.mime_type] : []
+      api_file.web_content_link ? [api_file.mime_type] : []
     end
 
     # Downloads the file to a local file. e.g.
