@@ -6,8 +6,6 @@ require 'stringio'
 
 require 'rubygems'
 require 'nokogiri'
-require 'oauth'
-require 'oauth2'
 require 'googleauth'
 
 require 'google_drive/util'
@@ -46,17 +44,14 @@ module GoogleDrive
       end
 
       if credentials_or_access_token
-        case credentials_or_access_token
-        when String
+        if credentials_or_access_token.is_a?(String)
           credentials = Google::Auth::UserRefreshCredentials.new(
             access_token: credentials_or_access_token)
-        when OAuth2::AccessToken
+        # Equivalent of credentials_or_access_token.is_a?(OAuth2::Token),
+        # without adding dependency to "oauth2" library.
+        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == "OAuth2::Token" }
           credentials = Google::Auth::UserRefreshCredentials.new(
             access_token: credentials_or_access_token.token)
-        when OAuth::AccessToken
-          fail(
-            ArgumentError,
-            'OAuth1 is no longer supported. Use OAuth2 instead.')
         else
           credentials = credentials_or_access_token
         end
