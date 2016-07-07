@@ -37,6 +37,13 @@ $ sudo gem install google_drive
 
 ## How to use
 
+In this example, we use GoogleDrive.saved_session, the most simple way for
+authorization, which prompts the credential via command line. See the document
+of [GoogleDrive.login_with_oauth method]
+(http://www.rubydoc.info/gems/google_drive/GoogleDrive.login_with_oauth) for
+more advanced ways for authorization e.g., OAuth in Web apps and service
+accounts.
+
 First, follow Step 1 and 2 of "Authorizing requests with OAuth 2.0" in [this
 page](https://developers.google.com/drive/v3/web/about-auth) to get a client
 ID and client secret for OAuth. Set "Application type" to "Other" in the form
@@ -52,11 +59,6 @@ you got above, which looks like:
   "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
 }
 ```
-
-Note that when using the OAuth flow, the client will be able to access all files
-belonging to the the user who generated the token. To set permissions more
-specifically, you may want to consider using a service account.  [See full docs 
-in the login_with_oauth method.](https://github.com/gimite/google-drive-ruby/blob/lib/google_drive.rb)
 
 ### Example to read/write files in Google Drive:
 
