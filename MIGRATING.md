@@ -26,4 +26,4 @@ session.files(q: "name = 'hoge'")
 
 Ver. 0.x.x no longer works, because the API used was deprecated and shut down. You need to migrate to ver. 1.x.x or later.
 
-Ver. 1.x.x is not 100% backward compatible with 0.x.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.saved_session or GoogleDrive.login_with_oauth instead, as in the example code in README.rdoc.
+Ver. 1.x.x is not 100% backward compatible with 0.x.x. Some methods have been removed. Especially, GoogleDrive.login has been removed, and you must use GoogleDrive.saved_session or GoogleDrive.login_with_oauth instead, as in the example code in [README.md](https://github.com/gimite/google-drive-ruby/blob/master/README.md).
