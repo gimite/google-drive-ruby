@@ -50,7 +50,7 @@ ID and client secret for OAuth. Set "Application type" to "Other" in the form
 to create a client ID if you use GoogleDrive.saved_session method as in the
 example below.
 
-Next, create a file config.json which contains the client ID and crient secret
+Next, create a file config.json which contains the client ID and client secret
 you got above, which looks like:
 
 ```json
