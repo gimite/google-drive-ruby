@@ -257,7 +257,7 @@ module GoogleDrive
       self.max_rows += rows.size
       num_rows.downto(row_num) do |r|
         (1..num_cols).each do |c|
-          self[r + rows.size, c] = self[r, c]
+          self[r + rows.size, c] = self.input_value(r, c)
         end
       end
 
@@ -285,7 +285,7 @@ module GoogleDrive
       end
       for r in row_num..(self.max_rows - rows)
         for c in 1..num_cols
-          self[r, c] = self[r + rows, c]
+          self[r, c] = self.input_value(r + rows, c)
         end
       end
       self.max_rows -= rows
