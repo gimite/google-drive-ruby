@@ -291,6 +291,37 @@ module GoogleDrive
       self.max_rows -= rows
     end
 
+    # Inserts columns.
+    #
+    # e.g.
+    #   # Inserts 2 empty columns before column 3.
+    #   worksheet.insert_columns(3, 2)
+    #   # Inserts 2 columns with values before column 3.
+    #   worksheet.insert_columns(3, [["a, "b"], ["c, "d"]])
+    #
+    # Note that this method is implemented by shifting all cells after the column.
+    # Its behavior is different from inserting column on the web interface if the
+    # worksheet contains inter-cell reference.
+    def insert_columns(column_num, columns)
+      columns = Array.new(columns, []) if columns.is_a?(Integer)
+
+      # Shifts all cells after the column.
+      self.max_cols += columns.size
+      num_cols.downto(column_num) do |c|
+        (1..num_rows).each do |r|
+          self[r, c + columns.size] = self.input_value(r, c)
+        end
+      end
+
+      # Fills in the inserted columns.
+      num_rows = self.num_rows
+      columns.each_with_index do |column, c|
+        (0...[column.size, num_rows].max).each do |r|
+          self[1 + r, column_num + c] = column[r] || ''
+        end
+      end
+    end
+
     # Reloads content of the worksheets from the server.
     # Note that changes you made by []= etc. is discarded if you haven't called save().
     def reload
