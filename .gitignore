@@ -2,10 +2,9 @@ exp
 doc
 vendor
 .bundle
-test/account.yaml
+test/config.json
 *~
 *.gem
 .rvmrc
 Gemfile.lock
 .idea
-/tmp/

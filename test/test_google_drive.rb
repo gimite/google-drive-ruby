@@ -320,37 +320,25 @@ class TestGoogleDrive < Test::Unit::TestCase
     unless @@session
       puts("\nThis test will create files/spreadsheets/collections with your account,")
       puts('read/write them and finally delete them (if everything succeeds).')
+
       account_path = File.join(File.dirname(__FILE__), 'account.yaml')
+      config_path = File.join(File.dirname(__FILE__), 'config.json')
       if File.exist?(account_path)
-        account = YAML.load_file(account_path)
-      else
-        account = { 'auth_method' => 'prompt' }
+        fail(("%s is deprecated. Please delete it.\n" +
+            "Instead, follow this instruction to create config.json\n" +
+            "and put it at %s:\n" +
+            "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use") %
+                [account_path, config_path])
       end
-      case account['auth_method']
-      when 'saved_session'
-        @@session = GoogleDrive.saved_session(
-          nil, nil, account['oauth2_client_id'], account['oauth2_client_secret'])
-      when 'oauth2'
-        client = OAuth2::Client.new(
-          account['oauth2_client_id'], account['oauth2_client_secret'],
-          site: 'https://accounts.google.com',
-          token_url: '/o/oauth2/token',
-          authorize_url: '/o/oauth2/auth')
-        redirect_url = 'urn:ietf:wg:oauth:2.0:oob'
-        url = client.auth_code.authorize_url(
-          redirect_uri: redirect_url,
-          scope: 'https://docs.google.com/feeds/ ' \
-              'https://docs.googleusercontent.com/ ' \
-              'https://spreadsheets.google.com/feeds/')
-        print("Open this URL in Web browser:\n  %s\nPaste authorization code here: " % url)
-        code = gets.chomp
-        token = client.auth_code.get_token(code, redirect_uri: redirect_url)
-        @@session = GoogleDrive.login_with_oauth(token)
-      when 'client_login', 'prompt'
-        fail('auth_method %s is no longer supported in %s' % [account['auth_method'], account_path])
-      else
-        fail('auth_method field is missing in %s' % account_path)
+      if !File.exist?(config_path)
+        fail(("%s is missing.\n" +
+            "Follow this instruction to create config.json\n" +
+            "and put it at %s:\n" +
+            "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use") %
+                [config_path, config_path])
       end
+
+      @@session = GoogleDrive.saved_session(config_path)
     end
     @@session
   end
