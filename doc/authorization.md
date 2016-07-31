@@ -6,7 +6,7 @@ There are multiple ways for authorization, based on whom your code access Google
 
 If you want your program to access Google Drive with your own account, or the account of the user who runs your program on the command line, follow these steps:
 
-1. Follow "Creating web application credentials" in {this page}[https://developers.google.com/identity/protocols/OAuth2WebServer] to get a client ID and a client secret for OAuth, but choose "Other" for "Application type".
+1. Follow "Creating web application credentials" in [this page](https://developers.google.com/identity/protocols/OAuth2WebServer) to get a client ID and a client secret for OAuth, but choose "Other" for "Application type".
 1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
 1. Create a file config.json which contains the client ID and client secret you got above, which looks like:
     ```
@@ -28,7 +28,7 @@ config.json. For the second time and later, it uses the saved credential without
 
 If you are developing a web app, and want your web app user to authorize with the user's account, follow these steps:
 
-1. Follow "Creating web application credentials" in {this page}[https://developers.google.com/identity/protocols/OAuth2WebServer] to get a client ID and a client secret for OAuth.
+1. Follow "Creating web application credentials" in [this page](https://developers.google.com/identity/protocols/OAuth2WebServer) to get a client ID and a client secret for OAuth.
 1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
 1. Write code like this to get auth_url:
     ```ruby
