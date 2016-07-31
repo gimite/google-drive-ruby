@@ -14,10 +14,12 @@ If you want your program to access Google Drive with your own account, or the ac
       "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
       "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
     }
+
     ```
 1. Then you can construct a session object by:
     ```ruby
     session = GoogleDrive::Session.from_config("config.json")
+
     ```
 1. This code will prompt the credential via command line for the first time and save it to
 config.json. For the second time and later, it uses the saved credential without prompt.
@@ -41,7 +43,7 @@ If you are developing a web app, and want your web app user to authorize with th
       ],
       redirect_uri: "http://example.com/redirect")
     auth_url = credentials.authorization_uri
-    ``
+    ```
 1. Redirect the user to auth_url. It will redirect back to the redirect_url you passed with an authorization code.
 1. On access to the redirect_url, construct a session object by this code:
     ```ruby
@@ -49,6 +51,8 @@ If you are developing a web app, and want your web app user to authorize with th
     credentials.code = authorization_code
     credentials.fetch_access_token!
     session = GoogleDrive::Session.from_credentials(credentials)
+
+    ```
 
 The session above expires in 1 hour. If you want to restore a session afterwards, you can store credentials.refresh_token after credentials.fetch_access_token! above, and use this code:
 
@@ -75,6 +79,7 @@ To use a service account, follow these steps:
     ```ruby
     session = GoogleDrive::Session.from_service_account_key(
         "my-service-account-xxxxxxxxxxxx.json")
+
     ```
 
 If you want to share your files/documents/folders with the service account, share them with the client_email address in the JSON file.
