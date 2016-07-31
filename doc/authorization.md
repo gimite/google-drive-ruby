@@ -6,7 +6,14 @@ There are multiple ways for authorization, based on whom your code access Google
 
 If you want your program to access Google Drive with your own account, or the account of the user who runs your program on the command line, follow these steps:
 
-1. Follow "Creating web application credentials" in [this page](https://developers.google.com/identity/protocols/OAuth2WebServer) to get a client ID and a client secret for OAuth, but choose "Other" for "Application type".
+1. Go to the [credentials page](https://console.developers.google.com/apis/credentials) in the Google Developer Console.
+1. Create a new project, or select an existing project.<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/create_project.png)
+1. Click "Create credentials" -> "OAuth client ID".<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/oauth_client_id.png)
+1. Choose "Other" for "Application type".<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/app_type_other.png)
+1. Click "Create" and take note of the generated client ID and client secret.
 1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
 1. Create a file config.json which contains the client ID and client secret you got above, which looks like:
     ```
@@ -21,8 +28,7 @@ If you want your program to access Google Drive with your own account, or the ac
     session = GoogleDrive::Session.from_config("config.json")
 
     ```
-1. This code will prompt the credential via command line for the first time and save it to
-config.json. For the second time and later, it uses the saved credential without prompt.
+   This code will prompt the credential via command line for the first time and save it to config.json. For the second time and later, it uses the saved credential without prompt.
 
 ## On behalf of the user who accesses your web app (web based authorization)
 
