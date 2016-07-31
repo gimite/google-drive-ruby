@@ -26,7 +26,12 @@ module GoogleDrive
     include(Util)
     extend(Util)
 
-    # The same as GoogleDrive.login_with_oauth.
+    DEFAULT_SCOPE = [
+      'https://www.googleapis.com/auth/drive',
+      'https://spreadsheets.google.com/feeds/'
+    ]
+
+    # Equivalent of either from_credentials or from_access_token.
     def self.login_with_oauth(credentials_or_access_token, proxy = nil)
       Session.new(credentials_or_access_token, proxy)
     end
@@ -34,6 +39,93 @@ module GoogleDrive
     # Creates a dummy GoogleDrive::Session object for testing.
     def self.new_dummy
       Session.new(nil)
+    end
+
+    # Constructs a GoogleDrive::Session object from OAuth2 credentials such as
+    # Google::Auth::UserRefreshCredentials.
+    #
+    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    def self.from_credentials(credentials)
+      Session.new(credentials)
+    end
+
+    # Constructs a GoogleDrive::Session object from OAuth2 access token string.
+    def self.from_access_token(access_token)
+      Session.new(access_token)
+    end
+
+    # Constructs a GoogleDrive::Session object from a service account key JSON.
+    #
+    # You can pass either the path to a JSON file, or an IO-like object with the JSON.
+    #
+    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    def self.from_service_account_key(json_key_path_or_io, scope = DEFAULT_SCOPE)
+      if json_key_path_or_io.is_a?(String)
+        open(json_key_path_or_io) do |f|
+          from_service_account_key(f, scope)
+        end
+      else
+        credentials = Google::Auth::ServiceAccountCredentials.make_creds(
+            json_key_io: json_key_path_or_io, scope: scope)
+        Session.new(credentials)
+      end
+    end
+
+    # Returns GoogleDrive::Session constructed from a config JSON file at +config+.
+    #
+    # +config+ is the path to the config file.
+    #
+    # This will prompt the credential via command line for the first time and save it to
+    # +config+ for later usages.
+    #
+    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    #
+    # You can also provide a config object that must respond to:
+    #   client_id
+    #   client_secret
+    #   refesh_token
+    #   refresh_token=
+    #   scope
+    #   scope=
+    #   save
+    def self.from_config(config, options = {})
+      if config.is_a?(String)
+        config = Config.new(config)
+      end
+
+      config.scope ||= DEFAULT_SCOPE
+
+      if options[:client_id] && options[:client_secret]
+        config.client_id = options[:client_id]
+        config.client_secret = options[:client_secret]
+      end
+      if !config.client_id && !config.client_secret
+        config.client_id = '452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.apps.googleusercontent.com'
+        config.client_secret = '1U3-Krii5x1oLPrwD5zgn-ry'
+      elsif !config.client_id || !config.client_secret
+        fail(ArgumentError, 'client_id and client_secret must be both specified or both omitted')
+      end
+
+      credentials = Google::Auth::UserRefreshCredentials.new(
+        client_id: config.client_id,
+        client_secret: config.client_secret,
+        scope: config.scope,
+        redirect_uri: 'urn:ietf:wg:oauth:2.0:oob')
+
+      if config.refresh_token
+        credentials.refresh_token = config.refresh_token
+        credentials.fetch_access_token!
+      else
+        $stderr.print("\n1. Open this page:\n%s\n\n" % credentials.authorization_uri)
+        $stderr.print('2. Enter the authorization code shown in the page: ')
+        credentials.code = $stdin.gets.chomp
+        credentials.fetch_access_token!
+        config.refresh_token = credentials.refresh_token
+      end
+
+      config.save
+
+      Session.new(credentials)
     end
 
     def initialize(credentials_or_access_token, proxy = nil)

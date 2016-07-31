@@ -37,37 +37,29 @@ $ sudo gem install google_drive
 
 ## How to use
 
-In this example, we use GoogleDrive.saved_session, the most simple way for
-authorization, which prompts the credential via command line. See the document
-of [GoogleDrive.login_with_oauth method]
-(http://www.rubydoc.info/gems/google_drive/GoogleDrive.login_with_oauth) for
-more advanced ways for authorization e.g., OAuth in Web apps and service
-accounts.
+### Authorization
 
-First, follow Step 1 and 2 of "Authorizing requests with OAuth 2.0" in [this
-page](https://developers.google.com/drive/v3/web/about-auth) to get a client
-ID and client secret for OAuth. Set "Application type" to "Other" in the form
-to create a client ID if you use GoogleDrive.saved_session method as in the
-example below.
+In this example, we use the command line authorization, which prompts the credential via command line. See [Authorization](https://github.com/gimite/google-drive-ruby/doc/authorization.md) for other ways of authorization (web based, service account).
 
-Next, create a file config.json which contains the client ID and client secret
-you got above, which looks like:
+1. Follow "Creating web application credentials" in {this page}[https://developers.google.com/identity/protocols/OAuth2WebServer] to get a client ID and a client secret for OAuth, but choose "Other" for "Application type".
+1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
+1. Create a file config.json which contains the client ID and client secret you got above, which looks like:
+    ```
+    {
+      "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
+      "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+    ```
+1. Pass the config.json to GoogleDrive::Session.from_config as the example code below.
 
-```json
-{
-  "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
-  "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
-}
-```
-
-### Example to read/write files in Google Drive:
+### Example to read/write files in Google Drive
 
 ```ruby
 require "google_drive"
 
 # Creates a session. This will prompt the credential via command line for the
 # first time and save it to config.json file for later usages.
-session = GoogleDrive.saved_session("config.json")
+session = GoogleDrive::Session.from_config("config.json")
 
 # Gets list of remote files.
 session.files.each do |file|
@@ -85,14 +77,14 @@ file.download_to_file("/path/to/hello.txt")
 file.update_from_file("/path/to/hello.txt")
 ```
 
-### Example to read/write spreadsheets:
+### Example to read/write spreadsheets
 
 ```ruby
 require "google_drive"
 
 # Creates a session. This will prompt the credential via command line for the
 # first time and save it to config.json file for later usages.
-session = GoogleDrive.saved_session("config.json")
+session = GoogleDrive::Session.from_config("config.json")
 
 # First worksheet of
 # https://docs.google.com/spreadsheet/ccc?key=pz7XtlQC-PYx-jrVMJErTcg
