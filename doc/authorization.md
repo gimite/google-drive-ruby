@@ -1,6 +1,10 @@
 # Authorization
 
-There are multiple ways for authorization, based on whom your code access Google Drive on behalf of.
+There are multiple ways for authorization, based on whom your code access Google Drive on behalf of:
+
+* On behalf of you (command line authorization)
+* On behalf of the user who accesses your web app (web based authorization)
+* On behalf of no existing users (service account)
 
 ## On behalf of you (command line authorization)
 
