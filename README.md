@@ -39,18 +39,7 @@ $ sudo gem install google_drive
 
 ### Authorization
 
-In this example, we use the command line authorization, which prompts the credential via command line. See [Authorization](https://github.com/gimite/google-drive-ruby/doc/authorization.md) for other ways of authorization (web based, service account).
-
-1. Follow "Creating web application credentials" in {this page}[https://developers.google.com/identity/protocols/OAuth2WebServer] to get a client ID and a client secret for OAuth, but choose "Other" for "Application type".
-1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
-1. Create a file config.json which contains the client ID and client secret you got above, which looks like:
-    ```
-    {
-      "client_id": "xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com",
-      "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxx"
-    }
-    ```
-1. Pass the config.json to GoogleDrive::Session.from_config as the example code below.
+Follow one of the options in [Authorization](https://github.com/gimite/google-drive-ruby/doc/authorization.md) to construct a session object. The example code below assumes "On behalf of you" option.
 
 ### Example to read/write files in Google Drive
 
