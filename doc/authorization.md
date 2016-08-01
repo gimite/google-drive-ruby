@@ -34,7 +34,14 @@ If you want your program to access Google Drive with your own account, or the ac
 
 If you are developing a web app, and want your web app user to authorize with the user's account, follow these steps:
 
-1. Follow "Creating web application credentials" in [this page](https://developers.google.com/identity/protocols/OAuth2WebServer) to get a client ID and a client secret for OAuth.
+1. Go to the [credentials page](https://console.developers.google.com/apis/credentials) in the Google Developer Console.
+1. Create a new project, or select an existing project.<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/create_project.png)
+1. Click "Create credentials" -> "OAuth client ID".<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/oauth_client_id.png)
+1. Choose "Web application" for "Application type", and fill in the form.<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/app_type_web.png)
+1. Click "Create" and take note of the generated client ID and client secret.
 1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
 1. Write code like this to get auth_url:
     ```ruby
@@ -79,8 +86,13 @@ If you don't want your program to access Google Drive on behalf of any existing 
 
 To use a service account, follow these steps:
 
-1. Go to the [Credentials tab](https://console.developers.google.com/apis/credentials) for your project in the Google API console.
-1. Create a service account key, and download the keys as JSON.
+1. Go to the [credentials page](https://console.developers.google.com/apis/credentials) in the Google Developer Console.
+1. Create a new project, or select an existing project.<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/create_project.png)
+1. Click "Create credentials" -> "Service account".<br>
+![](https://raw.githubusercontent.com/gimite/google-drive-ruby/new-auth/doc/service_account.png)
+1. Click "Create" and download the keys as a JSON file.
+1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
 1. Construct a session object by code like this, passing the path to the downloaded JSON file:
     ```ruby
     session = GoogleDrive::Session.from_service_account_key(
