@@ -44,7 +44,7 @@ module GoogleDrive
     # Constructs a GoogleDrive::Session object from OAuth2 credentials such as
     # Google::Auth::UserRefreshCredentials.
     #
-    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    # See https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md for a usage example.
     def self.from_credentials(credentials)
       Session.new(credentials)
     end
@@ -58,7 +58,7 @@ module GoogleDrive
     #
     # You can pass either the path to a JSON file, or an IO-like object with the JSON.
     #
-    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    # See https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md for a usage example.
     def self.from_service_account_key(json_key_path_or_io, scope = DEFAULT_SCOPE)
       if json_key_path_or_io.is_a?(String)
         open(json_key_path_or_io) do |f|
@@ -78,7 +78,7 @@ module GoogleDrive
     # This will prompt the credential via command line for the first time and save it to
     # +config+ for later usages.
     #
-    # See https://github.com/gimite/google-drive-ruby/doc/authorization.md for a usage example.
+    # See https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md for a usage example.
     #
     # You can also provide a config object that must respond to:
     #   client_id
