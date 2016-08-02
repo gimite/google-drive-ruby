@@ -20,8 +20,10 @@ require 'google_drive/file'
 require 'google_drive/config'
 
 module GoogleDrive
-  # Use GoogleDrive.login_with_oauth or GoogleDrive.saved_session to get
-  # GoogleDrive::Session object.
+  # A session for Google Drive operations.
+  #
+  # Use from_credentials, from_access_token, from_service_account_key or from_config
+  # class method to construct a GoogleDrive::Session object.
   class Session
     include(Util)
     extend(Util)
