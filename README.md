@@ -103,15 +103,15 @@ p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
 ws.reload
 ```
 
-## Full API documentation
+## Learn more
 
-[API documentation in RubyDoc.info](http://www.rubydoc.info/gems/google_drive)
+* [API documentation](http://www.rubydoc.info/gems/google_drive/2.1.1)
+* [Authorization](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md)
+* [Github](http://github.com/gimite/google-drive-ruby)
 
-## Source code
+## License
 
-[Github](http://github.com/gimite/google-drive-ruby)
-
-The license of this source is "New BSD Licence"
+New BSD Licence.
 
 ## Supported environments
 
