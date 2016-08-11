@@ -103,5 +103,13 @@ To use a service account, follow these steps:
         "my-service-account-xxxxxxxxxxxx.json")
 
     ```
+1. Optional second param scope; default scope is:
+    ```ruby
+    scope = [
+      "https://www.googleapis.com/auth/drive",
+      "https://spreadsheets.google.com/feeds/"
+    ]
+
+    ```
 
 If you want to share your files/documents/folders with the service account, share them with the client_email address in the JSON file.
