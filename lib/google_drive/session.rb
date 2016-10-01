@@ -193,9 +193,11 @@ module GoogleDrive
         &block)
     end
 
-    # Returns GoogleDrive::File or its subclass whose title exactly matches +title+.
-    # Returns nil if not found. If multiple files with the +title+ are found, returns
-    # one of them.
+    # Returns a file (including a spreadsheet and a folder) whose title exactly matches +title+.
+    #
+    # Returns an instance of GoogleDrive::File or its subclass (GoogleDrive::Spreadsheet,
+    # GoogleDrive::Collection). Returns nil if not found. If multiple files with the +title+ are
+    # found, returns one of them.
     #
     # If given an Array, traverses collections by title. e.g.
     #   session.file_by_title(["myfolder", "mysubfolder/even/w/slash", "myfile"])
@@ -207,15 +209,22 @@ module GoogleDrive
       end
     end
 
-    # Returns GoogleDrive::File or its subclass with a given +id+.
+    # Returns a file (including a spreadsheet and a folder) with a given +id+.
+    #
+    # Returns an instance of GoogleDrive::File or its subclass (GoogleDrive::Spreadsheet,
+    # GoogleDrive::Collection).
     def file_by_id(id)
       api_file = self.drive.get_file(id, fields: '*')
       wrap_api_file(api_file)
     end
 
-    # Returns GoogleDrive::File or its subclass with a given +url+. +url+ must be eitehr of:
+    # Returns a file (including a spreadsheet and a folder) with a given +url+.
+    # +url+ must be eitehr of:
     # - URL of the page you open to access a document/spreadsheet in your browser
     # - URL of worksheet-based feed of a spreadseet
+    #
+    # Returns an instance of GoogleDrive::File or its subclass (GoogleDrive::Spreadsheet,
+    # GoogleDrive::Collection).
     def file_by_url(url)
       file_by_id(url_to_id(url))
     end
