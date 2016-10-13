@@ -46,12 +46,14 @@ module GoogleDrive
     #
     # e.g.
     #
-    #   # Gets all the files in collection, including subcollections.
+    #   # Gets all the files in the collection, including subcollections.
     #   collection.files
+    #
     #   # Gets only files with title "hoge".
-    #   collection.files(q: ["name = 'hoge'"])
+    #   collection.files(q: "name = 'hoge'")
+    #
     #   # Same as above with a placeholder.
-    #   collection.files(q: ["name = ?","hoge"])
+    #   collection.files(q: ["name = ?", "hoge"])
     #
     # By default, it returns the first 100 files. See document of GoogleDrive::Session#files method
     # for how to get all files.
