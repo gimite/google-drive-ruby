@@ -41,18 +41,17 @@ module GoogleDrive
     end
 
     # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
-    #
     # You can specify parameters documented at
-    # https://developers.google.com/drive/v2/reference/files/list
+    # https://developers.google.com/drive/v3/web/search-parameters
     #
     # e.g.
     #
     #   # Gets all the files in collection, including subcollections.
     #   collection.files
     #   # Gets only files with title "hoge".
-    #   collection.files("q" => "title = 'hoge'")
+    #   collection.files(q: ["name = 'hoge'"])
     #   # Same as above with a placeholder.
-    #   collection.files("q" => ["title = ?", "hoge"])
+    #   collection.files(q: ["name = ?","hoge"])
     #
     # By default, it returns the first 100 files. See document of GoogleDrive::Session#files method
     # for how to get all files.
