@@ -2,7 +2,6 @@
 GoogleDrive::Spreadsheet#add_worksheet_from_template(name)
 シートを追加するときにtemplateという名前があればそこからコピーして新たに作る。
 
-
 This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
 
 NOTE: This is NOT a library to create Google Drive App.

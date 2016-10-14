@@ -68,7 +68,6 @@ module GoogleDrive
 
     def add_worksheet_from_template(title)
       # get access token and client_key(id) from  @session
-      byebug
       auth_data = @session.drive.request_options.authorization
       access_token = auth_data.access_token # client_id
       client_id = auth_data.client_id
@@ -99,9 +98,15 @@ module GoogleDrive
       req = Net::HTTP::Post.new(uri.path, header)
       req.body = body
       p res = https.request(req)
-      # return ss
       new_sheet_id = JSON::parse(res.body)['sheetId']
-      worksheet_by_gid(new_sheet_id)
+      # select new worksheet
+      new_work_sheet = worksheet_by_gid(new_sheet_id)
+
+      # set title
+      new_work_sheet.title = title
+      new_work_sheet.save
+
+      new_work_sheet
     end
 
     # Adds a new worksheet to the spreadsheet. Returns added GoogleDrive::Worksheet.
