@@ -7,6 +7,7 @@ require 'stringio'
 
 require 'google_drive/util'
 require 'google_drive/acl'
+require 'api/spreadsheets'
 
 module GoogleDrive
   # A file in Google Drive, including Google Docs document/spreadsheet/presentation.
@@ -28,6 +29,10 @@ module GoogleDrive
       @api_file = api_file
       @acl = nil
       delegate_api_methods(self, @api_file, [:title])
+      auth_data = @session.drive.request_options.authorization
+      access_token = auth_data.access_token # client_id
+      client_id = auth_data.client_id
+      @sheet_api = SpreadsheetsApi.new(access_token, client_id)
     end
 
     # Wrapped Google::APIClient::Schema::Drive::V3::File object.
