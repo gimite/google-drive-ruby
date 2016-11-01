@@ -66,9 +66,9 @@ module GoogleDrive
       worksheets.find { |ws| ws.gid == gid }
     end
 
-    def add_worksheet_from_template(title)
+    def add_worksheet_from_template(title, template_file_name = 'template')
       # find template key
-      template_sheet = worksheet_by_title('template')
+      template_sheet = worksheet_by_title(template_file_name)
       template_sheet_id = template_sheet.gid
       # set sheet key
       spreadsheet_id = template_sheet.spreadsheet.api_file.id
