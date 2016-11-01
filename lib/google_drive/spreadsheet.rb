@@ -97,5 +97,12 @@ module GoogleDrive
       doc = @session.request(:post, worksheets_feed_url, data: xml)
       Worksheet.new(@session, self, doc.root)
     end
+
+    # https://developers.google.com/sheets/reference/rest/v4/spreadsheets.sheets/copyTo
+    def copy_to(spreadsheet_id, sheet_id, destination_spreadsheet_id)
+      res = @sheet_api.copy_to(spreadsheet_id, sheet_id, destination_spreadsheet_id)
+      new_sheet_id = JSON::parse(res.body)['sheetId']
+      worksheet_by_gid(new_sheet_id) # return new worksheet
+    end
   end
 end
