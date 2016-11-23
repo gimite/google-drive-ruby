@@ -57,7 +57,7 @@ module GoogleDrive
     #   # Set ACL without sending notification emails
     #   spreadsheet.acl.push(
     #       {type: "user", email_address: "example2@gmail.com", role: "reader"},
-    #       {sendNotificationEmails: false})
+    #       {send_notification_email: false})
     #
     # See here for parameter detais:
     # https://developers.google.com/drive/v3/reference/permissions/create
