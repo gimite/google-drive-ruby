@@ -33,11 +33,12 @@ module GoogleDrive
     # Also you can pass the second hash argument +options+, which specifies
     # optional query parameters for the API.
     # Possible keys of +options+ are,
-    # * :emailMessage  -- A custom message to include in notification emails
-    # * :sendNotificationEmails  -- Whether to send notification emails
-    #   when sharing to users or groups.
-    #
-    # NOTE: This sends email to the new people.
+    # * :email_message  -- A custom message to include in notification emails
+    # * :send_notification_email  -- Whether to send notification emails
+    #   when sharing to users or groups. (Default: true)
+    # * :transfer_ownership  -- Whether to transfer ownership to the specified user
+    #   and downgrade the current owner to a writer. This parameter is required as an
+    #   acknowledgement of the side effect. (Default: false)
     #
     # e.g.
     #   # A specific user can read or write.
