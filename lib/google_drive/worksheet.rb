@@ -188,29 +188,21 @@ module GoogleDrive
     end
 
     # Number of rows including empty rows.
-    def max_rows
-      reload_cells unless @cells
-      @max_rows
-    end
+    attr_reader :max_rows
 
     # Updates number of rows.
     # Note that update is not sent to the server until you call save().
     def max_rows=(rows)
-      reload_cells unless @cells
       @max_rows = rows
       @meta_modified = true
     end
 
     # Number of columns including empty columns.
-    def max_cols
-      reload_cells unless @cells
-      @max_cols
-    end
+    attr_reader :max_cols
 
     # Updates number of columns.
     # Note that update is not sent to the server until you call save().
     def max_cols=(cols)
-      reload_cells unless @cells
       @max_cols = cols
       @meta_modified = true
     end
@@ -310,7 +302,7 @@ module GoogleDrive
               <entry xmlns='http://www.w3.org/2005/Atom'
                      xmlns:gs='http://schemas.google.com/spreadsheets/2006'>
                 <title>#{h(title)}</title>
-                <gs:rowCount>#{h(self.max_rows)}</gs:rowCount>
+                <gs:rowCount>#{h(max_rows)}</gs:rowCount>
                 <gs:colCount>#{h(max_cols)}</gs:colCount>
               </entry>
             EOS
@@ -471,14 +463,19 @@ module GoogleDrive
     def set_worksheet_feed_entry(entry)
       @worksheet_feed_entry = entry
       @title = entry.css('title').text
+      set_max_values(entry)
       @updated = Time.parse(entry.css('updated').text)
       @meta_modified = false
+    end
+    
+    def set_max_values(entry)
+      @max_rows = entry.css('gs|rowCount').text.to_i
+      @max_cols = entry.css('gs|colCount').text.to_i
     end
 
     def reload_cells
       doc = @session.request(:get, cells_feed_url)
-      @max_rows = doc.css('gs|rowCount').text.to_i
-      @max_cols = doc.css('gs|colCount').text.to_i
+      set_max_values(doc)
 
       @num_cols = nil
       @num_rows = nil
