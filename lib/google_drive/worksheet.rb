@@ -15,7 +15,8 @@ module GoogleDrive
   class Worksheet
     include(Util)
 
-    def initialize(session, spreadsheet, worksheet_feed_entry) #:nodoc:
+    # @api private
+    def initialize(session, spreadsheet, worksheet_feed_entry)
       @session = session
       @spreadsheet = spreadsheet
       set_worksheet_feed_entry(worksheet_feed_entry)
@@ -214,7 +215,8 @@ module GoogleDrive
       @meta_modified = true
     end
 
-    def cells #:nodoc:
+    # @api private
+    def cells
       reload_cells unless @cells
       @cells
     end

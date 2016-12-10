@@ -23,7 +23,8 @@ module GoogleDrive
     include(Util)
     extend(Forwardable)
 
-    def initialize(session, api_file) #:nodoc:
+    # @api private
+    def initialize(session, api_file)
       @session = session
       @api_file = api_file
       @acl = nil

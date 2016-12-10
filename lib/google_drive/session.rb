@@ -421,7 +421,8 @@ module GoogleDrive
       upload_from_source(io, title, params)
     end
 
-    def wrap_api_file(api_file) #:nodoc:
+    # @api private
+    def wrap_api_file(api_file)
       case api_file.mime_type
       when 'application/vnd.google-apps.folder'
         return Collection.new(self, api_file)
@@ -432,7 +433,8 @@ module GoogleDrive
       end
     end
 
-    def execute_paged!(opts, &block) #:nodoc:
+    # @api private
+    def execute_paged!(opts, &block)
       if block
         page_token = nil
         loop do
@@ -456,7 +458,8 @@ module GoogleDrive
       end
     end
 
-    def request(method, url, params = {}) #:nodoc:
+    # @api private
+    def request(method, url, params = {})
       # Always uses HTTPS.
       url           = url.gsub(%r{^http://}, 'https://')
       data          = params[:data]

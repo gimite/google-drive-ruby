@@ -1,9 +1,10 @@
 module GoogleDrive
-
   # A simple credentials class using an existing OAuth2 access_token.
-
+  #
   # Based on:
   # https://github.com/google/google-api-ruby-client/issues/296
+  #
+  # @api private
   class AccessTokenCredentials
     attr_reader :access_token
 
@@ -15,5 +16,4 @@ module GoogleDrive
       headers['Authorization'] = "Bearer #{@access_token}"
     end
   end
-
 end

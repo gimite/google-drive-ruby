@@ -4,7 +4,8 @@
 require 'cgi'
 
 module GoogleDrive
-  module Util #:nodoc:
+  # @api private
+  module Util
     EXT_TO_CONTENT_TYPE = {
       '.csv' => 'text/csv',
       '.tsv' => 'text/tab-separated-values',

@@ -16,7 +16,8 @@ module GoogleDrive
     include(Util)
     extend(Forwardable)
 
-    def initialize(session, file) #:nodoc:
+    # @api private
+    def initialize(session, file)
       @session = session
       @file = file
       api_permissions = @session.drive.list_permissions(@file.id, fields: '*')
@@ -79,7 +80,8 @@ module GoogleDrive
       @entries.delete(entry)
     end
 
-    def update_role(entry) #:nodoc:
+    # @api private
+    def update_role(entry)
       api_permission = @session.drive.update_permission(
         @file.id, entry.id, {role: entry.role}, fields: '*')
       entry.api_permission = api_permission

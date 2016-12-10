@@ -17,7 +17,8 @@ module GoogleDrive
                    :assoc, :fetch, :flatten, :key, :invert, :size, :length, :rassoc,
                    :merge, :reject, :select, :sort, :to_a, :values_at)
 
-    def initialize(list, index) #:nodoc:
+    # @api private
+    def initialize(list, index)
       @list = list
       @index = index
     end

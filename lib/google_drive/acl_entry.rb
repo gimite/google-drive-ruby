@@ -29,8 +29,12 @@ module GoogleDrive
     end
 
     attr_reader(:acl)
-    attr_reader(:params) #:nodoc:
-    attr_accessor(:api_permission) #:nodoc:
+
+    # @api private
+    attr_reader(:params)
+
+    # @api private
+    attr_accessor(:api_permission)
 
     # The role given to the scope. One of:
     # - "owner": The owner.

@@ -4,7 +4,8 @@
 require 'json'
 
 module GoogleDrive
-  class Config #:nodoc:
+  # @api private
+  class Config
     FIELDS = %w(client_id client_secret scope refresh_token).freeze
     attr_accessor(*FIELDS)
 

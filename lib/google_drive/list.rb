@@ -15,7 +15,8 @@ module GoogleDrive
   class List
     include(Enumerable)
 
-    def initialize(worksheet) #:nodoc:
+    # @api private
+    def initialize(worksheet)
       @worksheet = worksheet
     end
 
@@ -90,19 +91,23 @@ module GoogleDrive
       map(&:to_hash)
     end
 
-    def get(index, key) #:nodoc:
+    # @api private
+    def get(index, key)
       @worksheet[index + 2, key_to_col(key)]
     end
 
-    def numeric_value(index, key) #:nodoc:
+    # @api private
+    def numeric_value(index, key)
       @worksheet.numeric_value(index + 2, key_to_col(key))
     end
 
-    def input_value(index, key) #:nodoc:
+    # @api private
+    def input_value(index, key)
       @worksheet.input_value(index + 2, key_to_col(key))
     end
 
-    def set(index, key, value) #:nodoc:
+    # @api private
+    def set(index, key, value)
       @worksheet[index + 2, key_to_col(key)] = value
     end
 
