@@ -475,7 +475,6 @@ module GoogleDrive
 
     def reload_cells
       doc = @session.request(:get, cells_feed_url)
-      set_max_values(doc)
 
       @num_cols = nil
       @num_rows = nil
