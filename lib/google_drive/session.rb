@@ -18,6 +18,7 @@ require 'google_drive/worksheet'
 require 'google_drive/collection'
 require 'google_drive/file'
 require 'google_drive/config'
+require 'google_drive/access_token_credentials'
 
 module GoogleDrive
   # A session for Google Drive operations.
@@ -139,13 +140,11 @@ module GoogleDrive
 
       if credentials_or_access_token
         if credentials_or_access_token.is_a?(String)
-          credentials = Google::Auth::UserRefreshCredentials.new(
-            access_token: credentials_or_access_token)
+          credentials = AccessTokenCredentials.new(credentials_or_access_token)
         # Equivalent of credentials_or_access_token.is_a?(OAuth2::AccessToken),
         # without adding dependency to "oauth2" library.
         elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == 'OAuth2::AccessToken' }
-          credentials = Google::Auth::UserRefreshCredentials.new(
-            access_token: credentials_or_access_token.token)
+          credentials = AccessTokenCredentials.new(credentials_or_access_token.token)
         else
           credentials = credentials_or_access_token
         end
