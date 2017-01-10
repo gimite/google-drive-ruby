@@ -138,20 +138,17 @@ module GoogleDrive
           'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.')
       end
 
-      if credentials_or_access_token
-        if credentials_or_access_token.is_a?(String)
-          credentials = AccessTokenCredentials.new(credentials_or_access_token)
-        # Equivalent of credentials_or_access_token.is_a?(OAuth2::AccessToken),
-        # without adding dependency to "oauth2" library.
-        elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == 'OAuth2::AccessToken' }
-          credentials = AccessTokenCredentials.new(credentials_or_access_token.token)
-        else
-          credentials = credentials_or_access_token
-        end
-        @fetcher = ApiClientFetcher.new(credentials)
+      if credentials_or_access_token.is_a?(String)
+        credentials = AccessTokenCredentials.new(credentials_or_access_token)
+      # Equivalent of credentials_or_access_token.is_a?(OAuth2::AccessToken),
+      # without adding dependency to "oauth2" library.
+      elsif credentials_or_access_token.class.ancestors.any?{ |m| m.name == 'OAuth2::AccessToken' }
+        credentials = AccessTokenCredentials.new(credentials_or_access_token.token)
       else
-        @fetcher = nil
+        credentials = credentials_or_access_token
       end
+      @fetcher = ApiClientFetcher.new(credentials)
+
     end
 
     # Proc or Method called when authentication has failed.
