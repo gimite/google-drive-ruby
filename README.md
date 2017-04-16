@@ -109,7 +109,7 @@ ws.reload
 
 ## Learn more
 
-* [API documentation](http://www.rubydoc.info/gems/google_drive/2.1.2)
+* [API documentation](http://www.rubydoc.info/gems/google_drive)
 * [Authorization](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md)
 * [Github](http://github.com/gimite/google-drive-ruby)
 
