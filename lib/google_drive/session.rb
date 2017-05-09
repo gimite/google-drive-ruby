@@ -368,6 +368,20 @@ module GoogleDrive
       wrap_api_file(file)
     end
 
+    # Creates new spreadsheet into a folder and returns the new GoogleDrive::Spreadsheet.
+    #
+    # e.g.
+    #   session.create_spreadsheet_into_folder("My new sheet", "Folder ID")
+    def create_spreadsheet_into_folder(title = 'Untitled', folderID=nil)
+      file_metadata = {
+        name:    title,
+        mime_type: 'application/vnd.google-apps.spreadsheet',
+        parents: [folderID]
+      }
+      file = self.drive.create_file(file_metadata, fields: '*')
+      wrap_api_file(file)
+    end
+
     # Uploads a file with the given +title+ and +content+.
     # Returns a GoogleSpreadsheet::File object.
     #
