@@ -372,7 +372,7 @@ module GoogleDrive
     #
     # e.g.
     #   session.create_spreadsheet_into_folder("My new sheet", "Folder ID")
-    def create_spreadsheet_into_folder(title = 'Untitled', folderID=nil)
+    def create_spreadsheet_into_folder(title = 'Untitled', folderID=root_collection.id)
       file_metadata = {
         name:    title,
         mime_type: 'application/vnd.google-apps.spreadsheet',
@@ -417,7 +417,7 @@ module GoogleDrive
     #   # Uploads a text file and converts to a Google Spreadsheet:
     #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
-    def upload_from_file(path, title = nil, params = {})
+    def upload_from_file(path, title = nil, params = {}, folderID=root_collection.id)
       # TODO: Add a feature to upload to a folder.
       file_name = ::File.basename(path)
       default_content_type =
@@ -426,7 +426,7 @@ module GoogleDrive
       upload_from_source(
         path,
         title || file_name,
-        {content_type: default_content_type}.merge(params))
+        {content_type: default_content_type, parents: [folderID]}.merge(params))
     end
 
     # Uploads a file. Reads content from +io+.
