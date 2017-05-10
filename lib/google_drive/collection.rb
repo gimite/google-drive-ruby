@@ -147,7 +147,7 @@ module GoogleDrive
 
     private
 
-    def files_with_type(type, params = {}, &block, trashed=false)
+    def files_with_type(type, params = {}, trashed=false, &block)
       params = convert_params(params)
       query  = construct_and_query([
         ['? in parents', id],
