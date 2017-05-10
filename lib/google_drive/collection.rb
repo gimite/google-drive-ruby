@@ -137,7 +137,7 @@ module GoogleDrive
         if rel_path.empty?
           return self
         else
-          parent = subcollection_by_title(rel_path[0...-1])
+          parent = subcollection_by_title(rel_path[0...-1], trashed)
           return parent && parent.file_by_title_with_type(rel_path[-1], type, trashed)
         end
       else
@@ -147,7 +147,7 @@ module GoogleDrive
 
     private
 
-    def files_with_type(type, params = {}, &block, trashed=false)
+    def files_with_type(type, params = {}, trashed=false, &block)
       params = convert_params(params)
       query  = construct_and_query([
         ['? in parents', id],
