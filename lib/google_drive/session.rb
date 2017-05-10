@@ -359,29 +359,15 @@ module GoogleDrive
     #
     # e.g.
     #   session.create_spreadsheet("My new sheet")
-    def create_spreadsheet(title = 'Untitled')
+    def create_spreadsheet(title = 'Untitled', params = {})
+      params[:parents] = params[:parents].present?? [params[:parents]] : [root_collection.id]
       file_metadata = {
         name:    title,
         mime_type: 'application/vnd.google-apps.spreadsheet'
-      }
+      }.merge(params)
       file = self.drive.create_file(file_metadata, fields: '*')
       wrap_api_file(file)
     end
-
-    # Creates new spreadsheet into a folder and returns the new GoogleDrive::Spreadsheet.
-    #
-    # e.g.
-    #   session.create_spreadsheet_into_folder("My new sheet", "Folder ID")
-    def create_spreadsheet_into_folder(title = 'Untitled', folderID=root_collection.id)
-      file_metadata = {
-        name:    title,
-        mime_type: 'application/vnd.google-apps.spreadsheet',
-        parents: [folderID]
-      }
-      file = self.drive.create_file(file_metadata, fields: '*')
-      wrap_api_file(file)
-    end
-
     # Uploads a file with the given +title+ and +content+.
     # Returns a GoogleSpreadsheet::File object.
     #
@@ -417,8 +403,9 @@ module GoogleDrive
     #   # Uploads a text file and converts to a Google Spreadsheet:
     #   session.upload_from_file("/path/to/hoge.csv", "Hoge")
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
-    def upload_from_file(path, title = nil, params = {}, folderID=root_collection.id)
+    def upload_from_file(path, title = nil, params = {})
       # TODO: Add a feature to upload to a folder.
+      params[:parents] = params[:parents].present?? [params[:parents]] : [root_collection.id]
       file_name = ::File.basename(path)
       default_content_type =
         EXT_TO_CONTENT_TYPE[::File.extname(file_name).downcase] ||
@@ -426,7 +413,7 @@ module GoogleDrive
       upload_from_source(
         path,
         title || file_name,
-        {content_type: default_content_type, parents: [folderID]}.merge(params))
+        {content_type: default_content_type}.merge(params))
     end
 
     # Uploads a file. Reads content from +io+.
