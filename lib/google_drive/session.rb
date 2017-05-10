@@ -330,8 +330,8 @@ module GoogleDrive
     # GoogleDrive::Collection.
     # Returns nil if not found. If multiple collections with the +title+ are found, returns
     # one of them.
-    def collection_by_title(title)
-      root_collection.subcollection_by_title(title)
+    def collection_by_title(title, trashed=false)
+      root_collection.subcollection_by_title(title, trashed)
     end
 
     # Returns GoogleDrive::Collection with given +url+.

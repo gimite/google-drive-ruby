@@ -120,8 +120,8 @@ module GoogleDrive
     # one of them.
     #
     # If given an Array, does a recursive subcollection traversal.
-    def subcollection_by_title(title)
-      file_by_title_with_type(title, 'application/vnd.google-apps.folder')
+    def subcollection_by_title(title, trashed=false)
+      file_by_title_with_type(title, 'application/vnd.google-apps.folder', trashed)
     end
 
     # Returns URL of the deprecated contents feed.
@@ -131,27 +131,27 @@ module GoogleDrive
 
     protected
 
-    def file_by_title_with_type(title, type)
+    def file_by_title_with_type(title, type, trashed=false)
       if title.is_a?(Array)
         rel_path = title
         if rel_path.empty?
           return self
         else
           parent = subcollection_by_title(rel_path[0...-1])
-          return parent && parent.file_by_title_with_type(rel_path[-1], type)
+          return parent && parent.file_by_title_with_type(rel_path[-1], type, trashed)
         end
       else
-        files_with_type(type, q: ['name = ?', title], page_size: 1)[0]
+        files_with_type(type, q: ['name = ?', title], page_size: 1, trashed)[0]
       end
     end
 
     private
 
-    def files_with_type(type, params = {}, &block)
+    def files_with_type(type, params = {}, &block, trashed=false)
       params = convert_params(params)
       query  = construct_and_query([
         ['? in parents', id],
-        type ? ['mimeType = ?', type] : nil,
+        type ? ['mimeType = ? and trashed = ?', type, trashed] : nil,
         params[:q]
       ])
       params = params.merge(q: query)
