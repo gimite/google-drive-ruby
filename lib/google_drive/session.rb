@@ -186,7 +186,7 @@ module GoogleDrive
       params = convert_params(params)
       execute_paged!(
         method: self.drive.method(:list_files),
-        parameters: {fields: '*'}.merge(params),
+        parameters: {fields: '*', supports_team_drives: true}.merge(params),
         items_method_name: :files,
         converter: proc { |af| wrap_api_file(af) },
         &block)
@@ -213,7 +213,7 @@ module GoogleDrive
     # Returns an instance of GoogleDrive::File or its subclass (GoogleDrive::Spreadsheet,
     # GoogleDrive::Collection).
     def file_by_id(id)
-      api_file = self.drive.get_file(id, fields: '*')
+      api_file = self.drive.get_file(id, fields: '*', supports_team_drives: true)
       wrap_api_file(api_file)
     end
 

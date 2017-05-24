@@ -36,7 +36,7 @@ module GoogleDrive
 
     # Reloads file metadata such as title and acl.
     def reload_metadata
-      @api_file = @session.drive.get_file(id, fields: '*')
+      @api_file = @session.drive.get_file(id, fields: '*', supports_team_drives: true)
       @acl = Acl.new(@session, self) if @acl
     end
 
@@ -87,7 +87,9 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_as_file.
     def download_to_file(path, params = {})
-      @session.drive.get_file(id, {download_dest: path}.merge(params))
+      @session.drive.get_file(
+          id,
+          {download_dest: path, supports_team_drives: true}.merge(params))
     end
 
     # Downloads the file and returns as a String.
@@ -103,7 +105,9 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_to_io.
     def download_to_io(io, params = {})
-      @session.drive.get_file(id, {download_dest: io}.merge(params))
+      @session.drive.get_file(
+          id,
+          {download_dest: io, supports_team_drives: true}.merge(params))
     end
 
     # Export the file to +path+ in content type +format+.
