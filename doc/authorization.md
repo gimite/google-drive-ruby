@@ -6,6 +6,8 @@ There are multiple ways for authorization, based on whom your code access Google
 * On behalf of the user who accesses your web app (web based authorization)
 * On behalf of no existing users (service account)
 
+If you don't have access to your machine's command line, you need to choose between the last two options. In case you do need to authorize as yourself, use the second option and authorize as yourself on the web.
+
 ## On behalf of you (command line authorization)
 
 If you want your program to access Google Drive with your own account, or the account of the user who runs your program on the command line, follow these steps:
