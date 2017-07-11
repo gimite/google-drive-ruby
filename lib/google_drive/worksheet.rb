@@ -119,13 +119,8 @@ module GoogleDrive
       @modified.add([row, col])
       self.max_rows = row if row > @max_rows
       self.max_cols = col if col > @max_cols
-      if value.empty?
-        @num_rows = nil
-        @num_cols = nil
-      else
-        @num_rows = row if row > num_rows
-        @num_cols = col if col > num_cols
-      end
+      @num_rows = nil
+      @num_cols = nil
     end
 
     # Updates cells in a rectangle area by a two-dimensional Array.
@@ -469,7 +464,7 @@ module GoogleDrive
       @updated = Time.parse(entry.css('updated').text)
       @meta_modified = false
     end
-    
+
     def set_max_values(entry)
       @max_rows = entry.css('gs|rowCount').text.to_i
       @max_cols = entry.css('gs|colCount').text.to_i
