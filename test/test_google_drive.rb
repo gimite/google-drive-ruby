@@ -222,6 +222,15 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { file.title == test_file_title }
     assert { file.available_content_types == ["text/plain"] }
     assert { file.download_to_string == File.read(test_file_path) }
+    
+    # Uploads a test file to folder.
+    test_file_path = File.join(File.dirname(__FILE__), 'test_file.txt')
+    file = session.upload_from_file_to_foler(test_file_path, test_file_title, test_remote_folder, convert: false)
+    assert { file.is_a?(GoogleDrive::File) }
+    assert { file.title == test_file_title }
+    assert { file.available_content_types == ["text/plain"] }
+    assert { file.download_to_string == File.read(test_file_path) }
+
 
     # Updates the content of the file.
     test_file2_path = File.join(File.dirname(__FILE__), 'test_file2.txt')
