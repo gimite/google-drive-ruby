@@ -123,8 +123,8 @@ module GoogleDrive
         @num_rows = nil
         @num_cols = nil
       else
-        @num_rows = row if row > num_rows
-        @num_cols = col if col > num_cols
+        @num_rows = row if @num_rows && row > @num_rows
+        @num_cols = col if @num_cols && col > @num_cols
       end
     end
 
