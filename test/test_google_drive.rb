@@ -16,6 +16,29 @@ class TestGoogleDrive < Test::Unit::TestCase
 
   @@session = nil
 
+  def get_folder_id
+    folder_id_path = File.join(File.dirname(__FILE__), 'folder_id.yaml')
+    if File.exist?(folder_id_path)
+      folder_id_conf = YAML.load_file(folder_id_path)
+      begin
+        folder_id = folder_id_conf["folder_id"]
+        return folder_id
+      rescue
+        raise("folder_id.yaml is not valid. Delete or rewrite it.")
+      end
+    else
+      while true
+        puts "Please input your Google Drive's test folder id:"
+        folder_id = gets.chomp
+        if !folder_id.empty?
+          fh = { "folder_id" => folder_id}
+          YAML.dump(fh,File.open(folder_id_path,'w'))
+          return folder_id
+        end
+      end
+    end
+  end
+
   def test_spreadsheet_online
     session = get_session
 
@@ -192,6 +215,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     test_collection_title = "#{PREFIX}collection"
     test_file_title = "#{PREFIX}file.txt"
     test_file2_title = "#{PREFIX}file2.txt"
+    test_file3_title = "#{PREFIX}file3.txt"
 
     # Removes test files/collections in the previous run in case the previous run failed.
     for title in [test_file_title, test_collection_title]
@@ -222,15 +246,15 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { file.title == test_file_title }
     assert { file.available_content_types == ["text/plain"] }
     assert { file.download_to_string == File.read(test_file_path) }
-    
-    # Uploads a test file to folder.
-    test_file_path = File.join(File.dirname(__FILE__), 'test_file.txt')
-    file = session.upload_from_file_to_foler(test_file_path, test_file_title, test_remote_folder, convert: false)
-    assert { file.is_a?(GoogleDrive::File) }
-    assert { file.title == test_file_title }
-    assert { file.available_content_types == ["text/plain"] }
-    assert { file.download_to_string == File.read(test_file_path) }
 
+    # Uploads a test file to folder.
+    test_file3_path = File.join(File.dirname(__FILE__), 'test_file3.txt')
+    test_remote_folder = get_folder_id
+    file3 = session.upload_from_file_to_folder(test_file3_path, test_remote_folder, test_file3_title, convert: false)
+    assert { file3.is_a?(GoogleDrive::File) }
+    assert { file3.title == test_file3_title }
+    assert { file3.available_content_types == ["text/plain"] }
+    assert { file3.download_to_string == File.read(test_file3_path) }
 
     # Updates the content of the file.
     test_file2_path = File.join(File.dirname(__FILE__), 'test_file2.txt')
