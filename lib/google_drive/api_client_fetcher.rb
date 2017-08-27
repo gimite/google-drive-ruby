@@ -22,6 +22,10 @@ module GoogleDrive
       @drive.authorization = authorization
       # Make the timeout virtually infinite because some of the operations (e.g., uploading a large file)
       # can take very long.
+
+      # This is the Max value of Int (32-bit) represented as milliseconds serving as the maximum allowed
+      # timeout value that Google's API seems willing accept (possibly due to the Java Socket lib used
+      # by httpclient for JRuby).
       t = (2**31 - 1) / 1000
       @drive.client_options.open_timeout_sec = t
       @drive.client_options.read_timeout_sec = t
