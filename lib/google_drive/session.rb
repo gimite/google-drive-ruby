@@ -497,6 +497,7 @@ module GoogleDrive
         upload_source: source,
         content_type: 'application/octet-stream',
         fields: '*',
+        supports_team_drives: true
       }
       for k, v in params
         if ![:convert, :convert_mime_type, :parents].include?(k)
