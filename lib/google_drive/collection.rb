@@ -15,13 +15,13 @@ module GoogleDrive
 
     # Adds the given GoogleDrive::File to the collection.
     def add(file)
-      @session.drive.update_file(file.id, add_parents: self.id, fields: '')
+      @session.drive.update_file(file.id, add_parents: self.id, fields: '', supports_team_drives: true)
       nil
     end
 
     # Removes the given GoogleDrive::File from the collection.
     def remove(file)
-      @session.drive.update_file(file.id, remove_parents: self.id, fields: '')
+      @session.drive.update_file(file.id, remove_parents: self.id, fields: '', supports_team_drives: true)
     end
 
     # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
@@ -31,7 +31,7 @@ module GoogleDrive
         mime_type: 'application/vnd.google-apps.folder',
         parents: [self.id],
       }
-      file = @session.drive.create_file(file_metadata, fields: '*')
+      file = @session.drive.create_file(file_metadata, fields: '*', supports_team_drives: true)
       @session.wrap_api_file(file)
     end
 
