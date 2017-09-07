@@ -66,6 +66,24 @@ module GoogleDrive
       worksheets.find { |ws| ws.gid == gid }
     end
 
+    def add_worksheet_from_template(title, template_file_name = 'template')
+      # find template key
+      template_sheet = worksheet_by_title(template_file_name)
+      template_sheet_id = template_sheet.gid
+      # set sheet key
+      spreadsheet_id = template_sheet.spreadsheet.api_file.id
+      res = @sheet_api.copy_to(spreadsheet_id, template_sheet_id, spreadsheet_id)
+      new_sheet_id = JSON::parse(res.body)['sheetId']
+      # select new worksheet
+      new_work_sheet = worksheet_by_gid(new_sheet_id)
+
+      # set title
+      new_work_sheet.title = title
+      new_work_sheet.save
+
+      new_work_sheet
+    end
+
     # Adds a new worksheet to the spreadsheet. Returns added GoogleDrive::Worksheet.
     def add_worksheet(title, max_rows = 100, max_cols = 20)
       xml = <<-"EOS"
@@ -78,6 +96,13 @@ module GoogleDrive
           EOS
       doc = @session.request(:post, worksheets_feed_url, data: xml)
       Worksheet.new(@session, self, doc.root)
+    end
+
+    # https://developers.google.com/sheets/reference/rest/v4/spreadsheets.sheets/copyTo
+    def copy_to(spreadsheet_id, sheet_id, destination_spreadsheet_id)
+      res = @sheet_api.copy_to(spreadsheet_id, sheet_id, destination_spreadsheet_id)
+      new_sheet_id = JSON::parse(res.body)['sheetId']
+      worksheet_by_gid(new_sheet_id) # return new worksheet
     end
   end
 end
