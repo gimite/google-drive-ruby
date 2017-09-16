@@ -16,6 +16,12 @@ module GoogleDrive
     include(Util)
 
     # @api private
+    # A regexp which matches an invalid character in XML 1.0:
+    # https://en.wikipedia.org/wiki/Valid_characters_in_XML#XML_1.0
+    XML_INVAILD_CHAR_REGEXP =
+        /[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/
+
+    # @api private
     def initialize(session, spreadsheet, worksheet_feed_entry)
       @session = session
       @spreadsheet = spreadsheet
@@ -513,8 +519,8 @@ module GoogleDrive
     end
 
     def validate_cell_value(value)
-      if value.include?("\x1a")
-        fail(ArgumentError, 'Contains invalid character \\x1a for xml: %p' % value)
+      if value =~ XML_INVAILD_CHAR_REGEXP
+        fail(ArgumentError, 'Contains invalid character %p for XML 1.0: %p' % [$&, value])
       end
     end
   end
