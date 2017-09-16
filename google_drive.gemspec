@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
 
   s.add_dependency('nokogiri', ['>= 1.5.3', '< 2.0.0'])
-  s.add_dependency('google-api-client', ['>= 0.11.0', '< 0.13.0'])
+  s.add_dependency('google-api-client', ['>= 0.11.0', '< 0.14.0'])
   s.add_dependency('googleauth', ['>= 0.5.0', '< 1.0.0'])
   s.add_development_dependency('test-unit', ['>= 3.0.0', '< 4.0.0'])
   s.add_development_dependency('rake', ['>= 0.8.0'])
