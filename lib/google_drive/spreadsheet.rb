@@ -79,5 +79,29 @@ module GoogleDrive
       doc = @session.request(:post, worksheets_feed_url, data: xml)
       Worksheet.new(@session, self, doc.root)
     end
+
+    # Not available for GoogleDrive::Spreadsheet. Use export_as_file instead.
+    def download_to_file(path, params = {})
+      raise(
+          NotImplementedError,
+          "download_to_file is not available for GoogleDrive::Spreadsheet. " +
+          "Use export_as_file instead.")
+    end
+
+    # Not available for GoogleDrive::Spreadsheet. Use export_as_string instead.
+    def download_to_string(params = {})
+      raise(
+          NotImplementedError,
+          "download_to_string is not available for GoogleDrive::Spreadsheet. " +
+          "Use export_as_string instead.")
+    end
+
+    # Not available for GoogleDrive::Spreadsheet. Use export_to_io instead.
+    def download_to_io(io, params = {})
+      raise(
+          NotImplementedError,
+          "download_to_io is not available for GoogleDrive::Spreadsheet. " +
+          "Use export_to_io instead.")
+    end
   end
 end
