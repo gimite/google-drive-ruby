@@ -198,7 +198,7 @@ module GoogleDrive
 
     # Creates copy of this file with the given title.
     def copy(title)
-      api_file = @session.drive.copy_file(id, { name: title }, {})
+      api_file = @session.drive.copy_file(id, { name: title }, fields: '*')
       @session.wrap_api_file(api_file)
     end
 
