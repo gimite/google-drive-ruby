@@ -1,15 +1,28 @@
+# google-drive-ruby [![Build Status](https://travis-ci.org/gimite/google-drive-ruby.svg?branch=master)](https://travis-ci.org/gimite/google-drive-ruby)
+
 This is a Ruby library to read/write files/spreadsheets in Google Drive/Docs.
 
 NOTE: This is NOT a library to create Google Drive App.
 
 
-## Migration from ver. 0.x.x / 1.x.x to to ver. 2.x.x
+* [Migration from ver. 0.x.x / 1.x.x](#migration)
+* [How to install](#install)
+* [How to use](#use)
+* [API documentation](http://www.rubydoc.info/gems/google_drive)
+* [Authorization](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md)
+* [Github](http://github.com/gimite/google-drive-ruby)
+* [License](#license)
+* [Supported environments](#environments)
+* [Author](#author)
+
+
+## <a name="migration">Migration from ver. 0.x.x / 1.x.x</a>
 
 There are some incompatible API changes. See
 [MIGRATING.md](https://github.com/gimite/google-drive-ruby/blob/master/MIGRATING.md).
 
 
-## How to install
+## <a name="install">How to install</a>
 
 Add this line to your application's Gemfile:
 
@@ -35,7 +48,7 @@ If you need system wide installation, execute below:
 $ sudo gem install google_drive
 ```
 
-## How to use
+## <a name="use">How to use</a>
 
 ### Authorization
 
@@ -107,20 +120,17 @@ p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
 ws.reload
 ```
 
-## Learn more
 
-* [API documentation](http://www.rubydoc.info/gems/google_drive)
-* [Authorization](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md)
-* [Github](http://github.com/gimite/google-drive-ruby)
-
-## License
+## <a name="license">License</a>
 
 New BSD Licence.
 
-## Supported environments
 
-Ruby 2.0.0 or later. Checked with Ruby 2.3.0.
+## <a name="environments">Supported environments</a>
 
-## Author
+Ruby 2.0.0 or later. Checked with Ruby 2.4.1.
+
+
+## <a name="author">Author</a>
 
 [Hiroshi Ichikawa](http://gimite.net/en/index.php?Contact)
