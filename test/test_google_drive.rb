@@ -325,16 +325,16 @@ class TestGoogleDrive < Test::Unit::TestCase
       config_path = File.join(File.dirname(__FILE__), 'config.json')
       if File.exist?(account_path)
         fail(("%s is deprecated. Please delete it.\n" +
-            "Instead, follow this instruction to create config.json\n" +
-            "and put it at %s:\n" +
+            "Instead, follow one of the instructions here to create either " +
+            "config.json or a service account key JSON file and put it at %s:\n" +
             "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use") %
                 [account_path, config_path])
       end
       if !File.exist?(config_path)
         fail(("%s is missing.\n" +
-            "Follow this instruction to create config.json\n" +
-            "and put it at %s:\n" +
-            "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use") %
+            "Follow one of the instructions here to create either config.json or a " +
+            "service account key JSON file and put it at %s:\n" +
+            "https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md") %
                 [config_path, config_path])
       end
 
