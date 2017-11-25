@@ -6,7 +6,7 @@ require 'json'
 module GoogleDrive
   # @api private
   class Config
-    FIELDS = %w(client_id client_secret scope refresh_token).freeze
+    FIELDS = %w(client_id client_secret scope refresh_token type).freeze
     attr_accessor(*FIELDS)
 
     def initialize(config_path)

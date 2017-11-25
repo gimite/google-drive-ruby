@@ -93,7 +93,12 @@ module GoogleDrive
     #   save
     def self.from_config(config, options = {})
       if config.is_a?(String)
-        config = Config.new(config)
+        config_path = config
+        config = Config.new(config_path)
+        if config.type == 'service_account'
+          return from_service_account_key(
+              config_path, options[:scope] || DEFAULT_SCOPE)
+        end
       end
 
       config.scope ||= DEFAULT_SCOPE
