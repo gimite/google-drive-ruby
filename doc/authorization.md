@@ -2,13 +2,13 @@
 
 There are multiple ways for authorization, based on whom your code access Google Drive on behalf of:
 
-* On behalf of you (command line authorization)
-* On behalf of the user who accesses your web app (web based authorization)
-* On behalf of no existing users (service account)
+* [On behalf of you (command line authorization)](#command-line)
+* [On behalf of the user who accesses your web app (web based authorization)](#web)
+* [On behalf of no existing users (service account)](#service-account)
 
 If you don't have access to your machine's command line, you need to choose between the last two options. In case you do need to authorize as yourself, use the second option and authorize as yourself on the web.
 
-## On behalf of you (command line authorization)
+## <a name="command-line">On behalf of you (command line authorization)</a>
 
 If you want your program to access Google Drive with your own account, or the account of the user who runs your program on the command line, follow these steps:
 
@@ -36,7 +36,7 @@ If you want your program to access Google Drive with your own account, or the ac
    ```
    This code will prompt the credential via command line for the first time and save it to config.json. For the second time and later, it uses the saved credential without prompt.
 
-## On behalf of the user who accesses your web app (web based authorization)
+## <a name="web">On behalf of the user who accesses your web app (web based authorization)</a>
 
 If you are developing a web app, and want your web app user to authorize with the user's account, follow these steps:
 
@@ -82,7 +82,7 @@ credentials.fetch_access_token!
 session = GoogleDrive::Session.from_credentials(credentials)
 ```
 
-## On behalf of no existing users (service account)
+## <a name="service-account">On behalf of no existing users (service account)</a>
 
 If you don't want your program to access Google Drive on behalf of any existing users, you can use a [service account](https://developers.google.com/identity/protocols/OAuth2ServiceAccount). It means that your program can only access:
 
