@@ -12,7 +12,8 @@ require 'google_drive/file'
 module GoogleDrive
   # A spreadsheet.
   #
-  # Use methods in GoogleDrive::Session to get GoogleDrive::Spreadsheet object.
+  # e.g., Use methods spreadsheet_by_title, spreadsheet_by_url, create_spreadsheet in GoogleDrive::Session
+  # to get GoogleDrive::Spreadsheet object.
   class Spreadsheet < GoogleDrive::File
     include(Util)
 
