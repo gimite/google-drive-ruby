@@ -57,8 +57,8 @@ module GoogleDrive
     #
     # By default, it returns the first 100 files. See document of GoogleDrive::Session#files method
     # for how to get all files.
-    def files(params = {}, &block)
-      files_with_type(nil, params, &block)
+    def files(params = {}, trashed=false, &block)
+      files_with_type(nil, params, trashed, &block)
     end
 
     # Same as Session#upload_from_file. It uploads file to current collection
@@ -85,24 +85,24 @@ module GoogleDrive
     #
     # By default, it returns the first 100 spreadsheets. See document of GoogleDrive::Session#files method
     # for how to get all spreadsheets.
-    def spreadsheets(params = {}, &block)
-      files_with_type('application/vnd.google-apps.spreadsheet', params, &block)
+    def spreadsheets(params = {}, trashed=false, &block)
+      files_with_type('application/vnd.google-apps.spreadsheet', params, trashed, &block)
     end
 
     # Returns all the Google Docs documents in the collection.
     #
     # By default, it returns the first 100 documents. See document of GoogleDrive::Session#files method
     # for how to get all documents.
-    def documents(params = {}, &block)
-      files_with_type('application/vnd.google-apps.document', params, &block)
+    def documents(params = {}, trashed=false, &block)
+      files_with_type('application/vnd.google-apps.document', params, trashed, &block)
     end
 
     # Returns all its subcollections.
     #
     # By default, it returns the first 100 subcollections. See document of GoogleDrive::Session#files method
     # for how to get all subcollections.
-    def subcollections(params = {}, &block)
-      files_with_type('application/vnd.google-apps.folder', params, &block)
+    def subcollections(params = {}, trashed=false, &block)
+      files_with_type('application/vnd.google-apps.folder', params, trashed, &block)
     end
 
     # Returns a file (can be a spreadsheet, document, subcollection or other files) in the
@@ -111,8 +111,8 @@ module GoogleDrive
     # one of them.
     #
     # If given an Array, does a recursive subcollection traversal.
-    def file_by_title(title)
-      file_by_title_with_type(title, nil)
+    def file_by_title(title, trashed=false)
+      file_by_title_with_type(title, trashed)
     end
 
     # Returns its subcollection whose title exactly matches +title+ as GoogleDrive::Collection.
@@ -120,8 +120,8 @@ module GoogleDrive
     # one of them.
     #
     # If given an Array, does a recursive subcollection traversal.
-    def subcollection_by_title(title)
-      file_by_title_with_type(title, 'application/vnd.google-apps.folder')
+    def subcollection_by_title(title, trashed=false)
+      file_by_title_with_type(title, 'application/vnd.google-apps.folder', trashed)
     end
 
     # Returns URL of the deprecated contents feed.
@@ -131,27 +131,27 @@ module GoogleDrive
 
     protected
 
-    def file_by_title_with_type(title, type)
+    def file_by_title_with_type(title, type, trashed=false)
       if title.is_a?(Array)
         rel_path = title
         if rel_path.empty?
           return self
         else
-          parent = subcollection_by_title(rel_path[0...-1])
-          return parent && parent.file_by_title_with_type(rel_path[-1], type)
+          parent = subcollection_by_title(rel_path[0...-1], trashed)
+          return parent && parent.file_by_title_with_type(rel_path[-1], type, trashed)
         end
       else
-        files_with_type(type, q: ['name = ?', title], page_size: 1)[0]
+        files_with_type(type, {q: ['name = ?', title], page_size: 1}, trashed)[0]
       end
     end
 
     private
 
-    def files_with_type(type, params = {}, &block)
+    def files_with_type(type, params = {}, trashed=false, &block)
       params = convert_params(params)
       query  = construct_and_query([
         ['? in parents', id],
-        type ? ['mimeType = ?', type] : nil,
+        type ? ['mimeType = ? and trashed = ?', type, trashed] : nil,
         params[:q]
       ])
       params = params.merge(q: query)

@@ -335,8 +335,8 @@ module GoogleDrive
     # GoogleDrive::Collection.
     # Returns nil if not found. If multiple collections with the +title+ are found, returns
     # one of them.
-    def collection_by_title(title)
-      root_collection.subcollection_by_title(title)
+    def collection_by_title(title, trashed=false)
+      root_collection.subcollection_by_title(title, trashed)
     end
 
     # Returns GoogleDrive::Collection with given +url+.
@@ -364,15 +364,15 @@ module GoogleDrive
     #
     # e.g.
     #   session.create_spreadsheet("My new sheet")
-    def create_spreadsheet(title = 'Untitled')
+    def create_spreadsheet(title = 'Untitled', params = {})
+      params[:parents] = params[:parents].present?? [params[:parents]] : [root_collection.id]
       file_metadata = {
         name:    title,
         mime_type: 'application/vnd.google-apps.spreadsheet'
-      }
+      }.merge(params)
       file = self.drive.create_file(file_metadata, fields: '*')
       wrap_api_file(file)
     end
-
     # Uploads a file with the given +title+ and +content+.
     # Returns a GoogleSpreadsheet::File object.
     #
@@ -410,6 +410,7 @@ module GoogleDrive
     #   session.upload_from_file("/path/to/hoge", "Hoge", :content_type => "text/csv")
     def upload_from_file(path, title = nil, params = {})
       # TODO: Add a feature to upload to a folder.
+      params[:parents] = params[:parents].present?? [params[:parents]] : [root_collection.id]
       file_name = ::File.basename(path)
       default_content_type =
         EXT_TO_CONTENT_TYPE[::File.extname(file_name).downcase] ||
