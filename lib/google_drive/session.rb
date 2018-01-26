@@ -427,6 +427,37 @@ module GoogleDrive
         {content_type: default_content_type}.merge(params))
     end
 
+    # Uploads a local file to remote folder.
+    # Returns a GoogleSpreadsheet::File object.
+    #
+    # e.g.
+    #   # Uploads a text file and converts to a Google Docs document:
+    #   session.upload_from_file_to_folder("/path/to/hoge.txt","remote_folder_id")
+    #
+    #   # Uploads without conversion:
+    #   session.upload_from_file_to_folder("/path/to/hoge.txt", "remote_folder_id", "Hoge", :convert => false)
+    #
+    #   # Uploads with explicit content type:
+    #   session.upload_from_file_to_folder("/path/to/hoge", "remote_folder_id", "Hoge", :content_type => "text/plain")
+    #
+    #   # Uploads a text file and converts to a Google Spreadsheet:
+    #   session.upload_from_file_to_folder("/path/to/hoge.csv", "remote_folder_id", "Hoge")
+    #   session.upload_from_file_to_folder("/path/to/hoge", "remote_folder_id", "Hoge", :content_type => "text/csv")
+    def upload_from_file_to_folder(path, remote_folder_id, title = nil, params = {})
+      parents = [remote_folder_id]
+      file_name = ::File.basename(path)
+      default_content_type =
+        EXT_TO_CONTENT_TYPE[::File.extname(file_name).downcase] ||
+        'application/octet-stream'
+      upload_from_source(
+        path,
+        title || file_name,
+        {
+          content_type: default_content_type,
+          parents: parents,
+        }.merge(params))
+    end
+
     # Uploads a file. Reads content from +io+.
     # Returns a GoogleDrive::File object.
     def upload_from_io(io, title = 'Untitled', params = {})
@@ -521,6 +552,8 @@ module GoogleDrive
       content_type = api_params[:content_type]
       if params[:convert_mime_type]
         file_metadata[:mime_type] = params[:convert_mime_type]
+      elsif params[:parents]
+        file_metadata[:parents] = params[:folder_id]
       elsif params.fetch(:convert, true) && IMPORTABLE_CONTENT_TYPE_MAP.key?(content_type)
         file_metadata[:mime_type] = IMPORTABLE_CONTENT_TYPE_MAP[content_type]
       end
