@@ -65,6 +65,8 @@ module GoogleDrive
       reload_metadata if params[:reload]
       api_file.name
     end
+    
+    alias name title
 
     # URL to view/edit the file in a Web browser.
     #

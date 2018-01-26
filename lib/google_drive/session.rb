@@ -203,7 +203,7 @@ module GoogleDrive
     # GoogleDrive::Collection). Returns nil if not found. If multiple files with the +title+ are
     # found, returns one of them.
     #
-    # If given an Array, traverses collections by title. e.g.
+    # If given an Array, traverses folders by title. e.g.
     #   session.file_by_title(["myfolder", "mysubfolder/even/w/slash", "myfile"])
     def file_by_title(title)
       if title.is_a?(Array)
@@ -212,6 +212,8 @@ module GoogleDrive
         files(q: ['name = ?', title], page_size: 1)[0]
       end
     end
+      
+    alias file_by_name file_by_title
 
     # Returns a file (including a spreadsheet and a folder) with a given +id+.
     #
@@ -290,6 +292,8 @@ module GoogleDrive
     def spreadsheet_by_title(title)
       spreadsheets(q: ['name = ?', title], page_size: 1)[0]
     end
+      
+    alias spreadsheet_by_name spreadsheet_by_title
 
     # Returns GoogleDrive::Worksheet with given +url+.
     # You must specify URL of either worksheet feed or cell-based feed of the worksheet.
@@ -318,47 +322,50 @@ module GoogleDrive
       Worksheet.new(self, nil, worksheet_feed_entry)
     end
 
-    # Returns the root collection.
+    # Returns the root folder.
     def root_collection
       @root_collection ||= file_by_id('root')
     end
+      
+    alias root_folder root_collection
 
-    # Returns the top-level collections (direct children of the root collection).
+    # Returns the top-level folders (direct children of the root folder).
     #
-    # By default, it returns the first 100 collections. See document of files method for how to get
-    # all collections.
+    # By default, it returns the first 100 folders. See document of files method for how to get
+    # all folders.
     def collections(params = {}, &block)
       root_collection.subcollections(params, &block)
     end
+      
+    alias folders collections
 
-    # Returns a top-level collection whose title exactly matches +title+ as
+    # Returns a top-level folder whose title exactly matches +title+ as
     # GoogleDrive::Collection.
-    # Returns nil if not found. If multiple collections with the +title+ are found, returns
+    # Returns nil if not found. If multiple folders with the +title+ are found, returns
     # one of them.
     def collection_by_title(title)
       root_collection.subcollection_by_title(title)
     end
+      
+    alias folders_by_name collection_by_title
 
     # Returns GoogleDrive::Collection with given +url+.
-    # You must specify either of:
-    # - URL of the page you get when you go to https://docs.google.com/ with your browser and
-    #   open a collection
-    # - URL of collection (folder) feed
+    #
+    # You must specify the URL of the page you get when you go to https://drive.google.com/
+    # with your browser and open a folder.
     #
     # e.g.
     #   session.collection_by_url(
-    #     "https://drive.google.com/#folders/" +
-    #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
-    #   session.collection_by_url(
-    #     "http://docs.google.com/feeds/default/private/full/folder%3A" +
-    #     "0B9GfDpQ2pBVUODNmOGE0NjIzMWU3ZC00NmUyLTk5NzEtYaFkZjY1MjAyxjMc")
+    #     "https://drive.google.com/drive/folders/1u99gpfHIk08RVK5q_vXxUqkxR1r6FUJH")
     def collection_by_url(url)
       file = file_by_url(url)
       unless file.is_a?(Collection)
-        fail(GoogleDrive::Error, 'The file with the URL is not a collection: %s' % url)
+        fail(GoogleDrive::Error, 'The file with the URL is not a folder: %s' % url)
       end
       file
     end
+      
+    alias folder_by_url collection_by_url
 
     # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
     #
@@ -552,7 +559,7 @@ module GoogleDrive
           # Human-readable new spreadsheet/document.
         when /\/d\/([^\/]+)/
           return Regexp.last_match(1)
-          # Human-readable new collection page.
+          # Human-readable new folder page.
         when /^\/drive\/[^\/]+\/([^\/]+)/
           return Regexp.last_match(1)
           # Human-readable old folder view.
@@ -563,7 +570,7 @@ module GoogleDrive
           return Regexp.last_match(1) if (uri.query || '').split(/&/).find { |s| s =~ /^key=(.*)$/ }
         end
         case uri.fragment
-          # Human-readable old collection page.
+          # Human-readable old folder page.
         when /^folders\/(.+)$/
           return Regexp.last_match(1)
         end

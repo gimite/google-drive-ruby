@@ -6,25 +6,27 @@ require 'google_drive/error'
 require 'google_drive/spreadsheet'
 
 module GoogleDrive
+  # Represents a folder in Google Drive.
+  #
   # Use GoogleDrive::Session#root_collection, GoogleDrive::Collection#subcollections,
   # or GoogleDrive::Session#collection_by_url to get GoogleDrive::Collection object.
   class Collection < GoogleDrive::File
     include(Util)
 
-    alias_method :collection_feed_url, :document_feed_url
+    alias collection_feed_url document_feed_url
 
-    # Adds the given GoogleDrive::File to the collection.
+    # Adds the given GoogleDrive::File to the folder.
     def add(file)
       @session.drive.update_file(file.id, add_parents: self.id, fields: '', supports_team_drives: true)
       nil
     end
 
-    # Removes the given GoogleDrive::File from the collection.
+    # Removes the given GoogleDrive::File from the folder.
     def remove(file)
       @session.drive.update_file(file.id, remove_parents: self.id, fields: '', supports_team_drives: true)
     end
 
-    # Creates a sub-collection with given title. Returns GoogleDrive::Collection object.
+    # Creates a sub-folder with given title. Returns GoogleDrive::Collection object.
     def create_subcollection(title)
       file_metadata = {
         name: title,
@@ -34,19 +36,21 @@ module GoogleDrive
       file = @session.drive.create_file(file_metadata, fields: '*', supports_team_drives: true)
       @session.wrap_api_file(file)
     end
+    
+    alias create_subfolder create_subcollection
 
-    # Returns true if this is a root collection
+    # Returns true if this is a root folder.
     def root?
       !api_file.parents || api_file.parents.empty?
     end
 
-    # Returns all the files (including spreadsheets, documents, subcollections) in the collection.
+    # Returns all the files (including spreadsheets, documents, subfolders) in the folder.
     # You can specify parameters documented at
     # https://developers.google.com/drive/v3/web/search-parameters
     #
     # e.g.
     #
-    #   # Gets all the files in the collection, including subcollections.
+    #   # Gets all the files in the folder, including subfolders.
     #   collection.files
     #
     #   # Gets only files with title "hoge".
@@ -61,19 +65,19 @@ module GoogleDrive
       files_with_type(nil, params, &block)
     end
 
-    # Same as Session#upload_from_file. It uploads file to current collection
+    # Uploads a file to this folder. See Session#upload_from_file for details.
     def upload_from_file(path, title = nil, params = {})
       params = {parents: [self.id]}.merge(params)
       @session.upload_from_file(path, title, params)
     end
 
-    # Same as Session#upload_from_io. It uploads file to current collection
+    # Uploads a file to this folder. See Session#upload_from_io for details.
     def upload_from_io(io, title = 'Untitled', params = {})
       params = {parents: [self.id]}.merge(params)
       @session.upload_from_io(io, title, params)
     end
 
-    # Same as Session#upload_from_string. It uploads file to current collection
+    # Uploads a file to this folder. See Session#upload_from_string for details.
     def upload_from_string(content, title = 'Untitled', params = {})
       params = {parents: [self.id]}.merge(params)
       @session.upload_from_string(content, title, params)
@@ -81,7 +85,7 @@ module GoogleDrive
 
     alias_method :contents, :files
 
-    # Returns all the spreadsheets in the collection.
+    # Returns all the spreadsheets in the folder.
     #
     # By default, it returns the first 100 spreadsheets. See document of GoogleDrive::Session#files method
     # for how to get all spreadsheets.
@@ -89,7 +93,7 @@ module GoogleDrive
       files_with_type('application/vnd.google-apps.spreadsheet', params, &block)
     end
 
-    # Returns all the Google Docs documents in the collection.
+    # Returns all the Google Docs documents in the folder.
     #
     # By default, it returns the first 100 documents. See document of GoogleDrive::Session#files method
     # for how to get all documents.
@@ -97,33 +101,39 @@ module GoogleDrive
       files_with_type('application/vnd.google-apps.document', params, &block)
     end
 
-    # Returns all its subcollections.
+    # Returns all its subfolders.
     #
-    # By default, it returns the first 100 subcollections. See document of GoogleDrive::Session#files method
-    # for how to get all subcollections.
+    # By default, it returns the first 100 subfolders. See document of GoogleDrive::Session#files method
+    # for how to get all subfolders.
     def subcollections(params = {}, &block)
       files_with_type('application/vnd.google-apps.folder', params, &block)
     end
+    
+    alias subfolders subcollections
 
-    # Returns a file (can be a spreadsheet, document, subcollection or other files) in the
-    # collection which exactly matches +title+ as GoogleDrive::File.
-    # Returns nil if not found. If multiple collections with the +title+ are found, returns
+    # Returns a file (can be a spreadsheet, document, subfolder or other files) in the
+    # folder which exactly matches +title+ as GoogleDrive::File.
+    # Returns nil if not found. If multiple folders with the +title+ are found, returns
     # one of them.
     #
-    # If given an Array, does a recursive subcollection traversal.
+    # If given an Array, does a recursive subfolder traversal.
     def file_by_title(title)
       file_by_title_with_type(title, nil)
     end
+    
+    alias file_by_name file_by_title
 
-    # Returns its subcollection whose title exactly matches +title+ as GoogleDrive::Collection.
-    # Returns nil if not found. If multiple collections with the +title+ are found, returns
+    # Returns its subfolder whose title exactly matches +title+ as GoogleDrive::Collection.
+    # Returns nil if not found. If multiple folders with the +title+ are found, returns
     # one of them.
     #
-    # If given an Array, does a recursive subcollection traversal.
+    # If given an Array, does a recursive subfolder traversal.
     def subcollection_by_title(title)
       file_by_title_with_type(title, 'application/vnd.google-apps.folder')
     end
 
+    alias subfolder_by_name subcollection_by_title
+    
     # Returns URL of the deprecated contents feed.
     def contents_url
       document_feed_url + '/contents'
@@ -144,6 +154,8 @@ module GoogleDrive
         files_with_type(type, q: ['name = ?', title], page_size: 1)[0]
       end
     end
+    
+    alias file_by_name_with_type file_by_title_with_type
 
     private
 
@@ -159,4 +171,6 @@ module GoogleDrive
       @session.files(params, &block)
     end
   end
+  
+  Folder = Collection
 end
