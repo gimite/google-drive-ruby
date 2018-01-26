@@ -63,7 +63,10 @@ If you are developing a web app, and want your web app user to authorize with th
      redirect_uri: "http://example.com/redirect")
    auth_url = credentials.authorization_uri
    ```
-1. Redirect the user to auth_url. It will redirect back to the redirect_uri you passed, with an authorization code.
+1. Redirect the user to auth_url. It will redirect back to the redirect_uri you passed, with an authorization code. You will have to unencode the Addressable auth_url before redirecting so it will look something like this:
+   ```ruby
+   redirect_to Addressable::URI.unencode_component(credentials.authorization_uri)
+   ```
 1. On access to the redirect_uri, construct a session object by this code:
    ```ruby
    credentials = ... same as above ...
