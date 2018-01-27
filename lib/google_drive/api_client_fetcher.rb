@@ -21,8 +21,8 @@ module GoogleDrive
       @drive = Google::Apis::DriveV3::DriveService.new
       @drive.authorization = authorization
 
-      # Make the timeout virtually infinite because some of the operations (e.g., uploading a large file)
-      # can take very long.
+      # Make the timeout virtually infinite because some of the operations
+      # (e.g., uploading a large file) can take very long.
       # This value is the maximal allowed timeout in seconds on JRuby.
       t = (2**31 - 1) / 1000
       @drive.client_options.open_timeout_sec = t

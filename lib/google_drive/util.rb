@@ -80,13 +80,16 @@ module GoogleDrive
     module_function
 
     def encode_query(params)
-      params.map { |k, v| CGI.escape(k.to_s) + '=' + CGI.escape(v.to_s) }.join('&')
+      params
+        .map { |k, v| CGI.escape(k.to_s) + '=' + CGI.escape(v.to_s) }
+        .join('&')
     end
 
     def concat_url(url, piece)
       (url_base, url_query) = url.split(/\?/, 2)
       (piece_base, piece_query) = piece.split(/\?/, 2)
-      result_query = [url_query, piece_query].select { |s| s && !s.empty? }.join('&')
+      result_query =
+        [url_query, piece_query].select { |s| s && !s.empty? }.join('&')
       (url_base || '') +
         (piece_base || '') +
         (result_query.empty? ? '' : "?#{result_query}")
@@ -107,7 +110,11 @@ module GoogleDrive
         if arg[0].scan(/\?/).size != arg.size - 1
           raise(
             ArgumentError,
-            format("The number of placeholders doesn't match the number of arguments: %p", arg)
+            format(
+              "The number of placeholders doesn't match the number of " \
+              'arguments: %p',
+              arg
+            )
           )
         end
         i = 1
@@ -124,18 +131,25 @@ module GoogleDrive
           when FalseClass
             'false'
           else
-            raise(ArgumentError, format('Expected String, Time, true or false, but got %p', v))
+            raise(
+              ArgumentError,
+              format('Expected String, Time, true or false, but got %p', v)
+            )
           end
         end
 
       else
-        raise(ArgumentError, format('Expected String or Array, but got %p', arg))
+        raise(
+          ArgumentError, format('Expected String or Array, but got %p', arg)
+        )
 
       end
     end
 
     def construct_and_query(args)
-      args.select { |a| a }.map { |a| format('(%s)', construct_query(a)) }.join(' and ')
+      args
+        .select { |a| a }.map { |a| format('(%s)', construct_query(a)) }
+        .join(' and ')
     end
 
     def convert_params(params)
@@ -181,7 +195,9 @@ module GoogleDrive
         when 'showdeleted'
           old_terms.push('trashed = false') if v.to_s == 'false'
         when 'ocr', 'targetLanguage', 'sourceLanguage'
-          raise(ArgumentError, format("'%s' parameter is no longer supported.", k))
+          raise(
+            ArgumentError, format("'%s' parameter is no longer supported.", k)
+          )
         else
           # e.g., 'pageToken' -> :page_token
           new_key = k
@@ -195,7 +211,10 @@ module GoogleDrive
 
       unless old_terms.empty?
         if new_params.key?(:q)
-          raise(ArgumentError, "Cannot specify both 'q' parameter and old query parameters.")
+          raise(
+            ArgumentError,
+            "Cannot specify both 'q' parameter and old query parameters."
+          )
         else
           new_params[:q] = construct_and_query(old_terms)
         end

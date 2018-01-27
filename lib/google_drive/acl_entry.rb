@@ -97,7 +97,8 @@ module GoogleDrive
     # If +false+, the file is shared only with people who know the link.
     # Only used for type "anyone".
     def allow_file_discovery
-      @params ? @params[:allow_file_discovery] : @api_permission.allow_file_discovery
+      @params ?
+        @params[:allow_file_discovery] : @api_permission.allow_file_discovery
     end
 
     # If +true+, the file is shared only with people who know the link.
@@ -124,11 +125,20 @@ module GoogleDrive
     def inspect
       case type
       when 'user', 'group'
-        format("\#<%p type=%p, email_address=%p, role=%p>", self.class, type, email_address, role)
+        format(
+          "\#<%p type=%p, email_address=%p, role=%p>",
+          self.class, type, email_address, role
+        )
       when 'domain'
-        format("\#<%p type=%p, domain=%p, role=%p>", self.class, type, domain, role)
+        format(
+          "\#<%p type=%p, domain=%p, role=%p>",
+          self.class, type, domain, role
+        )
       when 'anyone'
-        format("\#<%p type=%p, role=%p, allow_file_discovery=%p>", self.class, type, role, allow_file_discovery)
+        format(
+          "\#<%p type=%p, role=%p, allow_file_discovery=%p>",
+          self.class, type, role, allow_file_discovery
+        )
       else
         format("\#<%p type=%p, role=%p>", self.class, type, role)
       end

@@ -9,12 +9,14 @@ require 'google_drive/util'
 require 'google_drive/acl'
 
 module GoogleDrive
-  # A file in Google Drive, including Google Docs document/spreadsheet/presentation.
+  # A file in Google Drive, including a Google Docs
+  # document/spreadsheet/presentation and a folder.
   #
   # Use GoogleDrive::Session#files or GoogleDrive::Session#file_by_title to
   # get this object.
   #
-  # In addition to the methods below, properties defined here are also available as attributes:
+  # In addition to the methods below, properties defined here are also available
+  # as attributes:
   # https://developers.google.com/drive/v3/reference/files#resource
   #
   # e.g.,
@@ -36,7 +38,9 @@ module GoogleDrive
 
     # Reloads file metadata such as title and acl.
     def reload_metadata
-      @api_file = @session.drive.get_file(id, fields: '*', supports_team_drives: true)
+      @api_file = @session.drive.get_file(
+        id, fields: '*', supports_team_drives: true
+      )
       @acl = Acl.new(@session, self) if @acl
     end
 
@@ -47,7 +51,8 @@ module GoogleDrive
 
     # URL of feed used in the deprecated document list feed API.
     def document_feed_url
-      'https://docs.google.com/feeds/default/private/full/' + CGI.escape(resource_id)
+      'https://docs.google.com/feeds/default/private/full/' +
+        CGI.escape(resource_id)
     end
 
     # Deprecated ACL feed URL of the file.
@@ -75,11 +80,11 @@ module GoogleDrive
       api_file.web_view_link
     end
 
-    # Content types you can specify in methods download_to_file, download_to_string,
-    # download_to_io .
+    # Content types you can specify in methods download_to_file,
+    # download_to_string, download_to_io.
     #
-    # This returns zero or one file type. You may be able to download the file in other formats using
-    # export_as_file, export_as_string, or export_to_io.
+    # This returns zero or one file type. You may be able to download the file
+    # in other formats using export_as_file, export_as_string, or export_to_io.
     def available_content_types
       api_file.web_content_link ? [api_file.mime_type] : []
     end
@@ -121,7 +126,8 @@ module GoogleDrive
     #   spreadsheet.export_as_file("/path/to/hoge.csv")
     #   spreadsheet.export_as_file("/path/to/hoge", "text/csv")
     #
-    # If you want to download the file in the original format, use download_to_file instead.
+    # If you want to download the file in the original format,
+    # use download_to_file instead.
     def export_as_file(path, format = nil)
       unless format
         format = EXT_TO_CONTENT_TYPE[::File.extname(path).downcase]
@@ -139,7 +145,8 @@ module GoogleDrive
     # e.g.,
     #   spreadsheet.export_as_string("text/csv")
     #
-    # If you want to download the file in the original format, use download_to_string instead.
+    # If you want to download the file in the original format, use
+    # download_to_string instead.
     def export_as_string(format)
       sio = StringIO.new
       export_to_dest(sio, format)
@@ -148,7 +155,8 @@ module GoogleDrive
 
     # Export the file to +io+ in content type +format+.
     #
-    # If you want to download the file in the original format, use download_to_io instead.
+    # If you want to download the file in the original format, use
+    # download_to_io instead.
     def export_to_io(io, format)
       export_to_dest(io, format)
     end
@@ -166,7 +174,8 @@ module GoogleDrive
     # e.g.
     #   file.update_from_file("/path/to/hoge.txt")
     def update_from_file(path, params = {})
-      # Somehow it doesn't work if I specify the file name directly as upload_source.
+      # Somehow it doesn't work if I specify the file name directly as
+      # upload_source.
       open(path, 'rb') do |f|
         update_from_io(f, params)
       end

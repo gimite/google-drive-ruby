@@ -21,14 +21,15 @@ module GoogleDrive
       @session = session
       @file = file
       api_permissions = @session.drive.list_permissions(@file.id, fields: '*')
-      @entries = api_permissions.permissions.map { |perm| AclEntry.new(perm, self) }
+      @entries =
+        api_permissions.permissions.map { |perm| AclEntry.new(perm, self) }
     end
 
     def_delegators(:@entries, :size, :[], :each)
 
-    # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with keys
-    # +:type+, +:email_address+, +:domain+, +:role+ and +:allow_file_discovery+.
-    # See GoogleDrive::AclEntry#type and
+    # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with
+    # keys +:type+, +:email_address+, +:domain+, +:role+ and
+    # +:allow_file_discovery+. See GoogleDrive::AclEntry#type and
     # GoogleDrive::AclEntry#role for the document of the fields.
     #
     # Also you can pass the second hash argument +options+, which specifies
@@ -37,9 +38,9 @@ module GoogleDrive
     # * :email_message  -- A custom message to include in notification emails
     # * :send_notification_email  -- Whether to send notification emails
     #   when sharing to users or groups. (Default: true)
-    # * :transfer_ownership  -- Whether to transfer ownership to the specified user
-    #   and downgrade the current owner to a writer. This parameter is required as an
-    #   acknowledgement of the side effect. (Default: false)
+    # * :transfer_ownership  -- Whether to transfer ownership to the specified
+    #   user and downgrade the current owner to a writer. This parameter is
+    #   required as an acknowledgement of the side effect. (Default: false)
     #
     # e.g.
     #   # A specific user can read or write.
@@ -64,8 +65,11 @@ module GoogleDrive
     # See here for parameter detais:
     # https://developers.google.com/drive/v3/reference/permissions/create
     def push(params_or_entry, options = {})
-      entry = params_or_entry.is_a?(AclEntry) ? params_or_entry : AclEntry.new(params_or_entry)
-      api_permission = @session.drive.create_permission(@file.id, entry.params, { fields: '*' }.merge(options))
+      entry = params_or_entry.is_a?(AclEntry) ?
+        params_or_entry : AclEntry.new(params_or_entry)
+      api_permission = @session.drive.create_permission(
+        @file.id, entry.params, { fields: '*' }.merge(options)
+      )
       new_entry = AclEntry.new(api_permission, self)
       @entries.push(new_entry)
       new_entry
