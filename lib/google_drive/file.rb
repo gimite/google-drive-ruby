@@ -42,7 +42,7 @@ module GoogleDrive
 
     # Returns resource_type + ":" + id.
     def resource_id
-      '%s:%s' % [resource_type, id]
+      format('%s:%s', resource_type, id)
     end
 
     # URL of feed used in the deprecated document list feed API.
@@ -65,7 +65,7 @@ module GoogleDrive
       reload_metadata if params[:reload]
       api_file.name
     end
-    
+
     alias name title
 
     # URL to view/edit the file in a Web browser.
@@ -90,8 +90,9 @@ module GoogleDrive
     # To export the file in other formats, use export_as_file.
     def download_to_file(path, params = {})
       @session.drive.get_file(
-          id,
-          {download_dest: path, supports_team_drives: true}.merge(params))
+        id,
+        { download_dest: path, supports_team_drives: true }.merge(params)
+      )
     end
 
     # Downloads the file and returns as a String.
@@ -108,8 +109,9 @@ module GoogleDrive
     # To export the file in other formats, use export_to_io.
     def download_to_io(io, params = {})
       @session.drive.get_file(
-          id,
-          {download_dest: io, supports_team_drives: true}.merge(params))
+        id,
+        { download_dest: io, supports_team_drives: true }.merge(params)
+      )
     end
 
     # Export the file to +path+ in content type +format+.
@@ -124,10 +126,9 @@ module GoogleDrive
       unless format
         format = EXT_TO_CONTENT_TYPE[::File.extname(path).downcase]
         unless format
-          fail(ArgumentError,
-               ("Cannot guess format from the file name: %s\n" \
-                'Specify format argument explicitly.') %
-               path)
+          raise(ArgumentError,
+                format("Cannot guess format from the file name: %s\n" \
+                 'Specify format argument explicitly.', path))
         end
       end
       export_to_dest(path, format)
@@ -196,7 +197,7 @@ module GoogleDrive
       nil
     end
 
-    alias_method :title=, :rename
+    alias title= rename
 
     # Creates copy of this file with the given title.
     def copy(title)
@@ -204,7 +205,7 @@ module GoogleDrive
       @session.wrap_api_file(api_file)
     end
 
-    alias_method :duplicate, :copy
+    alias duplicate copy
 
     # Returns GoogleDrive::Acl object for the file.
     #
@@ -236,7 +237,7 @@ module GoogleDrive
     end
 
     def inspect
-      "\#<%p id=%p title=%p>" % [self.class, id, title]
+      format("\#<%p id=%p title=%p>", self.class, id, title)
     end
 
     private

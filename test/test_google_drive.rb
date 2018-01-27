@@ -12,7 +12,7 @@ ENV['SSL_CERT_FILE'] = Gem.loaded_specs['google-api-client'].full_gem_path + '/l
 
 class TestGoogleDrive < Test::Unit::TestCase
   # Random string is added to avoid conflict with existing file titles.
-  PREFIX = 'google-drive-ruby-test-4101301e303c-'
+  PREFIX = 'google-drive-ruby-test-4101301e303c-'.freeze
 
   @@session = nil
 
@@ -84,7 +84,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { session.spreadsheets.any? { |s| s.title == ss_title } }
     assert do
       session.spreadsheets('title' => ss_title, 'title-exact' => 'true')
-        .any? { |s| s.title == ss_title }
+             .any? { |s| s.title == ss_title }
     end
 
     ws2 = session.worksheet_by_url(ws.cells_feed_url)
@@ -94,7 +94,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     ss_copy = ss.duplicate(ss_copy_title)
     assert do
       session.spreadsheets('title' => ss_copy_title, 'title-exact' => 'true')
-        .any? { |s| s.title == ss_copy_title }
+             .any? { |s| s.title == ss_copy_title }
     end
     assert { ss_copy.worksheets[0][1, 1] == '3' }
 
@@ -104,10 +104,10 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ss5.title == ss_title }
 
     # Access via GoogleDrive::Worksheet#list.
-    ws.list.keys = %w(x y)
-    ws.list.push({ 'x' => '1', 'y' => '2' })
-    ws.list.push({ 'x' => '3', 'y' => '4' })
-    assert { ws.list.keys == %w(x y) }
+    ws.list.keys = %w[x y]
+    ws.list.push('x' => '1', 'y' => '2')
+    ws.list.push('x' => '3', 'y' => '4')
+    assert { ws.list.keys == %w[x y] }
     assert { ws.list.size == 2 }
     assert { ws.list[0]['x'] == '1' }
     assert { ws.list[0]['y'] == '2' }
@@ -141,10 +141,10 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[2, 1] == '555' }
 
     # Test of update_cells().
-    ws.update_cells(1, 1, [%w(1 2), %w(3 4)])
+    ws.update_cells(1, 1, [%w[1 2], %w[3 4]])
     assert { ws[1, 1] == '1' }
     assert { ws[2, 2] == '4' }
-    ws.update_cells(2, 1, [%w(5 6), %w(7 8)])
+    ws.update_cells(2, 1, [%w[5 6], %w[7 8]])
     assert { ws[1, 1] == '1' }
     assert { ws[2, 2] == '6' }
     assert { ws[3, 1] == '7' }
@@ -162,7 +162,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[2, 1] == '5' }
     assert { ws[3, 1] == '7' }
 
-    ws.insert_rows(2, [%w(9 10), %w(11 12)])
+    ws.insert_rows(2, [%w[9 10], %w[11 12]])
     assert { ws[1, 1] == '1' }
     assert { ws[2, 1] == '9' }
     assert { ws[2, 2] == '10' }
@@ -175,8 +175,8 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { session.spreadsheets(q: ['name = ? and trashed = false', ss_title]).empty? }
     delete_test_file(ss_copy, true)
     assert do
-      !session.spreadsheets('title' => ss_copy_title, 'title-exact' => 'true')
-        .any? { |s| s.title == ss_copy_title }
+      session.spreadsheets('title' => ss_copy_title, 'title-exact' => 'true')
+             .none? { |s| s.title == ss_copy_title }
     end
     delete_test_file(ss, true)
   end
@@ -212,7 +212,8 @@ class TestGoogleDrive < Test::Unit::TestCase
     collection2 = session.collection_by_url(collection.document_feed_url)
     assert { collection2.files.empty? }
     collection3 = session.collection_by_url(
-      'https://drive.google.com/#folders/%s' % collection.resource_id.split(/:/)[1])
+      format('https://drive.google.com/#folders/%s', collection.resource_id.split(/:/)[1])
+    )
     assert { collection3.files.empty? }
 
     # Uploads a test file.
@@ -220,7 +221,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     file = session.upload_from_file(test_file_path, test_file_title, convert: false)
     assert { file.is_a?(GoogleDrive::File) }
     assert { file.title == test_file_title }
-    assert { file.available_content_types == ["text/plain"] }
+    assert { file.available_content_types == ['text/plain'] }
     assert { file.download_to_string == File.read(test_file_path) }
 
     # Updates the content of the file.
@@ -279,7 +280,8 @@ class TestGoogleDrive < Test::Unit::TestCase
     # Ensure the collection is removed from Google Drive.
     assert do
       session.files(
-        'title' => test_collection_title, 'title-exact' => 'true', 'showfolders' => 'true').empty?
+        'title' => test_collection_title, 'title-exact' => 'true', 'showfolders' => 'true'
+      ).empty?
     end
   end
 
@@ -294,7 +296,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     end
 
     file = session.upload_from_string('hoge', test_file_title, content_type: 'text/plain', convert: false)
-    file.acl.push({ scope_type: 'anyone', with_key: true, role: 'reader' })
+    file.acl.push(scope_type: 'anyone', with_key: true, role: 'reader')
     acl = file.acl(reload: true)
     assert { acl.size == 2 }
 
@@ -324,18 +326,16 @@ class TestGoogleDrive < Test::Unit::TestCase
       account_path = File.join(File.dirname(__FILE__), 'account.yaml')
       config_path = File.join(File.dirname(__FILE__), 'config.json')
       if File.exist?(account_path)
-        fail(("%s is deprecated. Please delete it.\n" +
-            "Instead, follow one of the instructions here to create either " +
-            "config.json or a service account key JSON file and put it at %s:\n" +
-            "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use") %
-                [account_path, config_path])
+        raise(format("%s is deprecated. Please delete it.\n" \
+            'Instead, follow one of the instructions here to create either ' \
+            "config.json or a service account key JSON file and put it at %s:\n" \
+            "https://github.com/gimite/google-drive-ruby/blob/master/README.md\#how-to-use", account_path, config_path))
       end
-      if !File.exist?(config_path)
-        fail(("%s is missing.\n" +
-            "Follow one of the instructions here to create either config.json or a " +
-            "service account key JSON file and put it at %s:\n" +
-            "https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md") %
-                [config_path, config_path])
+      unless File.exist?(config_path)
+        raise(format("%s is missing.\n" \
+            'Follow one of the instructions here to create either config.json or a ' \
+            "service account key JSON file and put it at %s:\n" \
+            'https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md', config_path, config_path))
       end
 
       @@session = GoogleDrive::Session.from_config(config_path)
@@ -349,7 +349,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     if file.title =~ Regexp.new("\\A#{esc_prefix}")
       file.delete(permanent)
     else
-      fail('Trying to delete non-test file: %p' % file)
+      raise(format('Trying to delete non-test file: %p', file))
     end
   end
 end

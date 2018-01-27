@@ -6,7 +6,7 @@ require 'json'
 module GoogleDrive
   # @api private
   class Config
-    FIELDS = %w(client_id client_secret scope refresh_token type).freeze
+    FIELDS = %w[client_id client_secret scope refresh_token type].freeze
     attr_accessor(*FIELDS)
 
     def initialize(config_path)
@@ -19,7 +19,7 @@ module GoogleDrive
     end
 
     def save
-      ::File.open(@config_path, 'w', 0600) { |f| f.write(to_json) }
+      ::File.open(@config_path, 'w', 0o600) { |f| f.write(to_json) }
     end
 
     private

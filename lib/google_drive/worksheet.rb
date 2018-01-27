@@ -19,7 +19,7 @@ module GoogleDrive
     # A regexp which matches an invalid character in XML 1.0:
     # https://en.wikipedia.org/wiki/Valid_characters_in_XML#XML_1.0
     XML_INVAILD_CHAR_REGEXP =
-        /[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/
+      /[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/
 
     # @api private
     def initialize(session, spreadsheet, worksheet_feed_entry)
@@ -46,7 +46,8 @@ module GoogleDrive
     # URL of cell-based feed of the worksheet.
     def cells_feed_url
       @worksheet_feed_entry.css(
-        "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']")[0]['href']
+        "link[rel='http://schemas.google.com/spreadsheets/2006#cellsfeed']"
+      )[0]['href']
     end
 
     # URL of worksheet feed URL of the worksheet.
@@ -57,7 +58,8 @@ module GoogleDrive
     # URL to export the worksheet as CSV.
     def csv_export_url
       @worksheet_feed_entry.css(
-        "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']")[0]['href']
+        "link[rel='http://schemas.google.com/spreadsheets/2006#exportcsv']"
+      )[0]['href']
     end
 
     # Exports the worksheet as String in CSV format.
@@ -79,15 +81,15 @@ module GoogleDrive
 
     # URL to view/edit the worksheet in a Web browser.
     def human_url
-      "%s\#gid=%s" % [spreadsheet.human_url, gid]
+      format("%s\#gid=%s", spreadsheet.human_url, gid)
     end
 
     # GoogleDrive::Spreadsheet which this worksheet belongs to.
     def spreadsheet
       unless @spreadsheet
         unless worksheet_feed_url =~ %r{https?://spreadsheets\.google\.com/feeds/worksheets/(.*)/(.*)$}
-          fail(GoogleDrive::Error,
-               "Worksheet feed URL is in unknown format: #{worksheet_feed_url}")
+          raise(GoogleDrive::Error,
+                "Worksheet feed URL is in unknown format: #{worksheet_feed_url}")
         end
         @spreadsheet = @session.file_by_id(Regexp.last_match(1))
       end
@@ -183,7 +185,7 @@ module GoogleDrive
       reload_cells unless @cells
       # Memoizes it because this can be bottle-neck.
       # https://github.com/gimite/google-drive-ruby/pull/49
-      @num_rows ||= @input_values.select { |(_r, _c), v| !v.empty? }.map { |(r, _c), _v| r }.max || 0
+      @num_rows ||= @input_values.reject { |(_r, _c), v| v.empty? }.map { |(r, _c), _v| r }.max || 0
     end
 
     # Column number of the right-most non-empty column.
@@ -191,7 +193,7 @@ module GoogleDrive
       reload_cells unless @cells
       # Memoizes it because this can be bottle-neck.
       # https://github.com/gimite/google-drive-ruby/pull/49
-      @num_cols ||= @input_values.select { |(_r, _c), v| !v.empty? }.map { |(_r, c), _v| c }.max || 0
+      @num_cols ||= @input_values.reject { |(_r, _c), v| v.empty? }.map { |(_r, c), _v| c }.max || 0
     end
 
     # Number of rows including empty rows.
@@ -257,7 +259,7 @@ module GoogleDrive
       self.max_rows += rows.size
       num_rows.downto(row_num) do |r|
         (1..num_cols).each do |c|
-          self[r + rows.size, c] = self.input_value(r, c)
+          self[r + rows.size, c] = input_value(r, c)
         end
       end
 
@@ -281,11 +283,11 @@ module GoogleDrive
     # worksheet contains inter-cell reference.
     def delete_rows(row_num, rows)
       if row_num + rows - 1 > self.max_rows
-        fail(ArgumentError, 'The row number is out of range')
+        raise(ArgumentError, 'The row number is out of range')
       end
       for r in row_num..(self.max_rows - rows)
         for c in 1..num_cols
-          self[r, c] = self.input_value(r + rows, c)
+          self[r, c] = input_value(r + rows, c)
         end
       end
       self.max_rows -= rows
@@ -317,7 +319,8 @@ module GoogleDrive
 
         result = @session.request(
           :put, edit_url, data: xml,
-                          header: { 'Content-Type' => 'application/atom+xml;charset=utf-8', 'If-Match' => '*' })
+                          header: { 'Content-Type' => 'application/atom+xml;charset=utf-8', 'If-Match' => '*' }
+        )
         set_worksheet_feed_entry(result.root)
 
         sent = true
@@ -354,8 +357,8 @@ module GoogleDrive
           id        = entry.css('id').text
           edit_link = entry.css("link[rel='edit']")[0]
           unless edit_link
-            fail(GoogleDrive::Error,
-                 "The user doesn't have write permission to the spreadsheet: %p" % spreadsheet)
+            raise(GoogleDrive::Error,
+                  format("The user doesn't have write permission to the spreadsheet: %p", spreadsheet))
           end
           edit_url = edit_link['href']
           xml << <<-EOS
@@ -378,16 +381,15 @@ module GoogleDrive
           :post,
           batch_url,
           data: xml,
-          header: { 'Content-Type' => 'application/atom+xml;charset=utf-8', 'If-Match' => '*' })
+          header: { 'Content-Type' => 'application/atom+xml;charset=utf-8', 'If-Match' => '*' }
+        )
         result.css('entry').each do |entry|
           interrupted = entry.css('batch|interrupted')[0]
           if interrupted
-            fail(GoogleDrive::Error, 'Update has failed: %s' %
-                                     interrupted['reason'])
+            raise(GoogleDrive::Error, format('Update has failed: %s', interrupted['reason']))
           end
           unless entry.css('batch|status').first['code'] =~ /^2/
-            fail(GoogleDrive::Error, 'Updating cell %s has failed: %s' %
-                                     [entry.css('id').text, entry.css('batch|status')[0]['reason']])
+            raise(GoogleDrive::Error, format('Updating cell %s has failed: %s', entry.css('id').text, entry.css('batch|status')[0]['reason']))
           end
         end
 
@@ -420,7 +422,8 @@ module GoogleDrive
     # List feed URL of the worksheet.
     def list_feed_url
       @worksheet_feed_entry.css(
-        "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']")[0]['href']
+        "link[rel='http://schemas.google.com/spreadsheets/2006#listfeed']"
+      )[0]['href']
     end
 
     # Provides access to cells using column names, assuming the first row contains column
@@ -444,12 +447,11 @@ module GoogleDrive
     #   worksheet.cell_name_to_row_col("C2")  #=> [2, 3]
     def cell_name_to_row_col(cell_name)
       unless cell_name.is_a?(String)
-        fail(ArgumentError, 'Cell name must be a string: %p' % cell_name)
+        raise(ArgumentError, format('Cell name must be a string: %p', cell_name))
       end
       unless cell_name.upcase =~ /^([A-Z]+)(\d+)$/
-        fail(ArgumentError,
-             'Cell name must be only letters followed by digits with no spaces in between: %p' %
-                 cell_name)
+        raise(ArgumentError,
+              format('Cell name must be only letters followed by digits with no spaces in between: %p', cell_name))
       end
       col = 0
       Regexp.last_match(1).each_byte do |b|
@@ -463,7 +465,7 @@ module GoogleDrive
     def inspect
       fields = { worksheet_feed_url: worksheet_feed_url }
       fields[:title] = @title if @title
-      "\#<%p %s>" % [self.class, fields.map { |k, v| '%s=%p' % [k, v] }.join(', ')]
+      format("\#<%p %s>", self.class, fields.map { |k, v| format('%s=%p', k, v) }.join(', '))
     end
 
     private
@@ -475,7 +477,7 @@ module GoogleDrive
       @updated = Time.parse(entry.css('updated').text)
       @meta_modified = false
     end
-    
+
     def set_max_values(entry)
       @max_rows = entry.css('gs|rowCount').text.to_i
       @max_cols = entry.css('gs|colCount').text.to_i
@@ -504,23 +506,23 @@ module GoogleDrive
 
     def parse_cell_args(args)
       if args.size == 1 && args[0].is_a?(String)
-        return cell_name_to_row_col(args[0])
+        cell_name_to_row_col(args[0])
       elsif args.size == 2 && args[0].is_a?(Integer) && args[1].is_a?(Integer)
         if args[0] >= 1 && args[1] >= 1
-          return args
+          args
         else
-          fail(ArgumentError,
-               'Row/col must be >= 1 (1-origin), but are %d/%d' % [args[0], args[1]])
+          raise(ArgumentError,
+                format('Row/col must be >= 1 (1-origin), but are %d/%d', args[0], args[1]))
         end
       else
-        fail(ArgumentError,
-             "Arguments must be either one String or two Integer's, but are %p" % [args])
+        raise(ArgumentError,
+              format("Arguments must be either one String or two Integer's, but are %p", args))
       end
     end
 
     def validate_cell_value(value)
       if value =~ XML_INVAILD_CHAR_REGEXP
-        fail(ArgumentError, 'Contains invalid character %p for XML 1.0: %p' % [$&, value])
+        raise(ArgumentError, format('Contains invalid character %p for XML 1.0: %p', $&, value))
       end
     end
   end

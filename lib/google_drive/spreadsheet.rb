@@ -17,7 +17,7 @@ module GoogleDrive
   class Spreadsheet < GoogleDrive::File
     include(Util)
 
-    SUPPORTED_EXPORT_FORMAT = Set.new(%w(xlsx csv pdf))
+    SUPPORTED_EXPORT_FORMAT = Set.new(%w[xlsx csv pdf])
 
     # Key of the spreadsheet.
     def key
@@ -26,8 +26,7 @@ module GoogleDrive
 
     # URL of worksheet-based feed of the spreadsheet.
     def worksheets_feed_url
-      'https://spreadsheets.google.com/feeds/worksheets/%s/private/full' %
-        id
+      format('https://spreadsheets.google.com/feeds/worksheets/%s/private/full', id)
     end
 
     # URL of feed used in the deprecated document list feed API.
@@ -44,9 +43,8 @@ module GoogleDrive
     def worksheets
       doc = @session.request(:get, worksheets_feed_url)
       if doc.root.name != 'feed'
-        fail(GoogleDrive::Error,
-             "%s doesn't look like a worksheets feed URL because its root is not <feed>." %
-             worksheets_feed_url)
+        raise(GoogleDrive::Error,
+              format("%s doesn't look like a worksheets feed URL because its root is not <feed>.", worksheets_feed_url))
       end
       doc.css('entry').map { |e| Worksheet.new(@session, self, e) }.freeze
     end
@@ -82,27 +80,30 @@ module GoogleDrive
     end
 
     # Not available for GoogleDrive::Spreadsheet. Use export_as_file instead.
-    def download_to_file(path, params = {})
+    def download_to_file(_path, _params = {})
       raise(
-          NotImplementedError,
-          "download_to_file is not available for GoogleDrive::Spreadsheet. " +
-          "Use export_as_file instead.")
+        NotImplementedError,
+        'download_to_file is not available for GoogleDrive::Spreadsheet. ' \
+        'Use export_as_file instead.'
+      )
     end
 
     # Not available for GoogleDrive::Spreadsheet. Use export_as_string instead.
-    def download_to_string(params = {})
+    def download_to_string(_params = {})
       raise(
-          NotImplementedError,
-          "download_to_string is not available for GoogleDrive::Spreadsheet. " +
-          "Use export_as_string instead.")
+        NotImplementedError,
+        'download_to_string is not available for GoogleDrive::Spreadsheet. ' \
+        'Use export_as_string instead.'
+      )
     end
 
     # Not available for GoogleDrive::Spreadsheet. Use export_to_io instead.
-    def download_to_io(io, params = {})
+    def download_to_io(_io, _params = {})
       raise(
-          NotImplementedError,
-          "download_to_io is not available for GoogleDrive::Spreadsheet. " +
-          "Use export_to_io instead.")
+        NotImplementedError,
+        'download_to_io is not available for GoogleDrive::Spreadsheet. ' \
+        'Use export_to_io instead.'
+      )
     end
   end
 end

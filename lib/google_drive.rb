@@ -18,11 +18,13 @@ module GoogleDrive
       config = ENV['HOME'] + '/.ruby_google_drive.token',
       proxy = nil,
       client_id = nil,
-      client_secret = nil)
+      client_secret = nil
+  )
     if proxy
-      fail(
+      raise(
         ArgumentError,
-        'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.')
+        'Specifying a proxy object is no longer supported. Set ENV["http_proxy"] instead.'
+      )
     end
 
     Session.from_config(config, client_id: client_id, client_secret: client_secret)

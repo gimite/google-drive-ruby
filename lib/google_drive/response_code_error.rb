@@ -12,7 +12,7 @@ module GoogleDrive
     def initialize(code, body, method, url)
       @code = code
       @body = body
-      super('Response code %s for %s %s: %s' % [code, method, url, CGI.unescapeHTML(body)])
+      super(format('Response code %s for %s %s: %s', code, method, url, CGI.unescapeHTML(body)))
     end
 
     attr_reader(:code, :body)

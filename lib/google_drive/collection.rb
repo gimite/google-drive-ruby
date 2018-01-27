@@ -17,13 +17,13 @@ module GoogleDrive
 
     # Adds the given GoogleDrive::File to the folder.
     def add(file)
-      @session.drive.update_file(file.id, add_parents: self.id, fields: '', supports_team_drives: true)
+      @session.drive.update_file(file.id, add_parents: id, fields: '', supports_team_drives: true)
       nil
     end
 
     # Removes the given GoogleDrive::File from the folder.
     def remove(file)
-      @session.drive.update_file(file.id, remove_parents: self.id, fields: '', supports_team_drives: true)
+      @session.drive.update_file(file.id, remove_parents: id, fields: '', supports_team_drives: true)
     end
 
     # Creates a sub-folder with given title. Returns GoogleDrive::Collection object.
@@ -31,12 +31,12 @@ module GoogleDrive
       file_metadata = {
         name: title,
         mime_type: 'application/vnd.google-apps.folder',
-        parents: [self.id],
+        parents: [id]
       }
       file = @session.drive.create_file(file_metadata, fields: '*', supports_team_drives: true)
       @session.wrap_api_file(file)
     end
-    
+
     alias create_subfolder create_subcollection
 
     # Returns true if this is a root folder.
@@ -67,23 +67,23 @@ module GoogleDrive
 
     # Uploads a file to this folder. See Session#upload_from_file for details.
     def upload_from_file(path, title = nil, params = {})
-      params = {parents: [self.id]}.merge(params)
+      params = { parents: [id] }.merge(params)
       @session.upload_from_file(path, title, params)
     end
 
     # Uploads a file to this folder. See Session#upload_from_io for details.
     def upload_from_io(io, title = 'Untitled', params = {})
-      params = {parents: [self.id]}.merge(params)
+      params = { parents: [id] }.merge(params)
       @session.upload_from_io(io, title, params)
     end
 
     # Uploads a file to this folder. See Session#upload_from_string for details.
     def upload_from_string(content, title = 'Untitled', params = {})
-      params = {parents: [self.id]}.merge(params)
+      params = { parents: [id] }.merge(params)
       @session.upload_from_string(content, title, params)
     end
 
-    alias_method :contents, :files
+    alias contents files
 
     # Returns all the spreadsheets in the folder.
     #
@@ -108,7 +108,7 @@ module GoogleDrive
     def subcollections(params = {}, &block)
       files_with_type('application/vnd.google-apps.folder', params, &block)
     end
-    
+
     alias subfolders subcollections
 
     # Returns a file (can be a spreadsheet, document, subfolder or other files) in the
@@ -120,7 +120,7 @@ module GoogleDrive
     def file_by_title(title)
       file_by_title_with_type(title, nil)
     end
-    
+
     alias file_by_name file_by_title
 
     # Returns its subfolder whose title exactly matches +title+ as GoogleDrive::Collection.
@@ -133,7 +133,7 @@ module GoogleDrive
     end
 
     alias subfolder_by_name subcollection_by_title
-    
+
     # Returns URL of the deprecated contents feed.
     def contents_url
       document_feed_url + '/contents'
@@ -154,7 +154,7 @@ module GoogleDrive
         files_with_type(type, q: ['name = ?', title], page_size: 1)[0]
       end
     end
-    
+
     alias file_by_name_with_type file_by_title_with_type
 
     private
@@ -162,15 +162,15 @@ module GoogleDrive
     def files_with_type(type, params = {}, &block)
       params = convert_params(params)
       query  = construct_and_query([
-        ['? in parents', id],
-        type ? ['mimeType = ?', type] : nil,
-        params[:q]
-      ])
+                                     ['? in parents', id],
+                                     type ? ['mimeType = ?', type] : nil,
+                                     params[:q]
+                                   ])
       params = params.merge(q: query)
       # This is faster than calling children.list and then files.get for each file.
       @session.files(params, &block)
     end
   end
-  
+
   Folder = Collection
 end
