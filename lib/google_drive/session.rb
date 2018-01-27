@@ -67,7 +67,9 @@ module GoogleDrive
     # See
     # https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md
     # for a usage example.
-    def self.from_service_account_key(json_key_path_or_io, scope = DEFAULT_SCOPE)
+    def self.from_service_account_key(
+        json_key_path_or_io, scope = DEFAULT_SCOPE
+    )
       if json_key_path_or_io.is_a?(String)
         open(json_key_path_or_io) do |f|
           from_service_account_key(f, scope)
