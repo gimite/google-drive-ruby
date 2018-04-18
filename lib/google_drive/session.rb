@@ -427,7 +427,9 @@ module GoogleDrive
         name:    title,
         mime_type: 'application/vnd.google-apps.spreadsheet'
       }
-      file = drive.create_file(file_metadata, fields: '*')
+      file = drive.create_file(
+        file_metadata, fields: '*', supports_team_drives: true
+      )
       wrap_api_file(file)
     end
 

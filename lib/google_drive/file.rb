@@ -184,7 +184,7 @@ module GoogleDrive
 
     # Reads content from +io+ and updates the file with the content.
     def update_from_io(io, params = {})
-      params = { upload_source: io }.merge(params)
+      params = { upload_source: io, supports_team_drives: true }.merge(params)
       @session.drive.update_file(id, nil, params)
       nil
     end
@@ -193,16 +193,20 @@ module GoogleDrive
     # If +permanent+ is +true+, deletes the file permanently.
     def delete(permanent = false)
       if permanent
-        @session.drive.delete_file(id)
+        @session.drive.delete_file(id, supports_team_drives: true)
       else
-        @session.drive.update_file(id, { trashed: true }, {})
+        @session.drive.update_file(
+          id, { trashed: true }, supports_team_drives: true
+        )
       end
       nil
     end
 
     # Renames title of the file.
     def rename(title)
-      @session.drive.update_file(id, { name: title }, {})
+      @session.drive.update_file(
+        id, { name: title }, supports_team_drives: true
+      )
       nil
     end
 
@@ -210,7 +214,9 @@ module GoogleDrive
 
     # Creates copy of this file with the given title.
     def copy(title)
-      api_file = @session.drive.copy_file(id, { name: title }, fields: '*')
+      api_file = @session.drive.copy_file(
+        id, { name: title }, fields: '*', supports_team_drives: true
+      )
       @session.wrap_api_file(api_file)
     end
 
