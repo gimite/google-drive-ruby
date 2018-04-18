@@ -73,7 +73,16 @@ If you are developing a web app, and want your web app user to authorize with th
 
    ```
 
-The session above expires in 1 hour. If you want to restore a session afterwards, you can store credentials.refresh_token after credentials.fetch_access_token! above, and use this code:
+The session above expires in 1 hour. If you want to restore a session afterwards, add `additional_parameters: { "access_type" => "offline" }` to the argument of Google::Auth::UserRefreshCredentials.new:
+
+```ruby
+credentials = Google::Auth::UserRefreshCredentials.new(
+  ... same as above ...
+  additional_parameters: { "access_type" => "offline" })
+auth_url = credentials.authorization_uri
+```
+
+Then store credentials.refresh_token after credentials.fetch_access_token! above. Later, use this code to restore the session:
 
 ```ruby
 credentials = ... same as above ...
