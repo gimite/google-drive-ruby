@@ -420,7 +420,7 @@ module GoogleDrive
 
     # Creates a sub-folder with given title. Returns GoogleDrive::Collection
     # object.
-    def create_subcollection(title, file_properties = {})
+    def create_collection(title, file_properties = {})
       create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
     end
 
