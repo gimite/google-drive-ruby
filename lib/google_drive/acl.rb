@@ -14,6 +14,7 @@ module GoogleDrive
   # This code is based on https://github.com/guyboertje/gdata-spreadsheet-ruby .
   class Acl
     include(Util)
+    include(Enumerable)
     extend(Forwardable)
 
     # @api private
