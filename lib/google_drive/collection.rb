@@ -34,12 +34,33 @@ module GoogleDrive
 
     # Creates a sub-folder with given title. Returns GoogleDrive::Collection
     # object.
-    def create_subcollection(title)
-      create_file(title, mime_type: 'application/vnd.google-apps.folder')
+    def create_subcollection(title, file_properties = {})
+      create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
     end
 
     alias create_subfolder create_subcollection
 
+    # Creates a spreadsheet with given title. Returns GoogleDrive::Spreadsheet
+    # object.
+    def create_spreadsheet(title, file_properties = {})
+      create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.spreadsheet'))
+    end
+
+    # Creates a file with given title and properties. Returns objects
+    # with the following types: GoogleDrive::Spreadsheet, GoogleDrive::File,
+    # GoogleDrive::Collection
+    #
+    # You can pass a MIME Type using the file_properties-function parameter,
+    # for example: create_file('Document Title', mime_type: 'application/vnd.google-apps.document')
+    #
+    # A list of available Drive MIME Types can be found here:
+    # https://developers.google.com/drive/v3/web/mime-types
+    #
+    # A list of official MIME types can be found here:
+    # http://www.iana.org/assignments/media-types/media-types.xhtml
+    # These can be used as well.
+    #
+    # The default mime_type of Google Drive is application/octet-stream
     def create_file(title, file_properties = {})
       file_metadata = {
         name: title,
