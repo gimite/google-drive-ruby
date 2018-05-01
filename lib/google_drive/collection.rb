@@ -40,11 +40,11 @@ module GoogleDrive
 
     alias create_subfolder create_subcollection
 
-    def create_file(title, params = {})
+    def create_file(title, file_properties = {})
       file_metadata = {
         name: title,
         parents: [id]
-      }.merge(params)
+      }.merge(file_properties)
 
       file = @session.drive.create_file(
         file_metadata, fields: '*', supports_team_drives: true
