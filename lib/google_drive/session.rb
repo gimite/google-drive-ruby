@@ -418,18 +418,41 @@ module GoogleDrive
 
     alias folder_by_url collection_by_url
 
-    # Creates new spreadsheet and returns the new GoogleDrive::Spreadsheet.
+    # Creates a top-level folder with given title. Returns GoogleDrive::Collection
+    # object.
+    def create_collection(title, file_properties = {})
+      create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
+    end
+
+    alias create_subfolder create_subcollection
+
+    # Creates a spreadsheet with given title. Returns GoogleDrive::Spreadsheet
+    # object.
     #
     # e.g.
     #   session.create_spreadsheet("My new sheet")
-    def create_spreadsheet(title = 'Untitled')
+    def create_spreadsheet(title = 'Untitled', file_properties = {})
+      create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.spreadsheet'))
+    end
+
+    # Creates a file with given title and properties. Returns objects
+    # with the following types: GoogleDrive::Spreadsheet, GoogleDrive::File,
+    # GoogleDrive::Collection
+    #
+    # You can pass a MIME Type using the file_properties-function parameter,
+    # for example: create_file('Document Title', mime_type: 'application/vnd.google-apps.document')
+    #
+    # A list of available Drive MIME Types can be found here:
+    # https://developers.google.com/drive/v3/web/mime-types
+    def create_file(title, file_properties = {})
       file_metadata = {
-        name:    title,
-        mime_type: 'application/vnd.google-apps.spreadsheet'
-      }
+        name: title,
+      }.merge(file_properties)
+
       file = drive.create_file(
         file_metadata, fields: '*', supports_team_drives: true
       )
+
       wrap_api_file(file)
     end
 
