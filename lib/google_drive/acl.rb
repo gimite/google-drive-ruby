@@ -27,7 +27,9 @@ module GoogleDrive
         api_permissions.permissions.map { |perm| AclEntry.new(perm, self) }
     end
 
-    def_delegators(:@entries, :size, :[], :each)
+    def_delegators(:@entries, :size, :[], :each, :map, :any?, :sample, :select,
+                              :last, :length, :index, :bsearch, :at, :first,
+                              :include?, :index, :count)
 
     # Adds a new entry. +entry+ is either a GoogleDrive::AclEntry or a Hash with
     # keys +:type+, +:email_address+, +:domain+, +:role+ and
