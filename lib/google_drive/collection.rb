@@ -35,18 +35,23 @@ module GoogleDrive
     # Creates a sub-folder with given title. Returns GoogleDrive::Collection
     # object.
     def create_subcollection(title)
-      file_metadata = {
-        name: title,
-        mime_type: 'application/vnd.google-apps.folder',
-        parents: [id]
-      }
-      file = @session.drive.create_file(
-        file_metadata, fields: '*', supports_team_drives: true
-      )
-      @session.wrap_api_file(file)
+      create_file(mime_type: 'application/vnd.google-apps.folder')
     end
 
     alias create_subfolder create_subcollection
+
+    def create_file(title, params = {})
+      file_metadata = {
+        name: title,
+        parents: [id]
+      }.merge(params)
+
+      file = @session.drive.create_file(
+        file_metadata, fields: '*', supports_team_drives: true
+      )
+
+      @session.wrap_api_file(file)
+    end
 
     # Returns true if this is a root folder.
     def root?
