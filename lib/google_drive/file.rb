@@ -213,9 +213,9 @@ module GoogleDrive
     alias title= rename
 
     # Creates copy of this file with the given title.
-    def copy(title)
+    def copy(title, params = {})
       api_file = @session.drive.copy_file(
-        id, { name: title }, fields: '*', supports_team_drives: true
+        id, { name: title }.merge(params), fields: '*', supports_team_drives: true
       )
       @session.wrap_api_file(api_file)
     end
