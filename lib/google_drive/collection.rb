@@ -35,7 +35,7 @@ module GoogleDrive
     # Creates a sub-folder with given title. Returns GoogleDrive::Collection
     # object.
     def create_subcollection(title)
-      create_file(mime_type: 'application/vnd.google-apps.folder')
+      create_file(title, mime_type: 'application/vnd.google-apps.folder')
     end
 
     alias create_subfolder create_subcollection
