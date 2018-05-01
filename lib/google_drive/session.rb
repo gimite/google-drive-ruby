@@ -424,7 +424,7 @@ module GoogleDrive
       create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
     end
 
-    alias create_subfolder create_subcollection
+    alias create_folder create_collection
 
     # Creates a spreadsheet with given title. Returns GoogleDrive::Spreadsheet
     # object.
