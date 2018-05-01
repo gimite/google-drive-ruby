@@ -418,7 +418,7 @@ module GoogleDrive
 
     alias folder_by_url collection_by_url
 
-    # Creates a sub-folder with given title. Returns GoogleDrive::Collection
+    # Creates a top-level folder with given title. Returns GoogleDrive::Collection
     # object.
     def create_collection(title, file_properties = {})
       create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
@@ -444,12 +444,6 @@ module GoogleDrive
     #
     # A list of available Drive MIME Types can be found here:
     # https://developers.google.com/drive/v3/web/mime-types
-    #
-    # A list of official MIME types can be found here:
-    # http://www.iana.org/assignments/media-types/media-types.xhtml
-    # These can be used as well.
-    #
-    # The default mime_type of Google Drive is application/octet-stream
     def create_file(title, file_properties = {})
       file_metadata = {
         name: title,
