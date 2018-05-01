@@ -418,6 +418,14 @@ module GoogleDrive
 
     alias folder_by_url collection_by_url
 
+    # Creates a sub-folder with given title. Returns GoogleDrive::Collection
+    # object.
+    def create_subcollection(title, file_properties = {})
+      create_file(title, file_properties.merge(mime_type: 'application/vnd.google-apps.folder'))
+    end
+
+    alias create_subfolder create_subcollection
+
     # Creates a spreadsheet with given title. Returns GoogleDrive::Spreadsheet
     # object.
     #
