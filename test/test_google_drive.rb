@@ -336,23 +336,23 @@ class TestGoogleDrive < Test::Unit::TestCase
       'hoge', test_file_title, content_type: 'text/plain', convert: false
     )
     file.acl.push(scope_type: 'anyone', with_key: true, role: 'reader')
-    acl = file.acl(reload: true)
+    acl = file.acl(reload: true).sort_by { |e| e.scope_type }
     assert { acl.size == 2 }
+    
+    assert { acl[0].scope_type == 'anyone' }
+    assert { acl[0].with_key }
+    assert { acl[0].role == 'reader' }
+    assert { acl[0].value.nil? }
 
-    assert { acl[0].scope_type == 'user' }
-    assert { !acl[0].with_key }
-    assert { acl[0].role == 'owner' }
-    assert { !acl[0].value.nil? }
+    assert { acl[1].scope_type == 'user' }
+    assert { !acl[1].with_key }
+    assert { acl[1].role == 'owner' }
+    assert { !acl[1].value.nil? }
 
-    assert { acl[1].scope_type == 'anyone' }
-    assert { acl[1].with_key }
-    assert { acl[1].role == 'reader' }
-    assert { acl[1].value.nil? }
-
-    acl[1].role = 'writer'
-    assert { acl[1].role == 'writer' }
-    acl = file.acl(reload: true)
-    assert { acl[1].role == 'writer' }
+    acl[0].role = 'writer'
+    assert { acl[0].role == 'writer' }
+    acl = file.acl(reload: true).sort_by { |e| e.scope_type }
+    assert { acl[0].role == 'writer' }
 
     delete_test_file(file, true)
   end
