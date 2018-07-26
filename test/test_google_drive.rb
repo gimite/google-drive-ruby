@@ -228,6 +228,9 @@ class TestGoogleDrive < Test::Unit::TestCase
     )
     assert { collection3.files.empty? }
 
+    collection4 = session.collection_by_key(collection.key)
+    assert { collection4.files.empty? }
+
     # Uploads a test file.
     test_file_path = File.join(File.dirname(__FILE__), 'test_file.txt')
     file = session.upload_from_file(
@@ -394,7 +397,7 @@ class TestGoogleDrive < Test::Unit::TestCase
         )
       end
 
-      @@session = GoogleDrive::Session.from_config(config_path)
+      @@session = GoogleDrive::Session.from_config('config.json')
     end
     @@session
   end
