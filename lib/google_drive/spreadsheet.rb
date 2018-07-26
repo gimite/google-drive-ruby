@@ -20,11 +20,6 @@ module GoogleDrive
 
     SUPPORTED_EXPORT_FORMAT = Set.new(%w[xlsx csv pdf])
 
-    # Key of the spreadsheet.
-    def key
-      id
-    end
-    
     # URL of worksheet-based feed of the spreadsheet.
     def worksheets_feed_url
       format(
