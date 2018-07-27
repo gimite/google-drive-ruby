@@ -44,11 +44,6 @@ module GoogleDrive
       @acl = Acl.new(@session, self) if @acl
     end
 
-    # Key of the spreadsheet.
-    def key
-      id
-    end
-    
     # Returns resource_type + ":" + id.
     def resource_id
       format('%s:%s', resource_type, id)
