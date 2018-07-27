@@ -228,7 +228,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     )
     assert { collection3.files.empty? }
 
-    collection4 = session.collection_by_key(collection.key)
+    collection4 = session.collection_by_id(collection.id)
     assert { collection4.files.empty? }
 
     # Uploads a test file.
