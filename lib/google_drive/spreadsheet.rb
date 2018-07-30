@@ -24,7 +24,7 @@ module GoogleDrive
     def key
       id
     end
-
+    
     # URL of worksheet-based feed of the spreadsheet.
     def worksheets_feed_url
       format(

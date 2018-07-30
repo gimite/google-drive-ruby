@@ -228,6 +228,9 @@ class TestGoogleDrive < Test::Unit::TestCase
     )
     assert { collection3.files.empty? }
 
+    collection4 = session.collection_by_id(collection.id)
+    assert { collection4.files.empty? }
+
     # Uploads a test file.
     test_file_path = File.join(File.dirname(__FILE__), 'test_file.txt')
     file = session.upload_from_file(

@@ -418,6 +418,24 @@ module GoogleDrive
 
     alias folder_by_url collection_by_url
 
+    # Returns GoogleDrive::Collection with given +id+.
+    #
+    # e.g.
+    #   # https://drive.google.com/drive/folders/1rPPuzAew4tO3ORc88Vz1JscPCcnrX7-J
+    #   session.collection_by_id("1rPPuzAew4tO3ORc88Vz1JscPCcnrX7-J")
+    def collection_by_id(id)
+      file = file_by_id(id)
+      unless file.is_a?(Collection)
+        raise(
+          GoogleDrive::Error,
+          format('The file with the ID is not a folder: %s', id)
+        )
+      end
+      file
+    end
+
+    alias folder_by_id collection_by_id
+
     # Creates a top-level folder with given title. Returns GoogleDrive::Collection
     # object.
     def create_collection(title, file_properties = {})
