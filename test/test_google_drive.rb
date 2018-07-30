@@ -397,7 +397,7 @@ class TestGoogleDrive < Test::Unit::TestCase
         )
       end
 
-      @@session = GoogleDrive::Session.from_config('config.json')
+      @@session = GoogleDrive::Session.from_config(config_path)
     end
     @@session
   end
