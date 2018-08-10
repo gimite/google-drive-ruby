@@ -553,8 +553,12 @@ module GoogleDrive
     end
 
     def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
-                          italic = false, strikethrough = false, foreground_color = nil)
+                          italic = false, strikethrough = false, foreground_color = nil,
+                          background_color = nil)
       text_format = Google::Apis::SheetsV4::TextFormat.new
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.text_format = text_format
+
       text_format.bold = bold
       text_format.italic = italic
       text_format.strikethrough = strikethrough
@@ -565,10 +569,12 @@ module GoogleDrive
         text_format.foreground_color = foreground_color
       end
 
-      fields << ")"
+      unless background_color.nil?
+        fields << ",backgroundColor"
+        format.background_color = background_color
+      end
 
-      format = Google::Apis::SheetsV4::CellFormat.new
-      format.text_format = text_format
+      fields << ")"
 
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
