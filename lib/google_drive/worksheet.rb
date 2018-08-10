@@ -33,6 +33,7 @@ module GoogleDrive
       @numeric_values = nil
       @modified = Set.new
       @list = nil
+      @made_v4_changes = false
     end
 
     # Nokogiri::XML::Element object of the <entry> element in a worksheets feed.
@@ -442,6 +443,11 @@ module GoogleDrive
 
       end
 
+      if @made_v4_changes
+        # For V4, updates are batched and saved at the spreadsheet level
+        @spreadsheet.save
+      end
+
       sent
     end
 
@@ -524,6 +530,67 @@ module GoogleDrive
         self.class,
         fields.map { |k, v| format('%s=%p', k, v) }.join(', ')
       )
+    end
+
+    # Merges a range of cells together.  "MERGE_COLUMNS" is another option for merge_type
+    def merge_cells(start_row, start_col, end_row, end_col, merge_type = "MERGE_ALL")
+      range = Google::Apis::SheetsV4::GridRange.new(
+        start_row_index: start_row - 1,
+        start_column_index: start_col - 1,
+        end_row_index: end_row,
+        end_column_index: end_col
+      )
+      merge_request = Google::Apis::SheetsV4::MergeCellsRequest.new(range: range,
+        merge_type: merge_type)
+
+      @spreadsheet.add_to_batch_updates(merge_cells: merge_request)
+
+      @made_v4_changes = true
+    end
+
+    def red_color
+      Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.0, blue: 0.0)
+    end
+
+    def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
+                          italic = false, strikethrough = false, foreground_color = nil)
+      text_format = Google::Apis::SheetsV4::TextFormat.new
+      text_format.bold = bold
+      text_format.italic = italic
+      text_format.strikethrough = strikethrough
+
+      fields = "userEnteredFormat(textFormat"
+
+      unless foreground_color.nil?
+        text_format.foreground_color = foreground_color
+      end
+
+      fields << ")"
+
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.text_format = text_format
+
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    def format_cells(start_row, start_col, end_row, end_col, format, fields)
+      range = Google::Apis::SheetsV4::GridRange.new(
+        start_row_index: start_row - 1,
+        start_column_index: start_col - 1,
+        end_row_index: end_row,
+        end_column_index: end_col
+      )
+      cell_data = Google::Apis::SheetsV4::CellData.new
+      cell_data.user_entered_format = format
+
+      request = Google::Apis::SheetsV4::RepeatCellRequest.new
+      request.range = range
+      request.cell = cell_data
+      request.fields = fields
+
+      @spreadsheet.add_to_batch_updates(repeat_cell: request)
+
+      @made_v4_changes = true
     end
 
     private
