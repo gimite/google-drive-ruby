@@ -10,6 +10,12 @@ require 'google_drive/error'
 require 'google_drive/list'
 
 module GoogleDrive
+  RED = Google::Apis::SheetsV4::Color.new(red: 1.0)
+  BLUE = Google::Apis::SheetsV4::Color.new(blue: 1.0)
+  GREEN = Google::Apis::SheetsV4::Color.new(green: 1.0)
+  WHITE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 1.0, blue: 1.0)
+  BLACK = Google::Apis::SheetsV4::Color.new(red: 0.0, green: 0.0, blue: 0.0)
+
   # A worksheet (i.e. a tab) in a spreadsheet.
   # Use GoogleDrive::Spreadsheet#worksheets to get GoogleDrive::Worksheet
   # object.
@@ -533,6 +539,10 @@ module GoogleDrive
     end
 
     # Merges a range of cells together.  "MERGE_COLUMNS" is another option for merge_type
+    # 
+    # Note: One quirk I've noticed while testing things is that merging of cells should
+    # be saved to the sheet before applying text format changes.  If you try to do
+    # them together in batch, only the merge will complete successfully. 
     def merge_cells(start_row, start_col, end_row, end_col, merge_type = "MERGE_ALL")
       range = Google::Apis::SheetsV4::GridRange.new(
         start_row_index: start_row - 1,
@@ -546,10 +556,6 @@ module GoogleDrive
       @spreadsheet.add_to_batch_updates(merge_cells: merge_request)
 
       @made_v4_changes = true
-    end
-
-    def red_color
-      Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.0, blue: 0.0)
     end
 
     def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
@@ -580,22 +586,37 @@ module GoogleDrive
     end
 
     def format_cells(start_row, start_col, end_row, end_col, format, fields)
-      range = Google::Apis::SheetsV4::GridRange.new(
-        start_row_index: start_row - 1,
-        start_column_index: start_col - 1,
-        end_row_index: end_row,
-        end_column_index: end_col
-      )
       cell_data = Google::Apis::SheetsV4::CellData.new
       cell_data.user_entered_format = format
 
       request = Google::Apis::SheetsV4::RepeatCellRequest.new
-      request.range = range
+      request.range = v4_range_object(start_row, start_col, end_row, end_col)
       request.cell = cell_data
       request.fields = fields
 
       @spreadsheet.add_to_batch_updates(repeat_cell: request)
+      @made_v4_changes = true
+    end
 
+    # Style options:
+    #   "DOTTED"  The border is dotted.
+    #   "DASHED"  The border is dashed.
+    #   "SOLID" The border is a thin solid line.
+    #   "SOLID_MEDIUM"  The border is a medium solid line.
+    #   "SOLID_THICK" The border is a thick solid line.
+    #   "NONE"  No border. Used only when updating a border in order to erase it.
+    #   "DOUBLE"  The border is two solid lines.
+    def google_border(style, color)
+      Google::Apis::SheetsV4::Border.new(style: style, color: color)
+    end
+
+    # borders is a Hash of Google::Apis::SheetsV4::Border keyed with the
+    # following symbols: :top, :bottom, :left, :right, :innerHorizontal, :innerVertical
+    def update_borders(start_row, start_col, end_row, end_col, borders)
+      request = Google::Apis::SheetsV4::UpdateBordersRequest.new(borders)
+      request.range = v4_range_object(start_row, start_col, end_row, end_col)
+
+      @spreadsheet.add_to_batch_updates(update_borders: request)
       @made_v4_changes = true
     end
 
@@ -668,6 +689,15 @@ module GoogleDrive
           format('Contains invalid character %p for XML 1.0: %p', $&, value)
         )
       end
+    end
+
+    def v4_range_object(start_row, start_col, end_row, end_col)
+      Google::Apis::SheetsV4::GridRange.new(
+        start_row_index: start_row - 1,
+        start_column_index: start_col - 1,
+        end_row_index: end_row,
+        end_column_index: end_col
+      )
     end
   end
 end
