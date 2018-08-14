@@ -558,6 +558,24 @@ module GoogleDrive
       @made_v4_changes = true
     end
 
+    # Change the formatting of a range of cells to match some number format.
+    # For example to change A1 to a percentage with 1 decimal point:
+    #   number_format_cells(1, 1, 1, 1, "##.#%")
+    def number_format_cells(start_row, start_col, end_row, end_col, pattern)
+      number_format = Google::Apis::SheetsV4::NumberFormat.new(type: "NUMBER")
+      number_format.pattern = pattern
+
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.number_format = number_format
+
+      fields = "userEnteredFormat(numberFormat)"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    # Change the text formatting on a range of cells.  For example, set cell
+    # A1 to have red text that is bold and italic on a green background:
+    #   text_format_cells(1, 1, 1, 1, true, true, false, GoggleDrive::RED,
+    #     GoogleDrive::GREEN)
     def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
                           italic = false, strikethrough = false, foreground_color = nil,
                           background_color = nil)
@@ -610,8 +628,11 @@ module GoogleDrive
       Google::Apis::SheetsV4::Border.new(style: style, color: color)
     end
 
+    # Update the border styles for a range of cells.
     # borders is a Hash of Google::Apis::SheetsV4::Border keyed with the
     # following symbols: :top, :bottom, :left, :right, :innerHorizontal, :innerVertical
+    # For example, to set a black double-line on the bottom of A1:
+    #   update_borders(1, 1, 1, 1, { bottom: worksheet.google_border("DOUBLE", GoogleDrive::BLACK) } )
     def update_borders(start_row, start_col, end_row, end_col, borders)
       request = Google::Apis::SheetsV4::UpdateBordersRequest.new(borders)
       request.range = v4_range_object(start_row, start_col, end_row, end_col)
