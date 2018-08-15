@@ -194,6 +194,8 @@ module GoogleDrive
       @fetcher.drive
     end
 
+    alias drive drive_service
+
     # Returns an instance of Google::Apis::SheetsV4::SheetsService.
     def sheets_service
       @fetcher.sheets
