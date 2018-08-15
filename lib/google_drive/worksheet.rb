@@ -10,6 +10,21 @@ require 'google_drive/error'
 require 'google_drive/list'
 
 module GoogleDrive
+  # A few default color instances. Google API reference:
+  # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#color
+  RED = Google::Apis::SheetsV4::Color.new(red: 1.0)
+  DARK_RED_1 = Google::Apis::SheetsV4::Color.new(red: 0.8)
+  RED_BERRY = Google::Apis::SheetsV4::Color.new(red: 0.596)
+  ORANGE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.6)
+  DARK_ORANGE_1 = Google::Apis::SheetsV4::Color.new(red: 0.9, green: 0.569, blue: 0.22)
+  DARK_YELLOW_1 = Google::Apis::SheetsV4::Color.new(red: 0.945, green: 0.76, blue: 0.196)
+  GREEN = Google::Apis::SheetsV4::Color.new(green: 1.0)
+  DARK_GREEN_1 = Google::Apis::SheetsV4::Color.new(red: 0.416, green: 0.659, blue: 0.31)
+  BLUE = Google::Apis::SheetsV4::Color.new(blue: 1.0)
+  DARK_BLUE_1 = Google::Apis::SheetsV4::Color.new(red: 0.239, green: 0.522, blue: 0.776)
+  WHITE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 1.0, blue: 1.0)
+  BLACK = Google::Apis::SheetsV4::Color.new(red: 0.0, green: 0.0, blue: 0.0)
+
   # A worksheet (i.e. a tab) in a spreadsheet.
   # Use GoogleDrive::Spreadsheet#worksheets to get GoogleDrive::Worksheet
   # object.
@@ -33,6 +48,7 @@ module GoogleDrive
       @numeric_values = nil
       @modified = Set.new
       @list = nil
+      @made_v4_changes = false
     end
 
     # Nokogiri::XML::Element object of the <entry> element in a worksheets feed.
@@ -442,6 +458,11 @@ module GoogleDrive
 
       end
 
+      if @made_v4_changes
+        # For V4, updates are batched and saved at the spreadsheet level
+        @spreadsheet.save
+      end
+
       sent
     end
 
@@ -526,6 +547,142 @@ module GoogleDrive
       )
     end
 
+    # Merges a range of cells together.  "MERGE_COLUMNS" is another option for merge_type
+    # 
+    # Note: One quirk I've noticed while testing things is that merging of cells should
+    # be saved to the sheet before applying text format changes.  If you try to do
+    # them together in batch, only the merge will complete successfully. 
+    def merge_cells(start_row, start_col, end_row, end_col, merge_type = "MERGE_ALL")
+      range = Google::Apis::SheetsV4::GridRange.new(
+        start_row_index: start_row - 1,
+        start_column_index: start_col - 1,
+        end_row_index: end_row,
+        end_column_index: end_col
+      )
+      merge_request = Google::Apis::SheetsV4::MergeCellsRequest.new(range: range,
+        merge_type: merge_type)
+
+      @spreadsheet.add_to_batch_updates(merge_cells: merge_request)
+
+      @made_v4_changes = true
+    end
+
+    # Change the formatting of a range of cells to match some number format.
+    # For example to change A1 to a percentage with 1 decimal point:
+    #   number_format_cells(1, 1, 1, 1, "##.#%")
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#numberformat
+    def number_format_cells(start_row, start_col, end_row, end_col, pattern)
+      number_format = Google::Apis::SheetsV4::NumberFormat.new(type: "NUMBER")
+      number_format.pattern = pattern
+
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.number_format = number_format
+
+      fields = "userEnteredFormat(numberFormat)"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    # Horiztonal alignment can be "LEFT", "CENTER", or "RIGHT".
+    # Vertical alignment can be "TOP", "MIDDLE", or "BOTTOM"
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#HorizontalAlign
+    def cell_text_alignment(start_row, start_col, end_row, end_col, horizontal_alignment,
+                            vertical_alignment = nil)
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.horizontal_alignment = horizontal_alignment
+
+      fields = "userEnteredFormat(horizontalAlignment"
+
+      unless vertical_alignment.nil?
+        format.vertical_alignment = vertical_alignment
+        fields << ",verticalAlignment"
+      end
+
+      fields << ")"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    # Change the background color on a range of cells. For example:
+    #   cell_background_color(1, 1, 1, 1, GoogleDrive::DARK_YELLOW_1)
+    def cell_background_color(start_row, start_col, end_row, end_col, background_color)
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.background_color = background_color
+
+      fields = "userEnteredFormat(backgroundColor)"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    # Change the text formatting on a range of cells.  For example, set cell
+    # A1 to have red text that is bold and italic:
+    #   text_format_cells(1, 1, 1, 1, true, true, false, nil, nil, GoogleDrive::RED_BERRY)
+    # Google API reference:
+    # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#textformat
+    def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
+                          italic = false, strikethrough = false, font_size = nil,
+                          font_family = nil, foreground_color = nil)
+
+      text_format = Google::Apis::SheetsV4::TextFormat.new
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.text_format = text_format
+
+      text_format.bold = bold
+      text_format.italic = italic
+      text_format.strikethrough = strikethrough
+
+      unless font_size.nil?
+        text_format.font_size = font_size
+      end
+
+      unless font_family.nil?
+        text_format.font_family = font_family
+      end
+
+      unless foreground_color.nil?
+        text_format.foreground_color = foreground_color
+      end
+
+      fields = "userEnteredFormat(textFormat)"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    def format_cells(start_row, start_col, end_row, end_col, format, fields)
+      cell_data = Google::Apis::SheetsV4::CellData.new
+      cell_data.user_entered_format = format
+
+      request = Google::Apis::SheetsV4::RepeatCellRequest.new
+      request.range = v4_range_object(start_row, start_col, end_row, end_col)
+      request.cell = cell_data
+      request.fields = fields
+
+      @spreadsheet.add_to_batch_updates(repeat_cell: request)
+      @made_v4_changes = true
+    end
+
+    # Style options:
+    #   "DOTTED"  The border is dotted.
+    #   "DASHED"  The border is dashed.
+    #   "SOLID" The border is a thin solid line.
+    #   "SOLID_MEDIUM"  The border is a medium solid line.
+    #   "SOLID_THICK" The border is a thick solid line.
+    #   "NONE"  No border. Used only when updating a border in order to erase it.
+    #   "DOUBLE"  The border is two solid lines.
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#Style
+    def google_border(style, color)
+      Google::Apis::SheetsV4::Border.new(style: style, color: color)
+    end
+
+    # Update the border styles for a range of cells.
+    # borders is a Hash of Google::Apis::SheetsV4::Border keyed with the
+    # following symbols: :top, :bottom, :left, :right, :innerHorizontal, :innerVertical
+    # For example, to set a black double-line on the bottom of A1:
+    #   update_borders(1, 1, 1, 1, { bottom: worksheet.google_border("DOUBLE", GoogleDrive::BLACK) } )
+    def update_borders(start_row, start_col, end_row, end_col, borders)
+      request = Google::Apis::SheetsV4::UpdateBordersRequest.new(borders)
+      request.range = v4_range_object(start_row, start_col, end_row, end_col)
+
+      @spreadsheet.add_to_batch_updates(update_borders: request)
+      @made_v4_changes = true
+    end
+
     private
 
     def set_worksheet_feed_entry(entry)
@@ -595,6 +752,15 @@ module GoogleDrive
           format('Contains invalid character %p for XML 1.0: %p', $&, value)
         )
       end
+    end
+
+    def v4_range_object(start_row, start_col, end_row, end_col)
+      Google::Apis::SheetsV4::GridRange.new(
+        start_row_index: start_row - 1,
+        start_column_index: start_col - 1,
+        end_row_index: end_row,
+        end_column_index: end_col
+      )
     end
   end
 end

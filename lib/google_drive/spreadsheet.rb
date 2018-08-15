@@ -88,6 +88,13 @@ module GoogleDrive
       Worksheet.new(@session, self, doc.root)
     end
 
+    def add_worksheet_v4(title)
+      add_sheet_request = Google::Apis::SheetsV4::AddSheetRequest.new
+      add_sheet_request.properties = Google::Apis::SheetsV4::SheetProperties.new
+      add_sheet_request.properties.title = title
+      add_to_batch_updates(add_sheet: add_sheet_request)
+    end
+
     # Not available for GoogleDrive::Spreadsheet. Use export_as_file instead.
     def download_to_file(_path, _params = {})
       raise(
@@ -113,6 +120,31 @@ module GoogleDrive
         'download_to_io is not available for GoogleDrive::Spreadsheet. ' \
         'Use export_to_io instead.'
       )
+    end
+
+    def batch_update_request
+      @batch_update_spreadsheet_request ||= Google::Apis::SheetsV4::BatchUpdateSpreadsheetRequest.new
+      @batch_update_spreadsheet_request.requests = []
+
+      @batch_update_spreadsheet_request
+    end
+
+    def clear_batch_update_request
+      @batch_update_spreadsheet_request = nil
+    end
+
+    def add_to_batch_updates(request)
+      batch_update = batch_update_request
+      batch_update.requests << request
+    end
+
+    def save
+      unless @batch_update_spreadsheet_request.nil?
+        @session.sheets.batch_update_spreadsheet(id, @batch_update_spreadsheet_request)
+
+        # Reset since the batch requests have now been made
+        @batch_update_spreadsheet_request = nil
+      end
     end
   end
 end

@@ -194,6 +194,11 @@ module GoogleDrive
       @fetcher.drive
     end
 
+    # Returns an instance of Google::Apis::SheetsV4::SheetsService.
+    def sheets
+      @fetcher.sheets
+    end
+
     # Returns list of files for the user as array of GoogleDrive::File or its
     # subclass. You can specify parameters documented at
     # https://developers.google.com/drive/v3/web/search-parameters

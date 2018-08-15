@@ -4,6 +4,7 @@
 require 'net/https'
 require 'uri'
 require 'google/apis/drive_v3'
+require 'google/apis/sheets_v4'
 Net::HTTP.version_1_2
 
 module GoogleDrive
@@ -21,6 +22,9 @@ module GoogleDrive
       @drive = Google::Apis::DriveV3::DriveService.new
       @drive.authorization = authorization
 
+      @sheets = Google::Apis::SheetsV4::SheetsService.new
+      @sheets.authorization = authorization
+
       # Make the timeout virtually infinite because some of the operations
       # (e.g., uploading a large file) can take very long.
       # This value is the maximal allowed timeout in seconds on JRuby.
@@ -28,9 +32,13 @@ module GoogleDrive
       @drive.client_options.open_timeout_sec = t
       @drive.client_options.read_timeout_sec = t
       @drive.client_options.send_timeout_sec = t
+      @sheets.client_options.open_timeout_sec = t
+      @sheets.client_options.read_timeout_sec = t
+      @sheets.client_options.send_timeout_sec = t
     end
 
     attr_reader(:drive)
+    attr_reader(:sheets)
 
     def request_raw(method, url, data, extra_header, _auth)
       options = @drive.request_options.merge(header: extra_header)
