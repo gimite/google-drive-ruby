@@ -136,16 +136,10 @@ module GoogleDrive
     def add_to_batch_updates(request)
       batch_update = batch_update_request
       batch_update.requests << request
-      puts "ADDED!"
-      ap batch_update.requests
-      ap @batch_update_spreadsheet_request.requests
     end
 
     def save
       unless @batch_update_spreadsheet_request.nil?
-        puts "TIME TO SAVE!"
-        ap @batch_update_spreadsheet_request.requests
-        ap @batch_update_spreadsheet_request
         #TODO: call the sheets service
         @session.sheets.batch_update_spreadsheet(id, @batch_update_spreadsheet_request)
 
