@@ -10,9 +10,18 @@ require 'google_drive/error'
 require 'google_drive/list'
 
 module GoogleDrive
+  # A few default color instances. Google API reference:
+  # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#color
   RED = Google::Apis::SheetsV4::Color.new(red: 1.0)
-  BLUE = Google::Apis::SheetsV4::Color.new(blue: 1.0)
+  DARK_RED_1 = Google::Apis::SheetsV4::Color.new(red: 0.8)
+  RED_BERRY = Google::Apis::SheetsV4::Color.new(red: 0.596)
+  ORANGE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.6)
+  DARK_ORANGE_1 = Google::Apis::SheetsV4::Color.new(red: 0.9, green: 0.569, blue: 0.22)
+  DARK_YELLOW_1 = Google::Apis::SheetsV4::Color.new(red: 0.945, green: 0.76, blue: 0.196)
   GREEN = Google::Apis::SheetsV4::Color.new(green: 1.0)
+  DARK_GREEN_1 = Google::Apis::SheetsV4::Color.new(red: 0.416, green: 0.659, blue: 0.31)
+  BLUE = Google::Apis::SheetsV4::Color.new(blue: 1.0)
+  DARK_BLUE_1 = Google::Apis::SheetsV4::Color.new(red: 0.239, green: 0.522, blue: 0.776)
   WHITE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 1.0, blue: 1.0)
   BLACK = Google::Apis::SheetsV4::Color.new(red: 0.0, green: 0.0, blue: 0.0)
 
@@ -561,6 +570,7 @@ module GoogleDrive
     # Change the formatting of a range of cells to match some number format.
     # For example to change A1 to a percentage with 1 decimal point:
     #   number_format_cells(1, 1, 1, 1, "##.#%")
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#numberformat
     def number_format_cells(start_row, start_col, end_row, end_col, pattern)
       number_format = Google::Apis::SheetsV4::NumberFormat.new(type: "NUMBER")
       number_format.pattern = pattern
@@ -572,20 +582,41 @@ module GoogleDrive
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
 
+    # Horiztonal alignment can be "LEFT", "CENTER", or "RIGHT".
+    # Vertical alignment can be "TOP", "MIDDLE", or "BOTTOM"
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#HorizontalAlign
     def cell_text_alignment(start_row, start_col, end_row, end_col, horizontal_alignment,
                             vertical_alignment = nil)
       format = Google::Apis::SheetsV4::CellFormat.new
       format.horizontal_alignment = horizontal_alignment
+
+      fields = "userEnteredFormat(horizontalAlignment"
+
+      unless vertical_alignment.nil?
+        format.vertical_alignment = vertical_alignment
+        fields << ",verticalAlignment"
+      end
+
+      fields << ")"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
+    end
+
+    def cell_background_color(start_row, start_col, end_row, end_col, background_color)
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.background_color = background_color
+      
+      fields = "userEnteredFormat(backgroundColor)"
+      format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
 
     # Change the text formatting on a range of cells.  For example, set cell
-    # A1 to have red text that is bold and italic on a green background:
-    #   text_format_cells(1, 1, 1, 1, true, true, false, GoggleDrive::RED,
-    #     GoogleDrive::GREEN)
+    # A1 to have red text that is bold and italic:
+    #   text_format_cells(1, 1, 1, 1, true, true, false, nil, nil, GoogleDrive::RED_BERRY)
+    # Google API reference:
+    # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#textformat
     def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
                           italic = false, strikethrough = false, font_size = nil,
-                          font_family = nil, foreground_color = nil,
-                          background_color = nil)
+                          font_family = nil, foreground_color = nil)
 
       text_format = Google::Apis::SheetsV4::TextFormat.new
       format = Google::Apis::SheetsV4::CellFormat.new
@@ -594,8 +625,6 @@ module GoogleDrive
       text_format.bold = bold
       text_format.italic = italic
       text_format.strikethrough = strikethrough
-
-      fields = "userEnteredFormat(textFormat"
 
       unless font_size.nil?
         text_format.font_size = font_size
@@ -609,13 +638,7 @@ module GoogleDrive
         text_format.foreground_color = foreground_color
       end
 
-      unless background_color.nil?
-        fields << ",backgroundColor"
-        format.background_color = background_color
-      end
-
-      fields << ")"
-
+      fields = "userEnteredFormat(textFormat)"
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
 
@@ -640,6 +663,7 @@ module GoogleDrive
     #   "SOLID_THICK" The border is a thick solid line.
     #   "NONE"  No border. Used only when updating a border in order to erase it.
     #   "DOUBLE"  The border is two solid lines.
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#Style
     def google_border(style, color)
       Google::Apis::SheetsV4::Border.new(style: style, color: color)
     end
