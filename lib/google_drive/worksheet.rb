@@ -572,13 +572,21 @@ module GoogleDrive
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
 
+    def cell_text_alignment(start_row, start_col, end_row, end_col, horizontal_alignment,
+                            vertical_alignment = nil)
+      format = Google::Apis::SheetsV4::CellFormat.new
+      format.horizontal_alignment = horizontal_alignment
+    end
+
     # Change the text formatting on a range of cells.  For example, set cell
     # A1 to have red text that is bold and italic on a green background:
     #   text_format_cells(1, 1, 1, 1, true, true, false, GoggleDrive::RED,
     #     GoogleDrive::GREEN)
     def text_format_cells(start_row, start_col, end_row, end_col, bold = false,
-                          italic = false, strikethrough = false, foreground_color = nil,
+                          italic = false, strikethrough = false, font_size = nil,
+                          font_family = nil, foreground_color = nil,
                           background_color = nil)
+
       text_format = Google::Apis::SheetsV4::TextFormat.new
       format = Google::Apis::SheetsV4::CellFormat.new
       format.text_format = text_format
@@ -588,6 +596,14 @@ module GoogleDrive
       text_format.strikethrough = strikethrough
 
       fields = "userEnteredFormat(textFormat"
+
+      unless font_size.nil?
+        text_format.font_size = font_size
+      end
+
+      unless font_family.nil?
+        text_format.font_family = font_family
+      end
 
       unless foreground_color.nil?
         text_format.foreground_color = foreground_color
