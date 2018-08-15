@@ -601,10 +601,12 @@ module GoogleDrive
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
 
+    # Change the background color on a range of cells. For example:
+    #   cell_background_color(1, 1, 1, 1, GoogleDrive::DARK_YELLOW_1)
     def cell_background_color(start_row, start_col, end_row, end_col, background_color)
       format = Google::Apis::SheetsV4::CellFormat.new
       format.background_color = background_color
-      
+
       fields = "userEnteredFormat(backgroundColor)"
       format_cells(start_row, start_col, end_row, end_col, format, fields)
     end
