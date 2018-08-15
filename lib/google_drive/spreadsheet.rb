@@ -140,7 +140,7 @@ module GoogleDrive
 
     def save
       unless @batch_update_spreadsheet_request.nil?
-        @session.sheets.batch_update_spreadsheet(id, @batch_update_spreadsheet_request)
+        @session.sheets_service.batch_update_spreadsheet(id, @batch_update_spreadsheet_request)
 
         # Reset since the batch requests have now been made
         @batch_update_spreadsheet_request = nil
