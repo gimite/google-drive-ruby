@@ -19,7 +19,7 @@ module GoogleDrive
 
     # Adds the given GoogleDrive::File to the folder.
     def add(file)
-      @session.drive.update_file(
+      @session.drive_service.update_file(
         file.id, add_parents: id, fields: '', supports_team_drives: true
       )
       nil
@@ -27,7 +27,7 @@ module GoogleDrive
 
     # Removes the given GoogleDrive::File from the folder.
     def remove(file)
-      @session.drive.update_file(
+      @session.drive_service.update_file(
         file.id, remove_parents: id, fields: '', supports_team_drives: true
       )
     end
@@ -61,7 +61,7 @@ module GoogleDrive
         parents: [id]
       }.merge(file_properties)
 
-      file = @session.drive.create_file(
+      file = @session.drive_service.create_file(
         file_metadata, fields: '*', supports_team_drives: true
       )
 
