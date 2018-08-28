@@ -15,6 +15,7 @@ module GoogleDrive
   RED = Google::Apis::SheetsV4::Color.new(red: 1.0)
   DARK_RED_1 = Google::Apis::SheetsV4::Color.new(red: 0.8)
   RED_BERRY = Google::Apis::SheetsV4::Color.new(red: 0.596)
+  DARK_RED_BERRY_1 = Google::Apis::SheetsV4::Color.new(red: 0.659, green: 0.11)
   ORANGE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.6)
   DARK_ORANGE_1 = Google::Apis::SheetsV4::Color.new(red: 0.9, green: 0.569, blue: 0.22)
   DARK_YELLOW_1 = Google::Apis::SheetsV4::Color.new(red: 0.945, green: 0.76, blue: 0.196)
@@ -548,17 +549,8 @@ module GoogleDrive
     end
 
     # Merges a range of cells together.  "MERGE_COLUMNS" is another option for merge_type
-    # 
-    # Note: One quirk I've noticed while testing things is that merging of cells should
-    # be saved to the sheet before applying text format changes.  If you try to do
-    # them together in batch, only the merge will complete successfully. 
     def merge_cells(start_row, start_col, end_row, end_col, merge_type = "MERGE_ALL")
-      range = Google::Apis::SheetsV4::GridRange.new(
-        start_row_index: start_row - 1,
-        start_column_index: start_col - 1,
-        end_row_index: end_row,
-        end_column_index: end_col
-      )
+      range = v4_range_object(start_row, start_col, end_row, end_col)
       merge_request = Google::Apis::SheetsV4::MergeCellsRequest.new(range: range,
         merge_type: merge_type)
 
@@ -759,7 +751,8 @@ module GoogleDrive
         start_row_index: start_row - 1,
         start_column_index: start_col - 1,
         end_row_index: end_row,
-        end_column_index: end_col
+        end_column_index: end_col,
+        sheet_id: gid
       )
     end
   end

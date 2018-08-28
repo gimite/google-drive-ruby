@@ -88,11 +88,21 @@ module GoogleDrive
       Worksheet.new(@session, self, doc.root)
     end
 
-    def add_worksheet_v4(title)
+    def add_worksheet_v4(title, position_index = 0)
       add_sheet_request = Google::Apis::SheetsV4::AddSheetRequest.new
-      add_sheet_request.properties = Google::Apis::SheetsV4::SheetProperties.new
-      add_sheet_request.properties.title = title
+      properties = Google::Apis::SheetsV4::SheetProperties.new
+      properties.title = title
+      properties.index = position_index
+      add_sheet_request.properties = properties
+
       add_to_batch_updates(add_sheet: add_sheet_request)
+    end
+
+    def delete_worksheet(id)
+      delete_sheet_request = Google::Apis::SheetsV4::DeleteSheetRequest.new
+      delete_sheet_request.sheet_id = id
+
+      add_to_batch_updates(delete_sheet: delete_sheet_request)
     end
 
     # Not available for GoogleDrive::Spreadsheet. Use export_as_file instead.
@@ -123,8 +133,10 @@ module GoogleDrive
     end
 
     def batch_update_request
-      @batch_update_spreadsheet_request ||= Google::Apis::SheetsV4::BatchUpdateSpreadsheetRequest.new
-      @batch_update_spreadsheet_request.requests = []
+      if @batch_update_spreadsheet_request.nil?
+        @batch_update_spreadsheet_request = Google::Apis::SheetsV4::BatchUpdateSpreadsheetRequest.new
+        @batch_update_spreadsheet_request.requests = []
+      end
 
       @batch_update_spreadsheet_request
     end
