@@ -50,13 +50,19 @@ module GoogleDrive
     # See
     # https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md
     # for a usage example.
-    def self.from_credentials(credentials)
-      Session.new(credentials)
+    #
+    # See from_config documentation for an explanation of client_options and
+    # request_options.
+    def self.from_credentials(credentials, client_options = nil, request_options = nil)
+      Session.new(credentials, nil, client_options, request_options)
     end
 
     # Constructs a GoogleDrive::Session object from OAuth2 access token string.
-    def self.from_access_token(access_token)
-      Session.new(access_token)
+    #
+    # See from_config documentation for an explanation of client_options and
+    # request_options.
+    def self.from_access_token(access_token, client_options = nil, request_options = nil)
+      Session.new(access_token, nil, client_options, request_options)
     end
 
     # Constructs a GoogleDrive::Session object from a service account key JSON.
@@ -67,23 +73,28 @@ module GoogleDrive
     # See
     # https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md
     # for a usage example.
+    #
+    # As with from_config, you can configure Google API client behavior with
+    # +client_options+ and +request_options+. Unlike in from_config, these
+    # are passed as positional arguments.
     def self.from_service_account_key(
-        json_key_path_or_io, scope = DEFAULT_SCOPE
+        json_key_path_or_io, scope = DEFAULT_SCOPE, client_options = nil,
+        request_options = nil
     )
       if json_key_path_or_io.is_a?(String)
         open(json_key_path_or_io) do |f|
-          from_service_account_key(f, scope)
+          from_service_account_key(f, scope, client_options, request_options)
         end
       else
         credentials = Google::Auth::ServiceAccountCredentials.make_creds(
           json_key_io: json_key_path_or_io, scope: scope
         )
-        Session.new(credentials)
+        Session.new(credentials, nil, client_options, request_options)
       end
     end
 
     # Returns GoogleDrive::Session constructed from a config JSON file at
-    # +config+.
+    # +config+, potenially modified with +options+.
     #
     # +config+ is the path to the config file.
     #
@@ -102,13 +113,24 @@ module GoogleDrive
     #   scope
     #   scope=
     #   save
+    #
+    # +options+ is a hash which may contain the following keys:
+    #   client_secret: if present, this will overwrite config.client_secret
+    #   client_id: if present, this will overwrite config.client_id
+    #   client_options: a hash or ::Google::Apis::ClientOptions. See
+    #     https://www.rubydoc.info/github/google/google-api-ruby-client/Google/Apis/ClientOptions
+    #     for an explanation of legal sub-fields.
+    #   request_options: a hash or ::Google::Apis::RequestOptions. See
+    #     https://www.rubydoc.info/github/google/google-api-ruby-client/Google/Apis/RequestOptions
+    #     for an explanation of legal sub-fields.
     def self.from_config(config, options = {})
       if config.is_a?(String)
         config_path = config
         config = Config.new(config_path)
         if config.type == 'service_account'
           return from_service_account_key(
-            config_path, options[:scope] || DEFAULT_SCOPE
+            config_path, options[:scope] || DEFAULT_SCOPE, options[:client_options],
+            options[:request_options]
           )
         end
       end
@@ -153,10 +175,15 @@ module GoogleDrive
 
       config.save
 
-      Session.new(credentials)
+      Session.new(
+        credentials, nil, options[:client_options], options[:request_options]
+      )
     end
 
-    def initialize(credentials_or_access_token, proxy = nil)
+    def initialize(
+        credentials_or_access_token, proxy = nil, client_options = nil,
+        request_options = nil
+    )
       if proxy
         raise(
           ArgumentError,
@@ -179,7 +206,9 @@ module GoogleDrive
         else
           credentials = credentials_or_access_token
         end
-        @fetcher = ApiClientFetcher.new(credentials)
+        @fetcher = ApiClientFetcher.new(
+          credentials, client_options, request_options
+        )
       else
         @fetcher = nil
       end
