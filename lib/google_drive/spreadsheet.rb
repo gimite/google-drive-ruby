@@ -88,12 +88,14 @@ module GoogleDrive
       Worksheet.new(@session, self, doc.root)
     end
 
+    # @api private
     def add_worksheet_v4(title, position_index = 0)
-      add_sheet_request = Google::Apis::SheetsV4::AddSheetRequest.new
-      properties = Google::Apis::SheetsV4::SheetProperties.new
-      properties.title = title
-      properties.index = position_index
-      add_sheet_request.properties = properties
+      add_sheet_request = Google::Apis::SheetsV4::AddSheetRequest.new(
+        properties: Google::Apis::SheetsV4::SheetProperties.new(
+          title: title,
+          index: position_index
+        )
+      )
 
       add_to_batch_updates(add_sheet: add_sheet_request)
     end
