@@ -341,7 +341,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     file.acl.push(scope_type: 'anyone', with_key: true, role: 'reader')
     acl = file.acl(reload: true).sort_by { |e| e.scope_type }
     assert { acl.size == 2 }
-    
+
     assert { acl[0].scope_type == 'anyone' }
     assert { acl[0].with_key }
     assert { acl[0].role == 'reader' }
@@ -397,7 +397,11 @@ class TestGoogleDrive < Test::Unit::TestCase
         )
       end
 
-      @@session = GoogleDrive::Session.from_config(config_path)
+      @@session = GoogleDrive::Session.from_config(
+        config_path,
+        client_options: {transparent_gzip_decompression: true},
+        request_options: {retries: 3}
+      )
     end
     @@session
   end

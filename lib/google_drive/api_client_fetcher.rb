@@ -18,7 +18,7 @@ module GoogleDrive
       attr_reader(:code, :body)
     end
 
-    def initialize(authorization)
+    def initialize(authorization, client_options, request_options)
       @drive = Google::Apis::DriveV3::DriveService.new
       @drive.authorization = authorization
 
@@ -35,6 +35,18 @@ module GoogleDrive
       @sheets.client_options.open_timeout_sec = t
       @sheets.client_options.read_timeout_sec = t
       @sheets.client_options.send_timeout_sec = t
+
+      if client_options
+        @drive.client_options.members.each do |name|
+          if !client_options[name].nil?
+            @drive.client_options[name] = client_options[name]
+          end
+        end
+      end
+
+      if request_options
+        @drive.request_options = @drive.request_options.merge(request_options)
+      end
     end
 
     attr_reader(:drive)
