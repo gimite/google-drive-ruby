@@ -669,7 +669,7 @@ module GoogleDrive
     # borders is a Hash of Google::Apis::SheetsV4::Border keyed with the
     # following symbols: :top, :bottom, :left, :right, :innerHorizontal, :innerVertical
     # For example, to set a black double-line on the bottom of A1:
-    #   update_borders(1, 1, 1, 1, { bottom: Border("DOUBLE", Colors::BLACK) } )
+    #   update_borders(1, 1, 1, 1, { bottom: Border(style: "DOUBLE", color: GoogleDrive::Worksheet::Colors::BLACK) } )
     def update_borders(start_row, start_col, end_row, end_col, borders)
       request = Google::Apis::SheetsV4::UpdateBordersRequest.new(borders)
       request.range = v4_range_object(start_row, start_col, end_row, end_col)
