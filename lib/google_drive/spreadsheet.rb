@@ -16,6 +16,10 @@ module GoogleDrive
   # create_spreadsheet in GoogleDrive::Session to get GoogleDrive::Spreadsheet
   # object.
   class Spreadsheet < GoogleDrive::File
+    
+    # TODO: Bump up the major version before switching the existing methods to
+    # v4 API because it requires to turn on a new API in the API console.
+
     include(Util)
 
     SUPPORTED_EXPORT_FORMAT = Set.new(%w[xlsx csv pdf])
@@ -88,6 +92,28 @@ module GoogleDrive
       Worksheet.new(@session, self, doc.root)
     end
 
+    # @api private
+    # This method is currently alpha, and will likely change in the future.
+    def add_worksheet_v4(title, position_index = 0)
+      # TODO: Let this method return Worksheet instance and merge it with add_worksheet.
+      batch_update([{
+        add_sheet: Google::Apis::SheetsV4::AddSheetRequest.new(
+          properties: Google::Apis::SheetsV4::SheetProperties.new(
+            title: title,
+            index: position_index
+          )
+        ),
+      }])
+    end
+
+    # @api private
+    # This method is currently alpha, and will likely change in the future.
+    def delete_worksheet(id)
+      batch_update([{
+        delete_sheet: Google::Apis::SheetsV4::DeleteSheetRequest.new(sheet_id: id),
+      }])
+    end
+
     # Not available for GoogleDrive::Spreadsheet. Use export_as_file instead.
     def download_to_file(_path, _params = {})
       raise(
@@ -113,6 +139,12 @@ module GoogleDrive
         'download_to_io is not available for GoogleDrive::Spreadsheet. ' \
         'Use export_to_io instead.'
       )
+    end
+
+    # @api private
+    def batch_update(requests)
+      batch_request = Google::Apis::SheetsV4::BatchUpdateSpreadsheetRequest.new(requests: requests)
+      @session.sheets_service.batch_update_spreadsheet(id, batch_request)
     end
   end
 end

@@ -219,8 +219,15 @@ module GoogleDrive
     attr_accessor :on_auth_fail
 
     # Returns an instance of Google::Apis::DriveV3::DriveService.
-    def drive
+    def drive_service
       @fetcher.drive
+    end
+
+    alias drive drive_service
+
+    # Returns an instance of Google::Apis::SheetsV4::SheetsService.
+    def sheets_service
+      @fetcher.sheets
     end
 
     # Returns list of files for the user as array of GoogleDrive::File or its
@@ -247,7 +254,7 @@ module GoogleDrive
     def files(params = {}, &block)
       params = convert_params(params)
       execute_paged!(
-        method: drive.method(:list_files),
+        method: drive_service.method(:list_files),
         parameters: { fields: '*', supports_team_drives: true }.merge(params),
         items_method_name: :files,
         converter: proc { |af| wrap_api_file(af) },
@@ -280,7 +287,7 @@ module GoogleDrive
     # Returns an instance of GoogleDrive::File or its subclass
     # (GoogleDrive::Spreadsheet, GoogleDrive::Collection).
     def file_by_id(id)
-      api_file = drive.get_file(id, fields: '*', supports_team_drives: true)
+      api_file = drive_service.get_file(id, fields: '*', supports_team_drives: true)
       wrap_api_file(api_file)
     end
 
@@ -496,7 +503,7 @@ module GoogleDrive
         name: title,
       }.merge(file_properties)
 
-      file = drive.create_file(
+      file = drive_service.create_file(
         file_metadata, fields: '*', supports_team_drives: true
       )
 
@@ -661,7 +668,7 @@ module GoogleDrive
       end
       file_metadata[:parents] = params[:parents] if params[:parents]
 
-      file = drive.create_file(file_metadata, api_params)
+      file = drive_service.create_file(file_metadata, api_params)
       wrap_api_file(file)
     end
 

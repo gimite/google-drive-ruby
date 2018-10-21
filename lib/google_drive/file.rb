@@ -38,7 +38,7 @@ module GoogleDrive
 
     # Reloads file metadata such as title and acl.
     def reload_metadata
-      @api_file = @session.drive.get_file(
+      @api_file = @session.drive_service.get_file(
         id, fields: '*', supports_team_drives: true
       )
       @acl = Acl.new(@session, self) if @acl
@@ -94,7 +94,7 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_as_file.
     def download_to_file(path, params = {})
-      @session.drive.get_file(
+      @session.drive_service.get_file(
         id,
         { download_dest: path, supports_team_drives: true }.merge(params)
       )
@@ -113,7 +113,7 @@ module GoogleDrive
     #
     # To export the file in other formats, use export_to_io.
     def download_to_io(io, params = {})
-      @session.drive.get_file(
+      @session.drive_service.get_file(
         id,
         { download_dest: io, supports_team_drives: true }.merge(params)
       )
@@ -185,7 +185,7 @@ module GoogleDrive
     # Reads content from +io+ and updates the file with the content.
     def update_from_io(io, params = {})
       params = { upload_source: io, supports_team_drives: true }.merge(params)
-      @session.drive.update_file(id, nil, params)
+      @session.drive_service.update_file(id, nil, params)
       nil
     end
 
@@ -193,9 +193,9 @@ module GoogleDrive
     # If +permanent+ is +true+, deletes the file permanently.
     def delete(permanent = false)
       if permanent
-        @session.drive.delete_file(id, supports_team_drives: true)
+        @session.drive_service.delete_file(id, supports_team_drives: true)
       else
-        @session.drive.update_file(
+        @session.drive_service.update_file(
           id, { trashed: true }, supports_team_drives: true
         )
       end
@@ -204,7 +204,7 @@ module GoogleDrive
 
     # Renames title of the file.
     def rename(title)
-      @session.drive.update_file(
+      @session.drive_service.update_file(
         id, { name: title }, supports_team_drives: true
       )
       nil
@@ -214,7 +214,7 @@ module GoogleDrive
 
     # Creates copy of this file with the given title.
     def copy(title, file_properties = {})
-      api_file = @session.drive.copy_file(
+      api_file = @session.drive_service.copy_file(
         id, { name: title }.merge(file_properties), fields: '*', supports_team_drives: true
       )
       @session.wrap_api_file(api_file)
@@ -259,7 +259,7 @@ module GoogleDrive
 
     def export_to_dest(dest, format)
       mime_type = EXT_TO_CONTENT_TYPE['.' + format] || format
-      @session.drive.export_file(id, mime_type, download_dest: dest)
+      @session.drive_service.export_file(id, mime_type, download_dest: dest)
       nil
     end
   end

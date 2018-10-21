@@ -16,6 +16,37 @@ module GoogleDrive
   class Worksheet
     include(Util)
 
+    # A few default color instances that match the colors from the Google Sheets web UI.
+    #
+    # TODO: Add more colors from
+    # https://github.com/denilsonsa/gimp-palettes/blob/master/palettes/Google-Drive.gpl
+    module Colors
+      RED = Google::Apis::SheetsV4::Color.new(red: 1.0)
+      DARK_RED_1 = Google::Apis::SheetsV4::Color.new(red: 0.8)
+      RED_BERRY = Google::Apis::SheetsV4::Color.new(red: 0.596)
+      DARK_RED_BERRY_1 = Google::Apis::SheetsV4::Color.new(red: 0.659, green: 0.11)
+      ORANGE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 0.6)
+      DARK_ORANGE_1 = Google::Apis::SheetsV4::Color.new(red: 0.9, green: 0.569, blue: 0.22)
+      YELLOW = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 1.0)
+      DARK_YELLOW_1 = Google::Apis::SheetsV4::Color.new(red: 0.945, green: 0.76, blue: 0.196)
+      GREEN = Google::Apis::SheetsV4::Color.new(green: 1.0)
+      DARK_GREEN_1 = Google::Apis::SheetsV4::Color.new(red: 0.416, green: 0.659, blue: 0.31)
+      CYAN = Google::Apis::SheetsV4::Color.new(green: 1.0, blue: 1.0)
+      DARK_CYAN_1 = Google::Apis::SheetsV4::Color.new(red: 0.27, green: 0.506, blue: 0.557)
+      CORNFLOWER_BLUE = Google::Apis::SheetsV4::Color.new(red: 0.29, green: 0.525, blue: 0.91)
+      DARK_CORNFLOWER_BLUE_1 = Google::Apis::SheetsV4::Color.new(red: 0.235, green: 0.47, blue: 0.847)
+      BLUE = Google::Apis::SheetsV4::Color.new(blue: 1.0)
+      DARK_BLUE_1 = Google::Apis::SheetsV4::Color.new(red: 0.239, green: 0.522, blue: 0.776)
+      PURPLE = Google::Apis::SheetsV4::Color.new(red: 0.6, blue: 1.0)
+      DARK_PURPLE_1 = Google::Apis::SheetsV4::Color.new(red: 0.404, green: 0.306, blue: 0.655)
+      MAGENTA = Google::Apis::SheetsV4::Color.new(red: 1.0, blue: 1.0)
+      DARK_MAGENTA_1 = Google::Apis::SheetsV4::Color.new(red: 0.651, green: 0.302, blue: 0.475)
+      WHITE = Google::Apis::SheetsV4::Color.new(red: 1.0, green: 1.0, blue: 1.0)
+      BLACK = Google::Apis::SheetsV4::Color.new(red: 0.0, green: 0.0, blue: 0.0)
+      GRAY = Google::Apis::SheetsV4::Color.new(red: 0.8, green: 0.8, blue: 0.8)
+      DARK_GRAY_1 = Google::Apis::SheetsV4::Color.new(red: 0.714, green: 0.714, blue: 0.714)
+    end
+
     # @api private
     # A regexp which matches an invalid character in XML 1.0:
     # https://en.wikipedia.org/wiki/Valid_characters_in_XML#XML_1.0
@@ -33,6 +64,7 @@ module GoogleDrive
       @numeric_values = nil
       @modified = Set.new
       @list = nil
+      @v4_requests = []
     end
 
     # Nokogiri::XML::Element object of the <entry> element in a worksheets feed.
@@ -316,6 +348,7 @@ module GoogleDrive
     def reload
       set_worksheet_feed_entry(@session.request(:get, worksheet_feed_url).root)
       reload_cells
+      @v4_requests = []
       true
     end
 
@@ -442,6 +475,12 @@ module GoogleDrive
 
       end
 
+      if !@v4_requests.empty?
+        self.spreadsheet.batch_update(@v4_requests)
+        @v4_requests = []
+        sent = true
+      end
+
       sent
     end
 
@@ -459,9 +498,9 @@ module GoogleDrive
       @session.request(:delete, edit_url)
     end
 
-    # Returns true if you have changes made by []= which haven't been saved.
+    # Returns true if you have changes made by []= etc. which haven't been saved.
     def dirty?
-      !@modified.empty?
+      !@modified.empty? || !@v4_requests.empty?
     end
 
     # List feed URL of the worksheet.
@@ -526,7 +565,116 @@ module GoogleDrive
       )
     end
 
+    # Merges a range of cells together. "MERGE_COLUMNS" is another option for merge_type
+    def merge_cells(top_row, left_col, num_rows, num_cols, merge_type: 'MERGE_ALL')
+      range = v4_range_object(top_row, left_col, num_rows, num_cols)
+      add_request({
+        merge_cells:
+          Google::Apis::SheetsV4::MergeCellsRequest.new(
+            range: range, merge_type: merge_type),
+      })
+    end
+
+    # Changes the formatting of a range of cells to match the given number format.
+    # For example to change A1 to a percentage with 1 decimal point:
+    #   worksheet.set_number_format(1, 1, 1, 1, "##.#%")
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#numberformat
+    def set_number_format(top_row, left_col, num_rows, num_cols, pattern, type: "NUMBER")
+      number_format = Google::Apis::SheetsV4::NumberFormat.new(type: type, pattern: pattern)
+      format = Google::Apis::SheetsV4::CellFormat.new(number_format: number_format)
+      fields = 'userEnteredFormat(numberFormat)'
+      format_cells(top_row, left_col, num_rows, num_cols, format, fields)
+    end
+
+    # Changes text alignment of a range of cells.
+    # Horizontal alignment can be "LEFT", "CENTER", or "RIGHT".
+    # Vertical alignment can be "TOP", "MIDDLE", or "BOTTOM".
+    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#HorizontalAlign
+    def set_text_alignment(
+        top_row, left_col, num_rows, num_cols,
+        horizontal: nil, vertical: nil)
+      return if horizontal.nil? && vertical.nil?
+
+      format = Google::Apis::SheetsV4::CellFormat.new(
+        horizontal_alignment: horizontal, vertical_alignment: vertical)
+      subfields =
+        (horizontal.nil? ? [] : ['horizontalAlignment']) +
+        (vertical.nil? ? [] : ['verticalAlignment'])
+
+      fields = 'userEnteredFormat(%s)' % subfields.join(',')
+      format_cells(top_row, left_col, num_rows, num_cols, format, fields)
+    end
+
+    # Changes the background color on a range of cells. e.g.:
+    #   worksheet.set_background_color(1, 1, 1, 1, GoogleDrive::Worksheet::Colors::DARK_YELLOW_1)
+    #
+    # background_color is an instance of Google::Apis::SheetsV4::Color.
+    def set_background_color(top_row, left_col, num_rows, num_cols, background_color)
+      format = Google::Apis::SheetsV4::CellFormat.new(background_color: background_color)
+      fields = 'userEnteredFormat(backgroundColor)'
+      format_cells(top_row, left_col, num_rows, num_cols, format, fields)
+    end
+
+    # Change the text formatting on a range of cells. e.g., To set cell
+    # A1 to have red text that is bold and italic:
+    #   worksheet.set_text_format(
+    #     1, 1, 1, 1,
+    #     bold: true, 
+    #     italic: true, 
+    #     foreground_color: GoogleDrive::Worksheet::Colors::RED_BERRY)
+    #
+    # foreground_color is an instance of Google::Apis::SheetsV4::Color.
+    # Google API reference:
+    # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#textformat
+    def set_text_format(top_row, left_col, num_rows, num_cols, bold: false,
+                          italic: false, strikethrough: false, font_size: nil,
+                          font_family: nil, foreground_color: nil)
+      text_format = Google::Apis::SheetsV4::TextFormat.new(
+        bold: bold,
+        italic: italic,
+        strikethrough: strikethrough,
+        font_size: font_size,
+        font_family: font_family,
+        foreground_color: foreground_color
+      )
+
+      format = Google::Apis::SheetsV4::CellFormat.new(text_format: text_format)
+      fields = 'userEnteredFormat(textFormat)'
+      format_cells(top_row, left_col, num_rows, num_cols, format, fields)
+    end
+
+    # Update the border styles for a range of cells.
+    # borders is a Hash of Google::Apis::SheetsV4::Border keyed with the
+    # following symbols: :top, :bottom, :left, :right, :innerHorizontal, :innerVertical
+    # e.g., To set a black double-line on the bottom of A1:
+    #   update_borders(
+    #     1, 1, 1, 1,
+    #     {bottom: Google::Apis::SheetsV4::Border.new(
+    #       style: "DOUBLE", color: GoogleDrive::Worksheet::Colors::BLACK)})
+    def update_borders(top_row, left_col, num_rows, num_cols, borders)
+      request = Google::Apis::SheetsV4::UpdateBordersRequest.new(borders)
+      request.range = v4_range_object(top_row, left_col, num_rows, num_cols)
+      add_request({update_borders: request})
+    end
+
+    # Add an instance of Google::Apis::SheetsV4::Request (or its Hash
+    # equivalent) which will be applied on the next call to the save method.
+    def add_request(request)
+      @v4_requests.push(request)
+    end
+
     private
+
+    def format_cells(top_row, left_col, num_rows, num_cols, format, fields)
+      add_request({
+        repeat_cell:
+          Google::Apis::SheetsV4::RepeatCellRequest.new(
+            range: v4_range_object(top_row, left_col, num_rows, num_cols),
+            cell: Google::Apis::SheetsV4::CellData.new(user_entered_format: format),
+            fields: fields
+          ),
+      })
+    end
 
     def set_worksheet_feed_entry(entry)
       @worksheet_feed_entry = entry
@@ -595,6 +743,16 @@ module GoogleDrive
           format('Contains invalid character %p for XML 1.0: %p', $&, value)
         )
       end
+    end
+
+    def v4_range_object(top_row, left_col, num_rows, num_cols)
+      Google::Apis::SheetsV4::GridRange.new(
+        sheet_id: gid,
+        start_row_index: top_row - 1,
+        start_column_index: left_col - 1,
+        end_row_index: top_row + num_rows - 1,
+        end_column_index: left_col + num_cols - 1
+      )
     end
   end
 end

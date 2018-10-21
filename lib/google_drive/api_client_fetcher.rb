@@ -4,6 +4,7 @@
 require 'net/https'
 require 'uri'
 require 'google/apis/drive_v3'
+require 'google/apis/sheets_v4'
 Net::HTTP.version_1_2
 
 module GoogleDrive
@@ -19,30 +20,35 @@ module GoogleDrive
 
     def initialize(authorization, client_options, request_options)
       @drive = Google::Apis::DriveV3::DriveService.new
-      @drive.authorization = authorization
+      @sheets = Google::Apis::SheetsV4::SheetsService.new
 
-      # Make the timeout virtually infinite because some of the operations
-      # (e.g., uploading a large file) can take very long.
-      # This value is the maximal allowed timeout in seconds on JRuby.
-      t = (2**31 - 1) / 1000
-      @drive.client_options.open_timeout_sec = t
-      @drive.client_options.read_timeout_sec = t
-      @drive.client_options.send_timeout_sec = t
+      [@drive, @sheets].each do |service|
+        service.authorization = authorization
 
-      if client_options
-        @drive.client_options.members.each do |name|
-          if !client_options[name].nil?
-            @drive.client_options[name] = client_options[name]
+        # Make the timeout virtually infinite because some of the operations
+        # (e.g., uploading a large file) can take very long.
+        # This value is the maximal allowed timeout in seconds on JRuby.
+        t = (2**31 - 1) / 1000
+        service.client_options.open_timeout_sec = t
+        service.client_options.read_timeout_sec = t
+        service.client_options.send_timeout_sec = t
+
+        if client_options
+          service.client_options.members.each do |name|
+            if !client_options[name].nil?
+              service.client_options[name] = client_options[name]
+            end
           end
         end
-      end
 
-      if request_options
-        @drive.request_options = @drive.request_options.merge(request_options)
+        if request_options
+          service.request_options = service.request_options.merge(request_options)
+        end
       end
     end
 
     attr_reader(:drive)
+    attr_reader(:sheets)
 
     def request_raw(method, url, data, extra_header, _auth)
       options = @drive.request_options.merge(header: extra_header)
