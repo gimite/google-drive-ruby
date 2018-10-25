@@ -386,13 +386,12 @@ module GoogleDrive
     #     "1smypkyAz4STrKO4Zkos5Z4UPUJKvvgIza32LnlQ7OGw/od7/private/full")
     def worksheet_by_url(url)
       case url
-      when %r{^https?://spreadsheets.google.com/feeds/worksheets/.*/.*/full/.*$}
-        worksheet_feed_url = url
-      when %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full((\?.*)?)$}
-        worksheet_feed_url =
-          'https://spreadsheets.google.com/feeds/worksheets/' \
-          "#{Regexp.last_match(1)}/private/full/" \
-          "#{Regexp.last_match(2)}#{Regexp.last_match(3)}"
+      when %r{^https?://spreadsheets.google.com/feeds/worksheets/(.*)/.*/full/(.*)$}
+        spreadsheet_id = Regexp.last_match(1)
+        worksheet_feed_id = Regexp.last_match(2)
+      when %r{^https?://spreadsheets.google.com/feeds/cells/(.*)/(.*)/private/full(\?.*)?$}
+        spreadsheet_id = Regexp.last_match(1)
+        worksheet_feed_id = Regexp.last_match(2)
       else
         raise(
           GoogleDrive::Error,
@@ -401,8 +400,15 @@ module GoogleDrive
         )
       end
 
-      worksheet_feed_entry = request(:get, worksheet_feed_url)
-      Worksheet.new(self, nil, worksheet_feed_entry)
+      spreadsheet = spreadsheet_by_key(spreadsheet_id)
+      worksheet = spreadsheet.worksheets.find{ |ws| ws.worksheet_feed_id == worksheet_feed_id }
+      unless worksheet
+        raise(
+          GoogleDrive::Error,
+          "Worksheet not found for the given URL: #{url}"
+        )
+      end
+      worksheet
     end
 
     # Returns the root folder.
