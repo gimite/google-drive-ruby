@@ -638,8 +638,12 @@ module GoogleDrive
     def set_properties(properties)
       @properties = properties
       @title = @remote_title = properties.title
-      @max_rows = properties.grid_properties.row_count
-      @max_cols = properties.grid_properties.column_count
+      if properties.grid_properties.nil?
+        @max_rows = @max_cols = 0
+      else
+        @max_rows = properties.grid_properties.row_count
+        @max_cols = properties.grid_properties.column_count
+      end
       @meta_modified = false
     end
 
