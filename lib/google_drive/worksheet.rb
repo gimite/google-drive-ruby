@@ -50,7 +50,7 @@ module GoogleDrive
     # @api private
     # A regexp which matches an invalid character in XML 1.0:
     # https://en.wikipedia.org/wiki/Valid_characters_in_XML#XML_1.0
-    XML_INVAILD_CHAR_REGEXP =
+    XML_INVALID_CHAR_REGEXP =
       /[^\u0009\u000a\u000d\u0020-\ud7ff\ue000-\ufffd\u{10000}-\u{10ffff}]/
 
     # @api private
@@ -709,7 +709,7 @@ module GoogleDrive
     end
 
     def validate_cell_value(value)
-      if value =~ XML_INVAILD_CHAR_REGEXP
+      if value =~ XML_INVALID_CHAR_REGEXP
         raise(
           ArgumentError,
           format('Contains invalid character %p for XML 1.0: %p', $&, value)
