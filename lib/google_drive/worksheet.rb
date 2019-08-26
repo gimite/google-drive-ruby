@@ -139,15 +139,16 @@ module GoogleDrive
       format("%s\#gid=%s", spreadsheet.human_url, gid)
     end
 
-    # copy worksheet to specified spreadsheet
-    def copy_to(spreadsheet_id)
+    # Copy worksheet to specified spreadsheet.
+    def copy_to(destination_spreadsheet_id)
       request = Google::Apis::SheetsV4::CopySheetToAnotherSpreadsheetRequest.new(
-        destination_spreadsheet_id: spreadsheet_id,
+        destination_spreadsheet_id: destination_spreadsheet_id,
       )
-      @session.sheets_service.copy_spreadsheet(spreadsheet_id, sheet_id, request)
+      @session.sheets_service.copy_spreadsheet(spreadsheet.id, sheet_id, request)
+      nil
     end
 
-    # copy worksheet to owner spreadsheet
+    # Copy worksheet to owner spreadsheet.
     def duplicate
       copy_to(spreadsheet.id)
     end
