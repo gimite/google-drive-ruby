@@ -139,6 +139,19 @@ module GoogleDrive
       format("%s\#gid=%s", spreadsheet.human_url, gid)
     end
 
+    # copy worksheet to specified spreadsheet
+    def copy_to(spreadsheet_id)
+      request = Google::Apis::SheetsV4::CopySheetToAnotherSpreadsheetRequest.new(
+        destination_spreadsheet_id: spreadsheet_id,
+      )
+      @session.sheets_service.copy_spreadsheet(spreadsheet_id, sheet_id, request)
+    end
+
+    # copy worksheet to owner spreadsheet
+    def duplicate
+      copy_to(spreadsheet.id)
+    end
+
     # Returns content of the cell as String. Arguments must be either
     # (row number, column number) or cell name. Top-left cell is [1, 1].
     #
