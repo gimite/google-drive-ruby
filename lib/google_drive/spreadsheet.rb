@@ -131,5 +131,18 @@ module GoogleDrive
         @session.sheets_service.batch_update_spreadsheet(id, batch_request)
       batch_response.replies
     end
+
+    # Append values to a spreadsheet by first searching for a data table at a range,
+    # then appending the specified values at the end of this data table.
+    def append(range_name, values, override_params = {})
+      value_range = Google::Apis::SheetsV4::ValueRange.new(values: values)
+      default_params = {
+        value_input_option: 'USER_ENTERED',
+        insert_data_option: 'INSERT_ROWS',
+      }
+      request_body = default_params.merge(override_params)
+      result = @session.sheets_service.append_spreadsheet_value(id, range_name, value_range, request_body)
+      result.updates
+    end
   end
 end
