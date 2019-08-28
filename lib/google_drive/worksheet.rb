@@ -140,7 +140,10 @@ module GoogleDrive
     end
 
     # Copy worksheet to specified spreadsheet.
-    def copy_to(destination_spreadsheet_id)
+    def copy_to(spreadsheet_or_id)
+      destination_spreadsheet_id =
+        spreadsheet_or_id.respond_to?(:id) ?
+          spreadsheet_or_id.id : spreadsheet_or_id
       request = Google::Apis::SheetsV4::CopySheetToAnotherSpreadsheetRequest.new(
         destination_spreadsheet_id: destination_spreadsheet_id,
       )
