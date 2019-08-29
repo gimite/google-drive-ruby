@@ -283,6 +283,13 @@ module GoogleDrive
       @meta_modified = true
     end
 
+    # Updates index of the worksheet.
+    # Note that update is not sent to the server until you call save().
+    def index=(index)
+      @index = index
+      @meta_modified = true
+    end
+
     # @api private
     def cells
       reload_cells unless @cells
@@ -641,6 +648,7 @@ module GoogleDrive
     def set_properties(properties)
       @properties = properties
       @title = @remote_title = properties.title
+      @index = properties.index
       if properties.grid_properties.nil?
         @max_rows = @max_cols = 0
       else
