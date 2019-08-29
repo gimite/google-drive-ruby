@@ -390,6 +390,7 @@ module GoogleDrive
             properties: {
               sheet_id: sheet_id,
               title: title,
+              index: index,
               grid_properties: {row_count: max_rows, column_count: max_cols},
             },
             fields: '*',
