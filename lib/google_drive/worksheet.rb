@@ -80,6 +80,9 @@ module GoogleDrive
     # Title of the worksheet (shown as tab label in Web interface).
     attr_reader :title
 
+    # Index of the worksheet (affects tab order in web interface).
+    attr_reader :index
+
     # GoogleDrive::Spreadsheet which this worksheet belongs to.
     attr_reader :spreadsheet
 
