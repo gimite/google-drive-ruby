@@ -73,7 +73,7 @@ module GoogleDrive
     def worksheet_feed_entry
       @worksheet_feed_entry ||= @session.request(:get, worksheet_feed_url).root
     end
-    
+
     # Google::Apis::SheetsV4::SheetProperties object for this worksheet.
     attr_reader :properties
 
@@ -392,7 +392,7 @@ module GoogleDrive
         @v4_requests = []
         sent = true
       end
-      
+
       @remote_title = @title
 
       unless @modified.empty?
@@ -406,7 +406,7 @@ module GoogleDrive
           min_modified_col = c if c < min_modified_col
           max_modified_col = c if c > max_modified_col
         end
-        
+
         # Uses update_spreadsheet_value instead batch_update_spreadsheet with
         # update_cells. batch_update_spreadsheet has benefit that the request
         # can be batched with other requests. But it has drawback that the
@@ -570,8 +570,8 @@ module GoogleDrive
     # A1 to have red text that is bold and italic:
     #   worksheet.set_text_format(
     #     1, 1, 1, 1,
-    #     bold: true, 
-    #     italic: true, 
+    #     bold: true,
+    #     italic: true,
     #     foreground_color: GoogleDrive::Worksheet::Colors::RED_BERRY)
     #
     # foreground_color is an instance of Google::Apis::SheetsV4::Color.
@@ -673,7 +673,7 @@ module GoogleDrive
           k = [r + 1, c + 1]
           @cells[k] = cell_data.formatted_value || ''
           @input_values[k] = extended_value_to_str(cell_data.user_entered_value)
-          @numeric_values[k] = 
+          @numeric_values[k] =
               cell_data.effective_value && cell_data.effective_value.number_value ?
                   cell_data.effective_value.number_value.to_f : nil
         end
