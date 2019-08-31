@@ -140,7 +140,7 @@ module GoogleDrive
     end
 
     # Copy worksheet to specified spreadsheet.
-    # This method can take either instance of GoogleDrive::Spreadsheet or it's id.
+    # This method can take either instance of GoogleDrive::Spreadsheet or its id.
     def copy_to(spreadsheet_or_id)
       destination_spreadsheet_id =
         spreadsheet_or_id.respond_to?(:id) ?
