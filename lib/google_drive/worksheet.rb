@@ -153,7 +153,7 @@ module GoogleDrive
 
     # Copy worksheet to owner spreadsheet.
     def duplicate
-      copy_to(spreadsheet.id)
+      copy_to(spreadsheet)
     end
 
     # Returns content of the cell as String. Arguments must be either
