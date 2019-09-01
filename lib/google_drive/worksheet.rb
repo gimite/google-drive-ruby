@@ -80,6 +80,9 @@ module GoogleDrive
     # Title of the worksheet (shown as tab label in Web interface).
     attr_reader :title
 
+    # Index of the worksheet (affects tab order in web interface).
+    attr_reader :index
+
     # GoogleDrive::Spreadsheet which this worksheet belongs to.
     attr_reader :spreadsheet
 
@@ -298,6 +301,13 @@ module GoogleDrive
       @meta_modified = true
     end
 
+    # Updates index of the worksheet.
+    # Note that update is not sent to the server until you call save().
+    def index=(index)
+      @index = index
+      @meta_modified = true
+    end
+
     # @api private
     def cells
       reload_cells unless @cells
@@ -398,6 +408,7 @@ module GoogleDrive
             properties: {
               sheet_id: sheet_id,
               title: title,
+              index: index,
               grid_properties: {row_count: max_rows, column_count: max_cols},
             },
             fields: '*',
@@ -656,6 +667,7 @@ module GoogleDrive
     def set_properties(properties)
       @properties = properties
       @title = @remote_title = properties.title
+      @index = properties.index
       if properties.grid_properties.nil?
         @max_rows = @max_cols = 0
       else
