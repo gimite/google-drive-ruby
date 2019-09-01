@@ -73,7 +73,7 @@ module GoogleDrive
     def worksheet_feed_entry
       @worksheet_feed_entry ||= @session.request(:get, worksheet_feed_url).root
     end
-    
+
     # Google::Apis::SheetsV4::SheetProperties object for this worksheet.
     attr_reader :properties
 
@@ -137,6 +137,24 @@ module GoogleDrive
     # URL to view/edit the worksheet in a Web browser.
     def human_url
       format("%s\#gid=%s", spreadsheet.human_url, gid)
+    end
+
+    # Copy worksheet to specified spreadsheet.
+    # This method can take either instance of GoogleDrive::Spreadsheet or its id.
+    def copy_to(spreadsheet_or_id)
+      destination_spreadsheet_id =
+        spreadsheet_or_id.respond_to?(:id) ?
+          spreadsheet_or_id.id : spreadsheet_or_id
+      request = Google::Apis::SheetsV4::CopySheetToAnotherSpreadsheetRequest.new(
+        destination_spreadsheet_id: destination_spreadsheet_id,
+      )
+      @session.sheets_service.copy_spreadsheet(spreadsheet.id, sheet_id, request)
+      nil
+    end
+
+    # Copy worksheet to owner spreadsheet.
+    def duplicate
+      copy_to(spreadsheet)
     end
 
     # Returns content of the cell as String. Arguments must be either
@@ -392,7 +410,7 @@ module GoogleDrive
         @v4_requests = []
         sent = true
       end
-      
+
       @remote_title = @title
 
       unless @modified.empty?
@@ -406,7 +424,7 @@ module GoogleDrive
           min_modified_col = c if c < min_modified_col
           max_modified_col = c if c > max_modified_col
         end
-        
+
         # Uses update_spreadsheet_value instead batch_update_spreadsheet with
         # update_cells. batch_update_spreadsheet has benefit that the request
         # can be batched with other requests. But it has drawback that the
@@ -570,8 +588,8 @@ module GoogleDrive
     # A1 to have red text that is bold and italic:
     #   worksheet.set_text_format(
     #     1, 1, 1, 1,
-    #     bold: true, 
-    #     italic: true, 
+    #     bold: true,
+    #     italic: true,
     #     foreground_color: GoogleDrive::Worksheet::Colors::RED_BERRY)
     #
     # foreground_color is an instance of Google::Apis::SheetsV4::Color.
@@ -673,7 +691,7 @@ module GoogleDrive
           k = [r + 1, c + 1]
           @cells[k] = cell_data.formatted_value || ''
           @input_values[k] = extended_value_to_str(cell_data.user_entered_value)
-          @numeric_values[k] = 
+          @numeric_values[k] =
               cell_data.effective_value && cell_data.effective_value.number_value ?
                   cell_data.effective_value.number_value.to_f : nil
         end
