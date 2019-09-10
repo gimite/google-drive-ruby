@@ -134,6 +134,20 @@ module GoogleDrive
 
     # Append values to a spreadsheet by first searching for a data table at a range,
     # then appending the specified values at the end of this data table.
+    #
+    # +range+ The A1 notation of a range to search for a logical table of data. 
+    # Values will be appended after the last row of the table.
+    # +values+ Array (rows) of Array (columns) of values to append to the spreadsheet.
+    # +override_params+ allows you to control how the values will be inserted.
+    #   By default, the values will be interpreted as if typed by a user, 
+    #   and will add new rows instead of ovewriting existing ones.
+    #   
+    # You can read the Google documentation for more information:
+    #   https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/append
+    #
+    # Example: 
+    #   sheet.append_values "A1", [ [ 10, 11, 12 ], [ 20, 21, 22 ] ]
+    # 
     def append_values(range_name, values, override_params = {})
       value_range = Google::Apis::SheetsV4::ValueRange.new(values: values)
       default_params = {
