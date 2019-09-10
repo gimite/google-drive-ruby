@@ -141,6 +141,9 @@ module GoogleDrive
     # +override_params+ allows you to control how the values will be inserted.
     #   By default, the values will be interpreted as if typed by a user, 
     #   and will add new rows instead of ovewriting existing ones.
+    #
+    # Returns an object +UpdateValuesResponse+ that documents the modifications done 
+    # to your spreadsheet.
     #   
     # You can read the Google documentation for more information:
     #   https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/append
