@@ -17,11 +17,11 @@ class TestGoogleDrive < Test::Unit::TestCase
 
   @@session = nil
 
-  def test_spreadsheet_append
+  def test_spreadsheet_append_values
     session = get_session
 
-    ss_title = "#{PREFIX}spreadsheet-append"
-    ss_copy_title = "#{PREFIX}spreadsheet-append-copy"    
+    ss_title = "#{PREFIX}spreadsheet-append-values"
+    ss_copy_title = "#{PREFIX}spreadsheet-append-values-copy"    
 
     # Removes test spreadsheets in the previous run in case the previous run
     # failed.
@@ -36,7 +36,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ss.title == ss_title }
     ws = ss.worksheets[0]
     
-    ss.append("A1", [ %w[abc def ghi], %w[jkl mno pqr] ])
+    ss.append_values("A1", [ %w[abc def ghi], %w[jkl mno pqr] ])
     ws.reload
     assert { ws.max_rows == 1002 }
     assert { ws.max_cols == 26 }
@@ -49,7 +49,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ws[2, 2] == 'mno' }
     assert { ws[2, 3] == 'pqr' }
 
-    ss.append("A1", [ %w[stu vwx yz], %w[123 456 789] ])
+    ss.append_values("A1", [ %w[stu vwx yz], %w[123 456 789] ])
     ws.reload
     assert { ws.max_rows == 1004 }
     assert { ws.max_cols == 26 }

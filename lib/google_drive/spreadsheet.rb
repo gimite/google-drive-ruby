@@ -134,7 +134,7 @@ module GoogleDrive
 
     # Append values to a spreadsheet by first searching for a data table at a range,
     # then appending the specified values at the end of this data table.
-    def append(range_name, values, override_params = {})
+    def append_values(range_name, values, override_params = {})
       value_range = Google::Apis::SheetsV4::ValueRange.new(values: values)
       default_params = {
         value_input_option: 'USER_ENTERED',
