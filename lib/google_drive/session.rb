@@ -141,15 +141,13 @@ module GoogleDrive
         config.client_id = options[:client_id]
         config.client_secret = options[:client_secret]
       end
-      if !config.client_id && !config.client_secret
-        config.client_id =
-          '452925651630-egr1f18o96acjjvphpbbd1qlsevkho1d.' \
-          'apps.googleusercontent.com'
-        config.client_secret = '1U3-Krii5x1oLPrwD5zgn-ry'
-      elsif !config.client_id || !config.client_secret
+      if !config.client_id || !config.client_secret
         raise(
           ArgumentError,
-          'client_id and client_secret must be both specified or both omitted'
+          'client_id or client_secret is missing in the config. Follow ' \
+          'https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md ' \
+          'to provide a valid config. google_drive library no longer provides ' \
+          'the default credential due to a limitation of Google API.'
         )
       end
 
