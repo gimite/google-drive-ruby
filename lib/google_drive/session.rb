@@ -606,7 +606,8 @@ module GoogleDrive
 
       else
         parameters = (opts[:parameters] || {}).merge(page_token: nil)
-        (items,) = execute_paged!(opts.merge(parameters: parameters))
+        (items, page_token) = execute_paged!(opts.merge(parameters: parameters))
+        [items, page_token]
         items
       end
     end
