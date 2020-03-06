@@ -253,7 +253,7 @@ module GoogleDrive
       params = convert_params(params)
       execute_paged!(
         method: drive_service.method(:list_files),
-        parameters: { fields: '*', supports_team_drives: true }.merge(params),
+        parameters: { fields: '*', supports_team_drives: true, include_team_drive_items: true }.merge(params),
         items_method_name: :files,
         converter: proc { |af| wrap_api_file(af) },
         &block
