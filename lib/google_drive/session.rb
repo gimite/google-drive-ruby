@@ -253,7 +253,7 @@ module GoogleDrive
       params = convert_params(params)
       execute_paged!(
         method: drive_service.method(:list_files),
-        parameters: { fields: '*', supports_team_drives: true, include_team_drive_items: true }.merge(params),
+        parameters: { fields: '*', supports_all_drives: true, include_items_from_all_drives: true }.merge(params),
         items_method_name: :files,
         converter: proc { |af| wrap_api_file(af) },
         &block
@@ -285,7 +285,7 @@ module GoogleDrive
     # Returns an instance of GoogleDrive::File or its subclass
     # (GoogleDrive::Spreadsheet, GoogleDrive::Collection).
     def file_by_id(id)
-      api_file = drive_service.get_file(id, fields: '*', supports_team_drives: true)
+      api_file = drive_service.get_file(id, fields: '*', supports_all_drives: true)
       wrap_api_file(api_file)
     end
 
@@ -508,7 +508,7 @@ module GoogleDrive
       }.merge(file_properties)
 
       file = drive_service.create_file(
-        file_metadata, fields: '*', supports_team_drives: true
+        file_metadata, fields: '*', supports_all_drives: true
       )
 
       wrap_api_file(file)
@@ -654,7 +654,7 @@ module GoogleDrive
         upload_source: source,
         content_type: 'application/octet-stream',
         fields: '*',
-        supports_team_drives: true
+        supports_all_drives: true
       }
       for k, v in params
         unless %i[convert convert_mime_type parents].include?(k)
