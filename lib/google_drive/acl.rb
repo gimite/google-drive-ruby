@@ -22,7 +22,7 @@ module GoogleDrive
       @session = session
       @file = file
       api_permissions = @session.drive_service.list_permissions(
-        @file.id, fields: '*', supports_team_drives: true
+        @file.id, fields: '*', supports_all_drives: true
       )
       @entries =
         api_permissions.permissions.map { |perm| AclEntry.new(perm, self) }
@@ -73,7 +73,7 @@ module GoogleDrive
       api_permission = @session.drive_service.create_permission(
         @file.id,
         entry.params,
-        { fields: '*', supports_team_drives: true }.merge(options)
+        { fields: '*', supports_all_drives: true }.merge(options)
       )
       new_entry = AclEntry.new(api_permission, self)
       @entries.push(new_entry)
@@ -86,7 +86,7 @@ module GoogleDrive
     #   spreadsheet.acl.delete(spreadsheet.acl[1])
     def delete(entry)
       @session.drive_service.delete_permission(
-        @file.id, entry.id, supports_team_drives: true
+        @file.id, entry.id, supports_all_drives: true
       )
       @entries.delete(entry)
     end
@@ -98,7 +98,7 @@ module GoogleDrive
         entry.id,
         { role: entry.role },
         fields: '*',
-        supports_team_drives: true
+        supports_all_drives: true
       )
       entry.api_permission = api_permission
       entry
