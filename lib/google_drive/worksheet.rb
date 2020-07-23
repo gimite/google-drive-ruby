@@ -183,12 +183,15 @@ module GoogleDrive
     #   worksheet[1, 3] = "=A1+B1"
     def []=(*args)
       (row, col) = parse_cell_args(args[0...-1])
-      value = args[-1].to_s
-      validate_cell_value(value)
+      value = args[-1]
+
       reload_cells unless @cells
+      @numeric_values[[row, col]] = value.is_a?(Numeric) ? value : nil
+      value = value.to_s
+      validate_cell_value(value)
+
       @cells[[row, col]] = value
       @input_values[[row, col]] = value
-      @numeric_values[[row, col]] = nil
       @modified.add([row, col])
       self.max_rows = row if row > @max_rows
       self.max_cols = col if col > @max_cols
@@ -237,8 +240,8 @@ module GoogleDrive
     #
     # Returns nil if the cell is empty or contains non-number.
     #
-    # If you modify the cell, its numeric_value is nil until you call save()
-    # and reload().
+    # If you modify the cell to a non-numeric object (i.e. '3' instead of 3),
+    # its numeric_value is nil until you call save() and reload().
     #
     # For details, see:
     # https://developers.google.com/google-apps/spreadsheets/#working_with_cell-based_feeds
@@ -447,7 +450,9 @@ module GoogleDrive
             [@title, min_modified_row, min_modified_col, max_modified_row, max_modified_col]
         values = (min_modified_row..max_modified_row).map do |r|
           (min_modified_col..max_modified_col).map do |c|
-            @modified.include?([r, c]) ? (@cells[[r, c]] || '') : nil
+            next unless @modified.include?([r, c])
+
+            @numeric_values[[r, c]] || @cells[[r, c]] || ''
           end
         end
         value_range = Google::Apis::SheetsV4::ValueRange.new(values: values)
@@ -558,7 +563,7 @@ module GoogleDrive
     # Changes the formatting of a range of cells to match the given number format.
     # For example to change A1 to a percentage with 1 decimal point:
     #   worksheet.set_number_format(1, 1, 1, 1, "##.#%")
-    # Google API reference: https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets#numberformat
+    # Google API reference: https://developers.google.com/sheets/api/guides/formats
     def set_number_format(top_row, left_col, num_rows, num_cols, pattern, type: "NUMBER")
       number_format = Google::Apis::SheetsV4::NumberFormat.new(type: type, pattern: pattern)
       format = Google::Apis::SheetsV4::CellFormat.new(number_format: number_format)

@@ -44,27 +44,36 @@ class TestGoogleDrive < Test::Unit::TestCase
     ws[1, 2] = '5'
     ws[1, 3] = '=A1+B1'
     ws[1, 4] = 13
+
+    ws.set_number_format(1, 5, 1, 2, 'yyyy-mm-dd h:mm:ss')
+    ws[1, 5] = 25569
+    ws[1, 6] = 25570.5
+
     assert { ws.max_rows == 20 }
     assert { ws.max_cols == 10 }
     assert { ws.num_rows == 1 }
-    assert { ws.num_cols == 4 }
+    assert { ws.num_cols == 6 }
     assert { ws[1, 1] == '3' }
     assert { ws[1, 2] == '5' }
     assert { ws[1, 4] == '13' }
+    assert { ws[1, 5] == '25569' }
+    assert { ws[1, 6] == '25570.5' }
     ws.save
 
     ws.reload
     assert { ws.max_rows == 20 }
     assert { ws.max_cols == 10 }
     assert { ws.num_rows == 1 }
-    assert { ws.num_cols == 4 }
+    assert { ws.num_cols == 6 }
     assert { ws[1, 1] == '3' }
     assert { ws[1, 2] == '5' }
     assert { ws[1, 3] == '8' }
     assert { ws[1, 4] == '13' }
+    assert { ws[1, 5] == '1970-01-01 0:00:00' }
+    assert { ws[1, 6] == '1970-01-02 12:00:00' }
     assert { ws[1, 1].encoding == Encoding::UTF_8 }
 
-    assert { ss.export_as_string('csv') == '3,5,8,13' }
+    assert { ss.export_as_string('csv') == '3,5,8,13,1970-01-01 0:00:00,1970-01-02 12:00:00' }
     assert { ss.available_content_types.empty? }
 
     ss2 = session.spreadsheet_by_key(ss.key)
