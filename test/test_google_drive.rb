@@ -36,7 +36,7 @@ class TestGoogleDrive < Test::Unit::TestCase
     assert { ss.title == ss_title }
     ws = ss.worksheets[0]
     
-    ss.append_values("A1", [ %w[abc def ghi], %w[jkl mno pqr] ])
+    ss.append_values('A1', [ %w[abc def ghi], %w[jkl mno pqr] ])
     ws.reload
     assert { ws.max_rows == 1002 }
     assert { ws.max_cols == 26 }
