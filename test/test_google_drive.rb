@@ -51,8 +51,6 @@ class TestGoogleDrive < Test::Unit::TestCase
 
     ss.append_values("A1", [ %w[stu vwx yz], %w[123 456 789] ])
     ws.reload
-    assert { ws.max_rows == 1004 }
-    assert { ws.max_cols == 26 }
     assert { ws.num_rows == 4 }
     assert { ws.num_cols == 3 }
     assert { ws[3, 1] == 'stu' }
