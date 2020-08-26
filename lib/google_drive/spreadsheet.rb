@@ -141,6 +141,8 @@ module GoogleDrive
     # +override_params+ allows you to control how the values will be inserted.
     #   By default, the values will be interpreted as if typed by a user, 
     #   and will add new rows instead of ovewriting existing ones.
+    #   So default value is `{ value_input_option: 'USER_ENTERED', insert_data_option: 'INSERT_ROWS' }`
+    #   See https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/append#query-parameters for more information
     #
     # Returns an object +UpdateValuesResponse+ that documents the modifications done 
     # to your spreadsheet.
