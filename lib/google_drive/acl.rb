@@ -73,7 +73,7 @@ module GoogleDrive
       api_permission = @session.drive_service.create_permission(
         @file.id,
         entry.params,
-        { fields: '*', supports_all_drives: true }.merge(options)
+        **{ fields: '*', supports_all_drives: true }.merge(options)
       )
       new_entry = AclEntry.new(api_permission, self)
       @entries.push(new_entry)

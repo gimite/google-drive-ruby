@@ -672,7 +672,7 @@ module GoogleDrive
       end
       file_metadata[:parents] = params[:parents] if params[:parents]
 
-      file = drive_service.create_file(file_metadata, api_params)
+      file = drive_service.create_file(file_metadata, **api_params)
       wrap_api_file(file)
     end
 
