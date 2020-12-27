@@ -598,7 +598,7 @@ module GoogleDrive
         end
 
       elsif opts[:parameters] && opts[:parameters].key?(:page_token)
-        response = opts[:method].call(opts[:parameters])
+        response = opts[:method].call(**opts[:parameters])
         items    = response.__send__(opts[:items_method_name]).map do |item|
           opts[:converter] ? opts[:converter].call(item) : item
         end
