@@ -8,7 +8,7 @@ NOTE: This is NOT a library to create Google Drive App.
 * [Migration from ver. 2.x.x or before](#migration)
 * [How to install](#install)
 * [How to use](#use)
-* [API documentation](http://www.rubydoc.info/gems/google_drive)
+* [API documentation](https://rubydoc.info/github/gimite/google-drive-ruby)
 * [Authorization](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md)
 * [Github](http://github.com/gimite/google-drive-ruby)
 * [License](#license)
