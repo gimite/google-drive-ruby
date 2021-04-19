@@ -321,9 +321,29 @@ module GoogleDrive
     def rows(skip = 0)
       nc = num_cols
       result = ((1 + skip)..num_rows).map do |row|
-        (1..nc).map { |col| self[row, col] }.freeze
+        (1..nc).map do |col|
+          block_given? ? yield(row, col) : self[row, col]
+        end.freeze
       end
       result.freeze
+    end
+
+    # Same as +#rows+, but replacing cells with numeric values where they exist.
+    # Please note that this will NOT replace dirty cells with their numeric
+    # value.
+    #
+    # @see #rows
+    # @see #numeric_value
+    def rows_with_numerics(skip = 0)
+      rows(skip) { |row, col| numeric_value(row, col) || self[row, col] }
+    end
+
+    # Same as +#rows+, but with input values instead
+    #
+    # @see #rows
+    # @see #input_value
+    def rows_with_inputs(skip = 0)
+      rows(skip) { |row, col| input_value(row, col) }
     end
 
     # Inserts rows.
