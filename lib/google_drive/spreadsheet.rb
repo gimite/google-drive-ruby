@@ -131,5 +131,37 @@ module GoogleDrive
         @session.sheets_service.batch_update_spreadsheet(id, batch_request)
       batch_response.replies
     end
+
+    # Append values to a spreadsheet by first searching for a data table at a range,
+    # then appending the specified values at the end of this data table.
+    #
+    # +range+ The A1 notation of a range to search for a logical table of data. 
+    # Values will be appended after the last row of the table.
+    # +values+ Array (rows) of Array (columns) of values to append to the spreadsheet.
+    # +override_params+ allows you to control how the values will be inserted.
+    #   By default, the values will be interpreted as if typed by a user, 
+    #   and will add new rows instead of ovewriting existing ones.
+    #   So default value is `{ value_input_option: 'USER_ENTERED', insert_data_option: 'INSERT_ROWS' }`
+    #   See https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/append#query-parameters for more information
+    #
+    # Returns an object +UpdateValuesResponse+ that documents the modifications done 
+    # to your spreadsheet.
+    #   
+    # You can read the Google documentation for more information:
+    #   https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets.values/append
+    #
+    # Example: 
+    #   sheet.append_values "A1", [ [ 10, 11, 12 ], [ 20, 21, 22 ] ]
+    # 
+    def append_values(range_name, values, override_params = {})
+      value_range = Google::Apis::SheetsV4::ValueRange.new(values: values)
+      default_params = {
+        value_input_option: 'USER_ENTERED',
+        insert_data_option: 'INSERT_ROWS',
+      }
+      request_body = default_params.merge(override_params)
+      result = @session.sheets_service.append_spreadsheet_value(id, range_name, value_range, request_body)
+      result.updates
+    end
   end
 end

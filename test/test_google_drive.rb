@@ -14,6 +14,50 @@ class TestGoogleDrive < Test::Unit::TestCase
 
   @@session = nil
 
+  def test_spreadsheet_append_values
+    session = get_session
+
+    ss_title = "#{PREFIX}spreadsheet-append-values"
+    ss_copy_title = "#{PREFIX}spreadsheet-append-values-copy"    
+
+    # Removes test spreadsheets in the previous run in case the previous run
+    # failed.
+    for ss in session.files('title' => ss_title, 'title-exact' => 'true')
+      delete_test_file(ss, true)
+    end
+    for ss in session.files('title' => ss_copy_title, 'title-exact' => 'true')
+      delete_test_file(ss, true)
+    end
+
+    ss = session.create_spreadsheet(ss_title)
+    assert { ss.title == ss_title }
+    ws = ss.worksheets[0]
+    
+    ss.append_values('A1', [ %w[abc def ghi], %w[jkl mno pqr] ])
+    ws.reload
+    assert { ws.max_rows == 1002 }
+    assert { ws.max_cols == 26 }
+    assert { ws.num_rows == 2 }
+    assert { ws.num_cols == 3 }
+    assert { ws[1, 1] == 'abc' }
+    assert { ws[1, 2] == 'def' }
+    assert { ws[1, 3] == 'ghi' }
+    assert { ws[2, 1] == 'jkl' }
+    assert { ws[2, 2] == 'mno' }
+    assert { ws[2, 3] == 'pqr' }
+
+    ss.append_values("A1", [ %w[stu vwx yz], %w[123 456 789] ])
+    ws.reload
+    assert { ws.num_rows == 4 }
+    assert { ws.num_cols == 3 }
+    assert { ws[3, 1] == 'stu' }
+    assert { ws[3, 2] == 'vwx' }
+    assert { ws[3, 3] == 'yz' }
+    assert { ws[4, 1] == '123' }
+    assert { ws[4, 2] == '456' }
+    assert { ws[4, 3] == '789' }
+  end
+
   def test_spreadsheet_online
     session = get_session
 
