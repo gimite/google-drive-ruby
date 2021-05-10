@@ -120,6 +120,18 @@ p ws.rows  #==> [["fuga", ""], ["foo", "bar]]
 ws.reload
 ```
 
+### Example to upload to shared folder
+
+```ruby
+config = "/path/to/config.json"
+GoogleDrive::Session
+  .from_service_account_key(config)
+  .collection_by_url("https://drive.google.com/drive/folders/gF1dvxQfFeRcQgFOdgid0aAcM1q9i6K15")
+  .upload_from_file("/path/to/local/file.txt")
+```
+
+[If you want to share your files/documents/folders with the service account, share them with the client_email address in the JSON file.](https://github.com/gimite/google-drive-ruby/blob/master/doc/authorization.md#on-behalf-of-no-existing-users-service-account)
+
 
 ## <a name="license">License</a>
 
