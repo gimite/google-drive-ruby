@@ -19,10 +19,18 @@ If you want your program to access Google Drive with your own account, or the ac
 1. Go to the [credentials page](https://console.developers.google.com/apis/credentials) in the Google Developer Console for the same project.
 1. Click "Create credentials" -> "OAuth client ID".<br>
 ![](https://raw.githubusercontent.com/gimite/google-drive-ruby/master/doc/images/oauth_client_id.png)
-1. Choose "Other" for "Application type".<br>
+1. Choose "Desktop App" for "Application type".<br>
 ![](https://raw.githubusercontent.com/gimite/google-drive-ruby/master/doc/images/app_type_other.png)
 1. Click "Create" and take note of the generated client ID and client secret.
 1. Activate the Drive API for your project in the [Google API Console](https://console.developers.google.com/apis/library).
+1. To retrieve Goole Refresh Token, run the following curl below. Populate the cliendID and clientSecret values generated from above. The authorization code is obtained by running the squirtle app the first time with the GOOGLE_REFRESH_TOKEN commented out in .env file. The app will generate a URL where you can go to to retrieve the authorization code. After you run the curl command below, uncomment the  GOOGLE_REFRESH_TOKEN and update with the refresh_token from the curl response.
+```
+curl \
+--request POST \
+--data "code=<Authorization Code>&client_id=<Goolge Client ID>&client_secret=<Google Client Secret>&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code" 
+
+```
+
 1. Create a file config.json which contains the client ID and client secret you got above, which looks like:
    ```
    {
