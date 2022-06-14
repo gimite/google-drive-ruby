@@ -96,7 +96,7 @@ module GoogleDrive
     def download_to_file(path, params = {})
       @session.drive_service.get_file(
         id,
-        { download_dest: path, supports_all_drives: true }.merge(params)
+        **{ download_dest: path, supports_all_drives: true }.merge(params)
       )
     end
 
