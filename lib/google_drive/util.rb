@@ -27,6 +27,7 @@ module GoogleDrive
       '.htm' => 'text/html',
       '.html' => 'text/html',
       '.zip' => 'application/zip',
+      '.epub' => 'application/epub+zip',
       '.swf' => 'application/x-shockwave-flash'
     }.freeze
 
