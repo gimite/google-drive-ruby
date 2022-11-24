@@ -83,6 +83,9 @@ module GoogleDrive
     # Index of the worksheet (affects tab order in web interface).
     attr_reader :index
 
+    # Visibility of the worksheet in Web interface.
+    attr_reader :hidden
+
     # GoogleDrive::Spreadsheet which this worksheet belongs to.
     attr_reader :spreadsheet
 
@@ -308,6 +311,13 @@ module GoogleDrive
       @meta_modified = true
     end
 
+    # Updates the visibility of the worksheet in Web interface.
+    # Note that update is not sent to the server until you call save().
+    def hidden=(hidden)
+      @hidden = hidden
+      @meta_modified = true
+    end
+
     # @api private
     def cells
       reload_cells unless @cells
@@ -409,6 +419,7 @@ module GoogleDrive
               sheet_id: sheet_id,
               title: title,
               index: index,
+              hidden: hidden,
               grid_properties: {row_count: max_rows, column_count: max_cols},
             },
             fields: '*',
@@ -668,6 +679,7 @@ module GoogleDrive
       @properties = properties
       @title = @remote_title = properties.title
       @index = properties.index
+      @hidden = properties.hidden
       if properties.grid_properties.nil?
         @max_rows = @max_cols = 0
       else
