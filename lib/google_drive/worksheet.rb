@@ -678,13 +678,38 @@ module GoogleDrive
     end
 
     def reload_cells
-      response =
-          @session.sheets_service.get_spreadsheet(
-              spreadsheet.id,
-              ranges: "'%s'" % @remote_title,
-              fields: 'sheets.data.rowData.values(formattedValue,userEnteredValue,effectiveValue)'
-          )
-      update_cells_from_api_sheet(response.sheets[0])
+      response = @session.sheets_service.batch_spreadsheet_value_get_by_data_filter(
+        spreadsheet.id,
+        Google::Apis::SheetsV4::BatchGetValuesByDataFilterRequest.new(
+          data_filters: [
+            Google::Apis::SheetsV4::DataFilter.new(
+              grid_range: Google::Apis::SheetsV4::GridRange.new(
+                sheet_id: sheet_id
+              )
+            )
+          ]
+        )
+      )
+
+      update_cells_from_api_sheet_value_get_by_data_filter(response.value_ranges[0])
+    end
+
+    def update_cells_from_api_sheet_value_get_by_data_filter(sheet)
+      rows_data = sheet.value_range.values || []
+      @num_rows = rows_data.size
+      @num_cols = 0
+      @cells = {}
+      @input_values = {}
+      @numeric_values = {}
+
+      rows_data.each_with_index do |row_data, r|
+        @num_cols = row_data.length if @num_cols < row_data.length
+        row_data.each_with_index do |cell_data, c|
+          k = [r + 1, c + 1]
+          @cells[k] = cell_data || ''
+          @input_values[k] = cell_data || ''
+        end
+      end
     end
 
     def update_cells_from_api_sheet(api_sheet)
