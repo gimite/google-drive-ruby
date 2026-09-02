@@ -8,9 +8,6 @@ require 'test/unit'
 
 require 'google_drive'
 
-ENV['SSL_CERT_FILE'] =
-  Gem.loaded_specs['google-api-client'].full_gem_path + '/lib/cacerts.pem'
-
 class TestGoogleDrive < Test::Unit::TestCase
   # Random string is added to avoid conflict with existing file titles.
   PREFIX = 'google-drive-ruby-test-4101301e303c-'.freeze
